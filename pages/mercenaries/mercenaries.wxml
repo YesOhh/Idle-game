@@ -19,30 +19,66 @@
       
       <view class="merc-stats">
         <view class="stat-row">
-          <text class="stat-label">拥有数量:</text>
-          <text class="stat-value">{{item.count}}</text>
+          <text class="stat-label">状态:</text>
+          <text class="stat-value {{item.recruited ? 'text-success' : 'text-muted'}}">
+            {{item.recruited ? '已雇佣' : '未雇佣'}}
+          </text>
         </view>
-        <view class="stat-row">
+        
+        <view wx:if="{{item.recruited}}" class="stat-row">
+          <text class="stat-label">攻击力:</text>
+          <text class="stat-value">{{item.currentDamage}} (Lv.{{item.damageLevel}})</text>
+        </view>
+        <view wx:else class="stat-row">
           <text class="stat-label">基础伤害:</text>
           <text class="stat-value">{{item.damage}}</text>
         </view>
-        <view class="stat-row">
+
+        <view wx:if="{{item.recruited}}" class="stat-row">
+          <text class="stat-label">攻击间隔:</text>
+          <text class="stat-value">{{item.currentInterval}}秒 (Lv.{{item.intervalLevel}})</text>
+        </view>
+        <view wx:else class="stat-row">
           <text class="stat-label">攻击间隔:</text>
           <text class="stat-value">{{item.attackInterval}}秒</text>
         </view>
+
         <view class="stat-row">
           <text class="stat-label">总DPS:</text>
           <text class="stat-value text-success">{{item.dpsText}}</text>
         </view>
       </view>
       
+      <!-- 未雇佣时显示招募按钮 -->
       <button 
-        class="pixel-button {{item.canAfford ? '' : 'disabled'}}" 
+        wx:if="{{!item.recruited}}"
+        class="pixel-button {{item.canAffordRecruit ? '' : 'disabled'}}" 
         bindtap="onRecruitMercenary" 
         data-id="{{item.id}}"
-        disabled="{{!item.canAfford}}">
-        招募 ({{item.costText}})
+        disabled="{{!item.canAffordRecruit}}">
+        招募 ({{item.recruitCostText}})
       </button>
+
+      <!-- 已雇佣时显示升级按钮 -->
+      <view wx:if="{{item.recruited}}" class="upgrade-buttons" style="display: flex; gap: 10rpx; margin-top: 10rpx;">
+        <button 
+          class="pixel-button small {{item.canAffordDamage ? '' : 'disabled'}}" 
+          bindtap="onUpgradeDamage" 
+          data-id="{{item.id}}"
+          disabled="{{!item.canAffordDamage}}"
+          style="flex: 1; font-size: 20rpx; padding: 5rpx;">
+          升级攻击力 ({{item.damageCostText}})
+        </button>
+        
+        <button 
+          class="pixel-button small {{item.canAffordInterval ? '' : 'disabled'}}" 
+          bindtap="onUpgradeInterval" 
+          data-id="{{item.id}}"
+          disabled="{{!item.canAffordInterval}}"
+          style="flex: 1; font-size: 20rpx; padding: 5rpx;">
+          升级攻速 ({{item.intervalCostText}})
+        </button>
+      </view>
     </view>
   </view>
   

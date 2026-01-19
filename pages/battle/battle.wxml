@@ -52,7 +52,7 @@
           <text class="merc-icon-small">{{item.icon}}</text>
           <view class="merc-info-compact">
             <text class="merc-name-small">{{item.name}}</text>
-            <text class="merc-count">x{{item.count}}</text>
+            <!-- <text class="merc-count">x{{item.count}}</text> 移除数量显示 -->
           </view>
         </view>
         
@@ -65,9 +65,11 @@
             class="merc-recruit-btn {{item.canAfford ? '' : 'disabled'}}" 
             bindtap="onRecruitMercenary" 
             data-id="{{item.id}}"
+            hidden="{{item.recruited}}"
             disabled="{{!item.canAfford}}">
             {{item.costText}}
           </button>
+          <text wx:if="{{item.recruited}}" class="merc-recruited-label" style="font-size: 20rpx; color: #888;">已雇佣</text>
         </view>
       </view>
     </scroll-view>

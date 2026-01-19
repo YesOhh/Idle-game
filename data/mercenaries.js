@@ -66,8 +66,12 @@ const MERCENARIES_DATA = [
 function initMercenaries() {
     return MERCENARIES_DATA.map(merc => ({
         ...merc,
-        count: 0,           // 当前拥有数量
-        totalDamage: 0      // 总伤害贡献
+        recruited: false,        // 是否已雇佣
+        damageLevel: 0,          // 攻击力升级等级
+        intervalLevel: 0,        // 攻击间隔升级等级
+        currentDamage: merc.damage,           // 当前伤害
+        currentInterval: merc.attackInterval, // 当前攻击间隔
+        totalDamage: 0          // 总伤害贡献
     }));
 }
 

@@ -65,6 +65,24 @@ Page({
         if (!globalData.mercenaries || globalData.mercenaries.length === 0) {
             const mercData = require('../../data/mercenaries.js');
             globalData.mercenaries = mercData.initMercenaries();
+        } else {
+            // 数据迁移：处理旧存档
+            globalData.mercenaries.forEach(merc => {
+                if (merc.recruited === undefined) {
+                    merc.recruited = (merc.count > 0);
+                    merc.damageLevel = 0;
+                    merc.intervalLevel = 0;
+                    merc.currentDamage = merc.damage;
+                    merc.currentInterval = merc.attackInterval;
+                }
+                // 确保有currentDamage和currentInterval字段（即使已迁移也可能因为升级逻辑变更需要重算? 暂时不需要重算，初始值为base即可，后续升级会覆盖）
+                if (merc.currentDamage === undefined) {
+                    merc.currentDamage = merc.damage;
+                }
+                if (merc.currentInterval === undefined) {
+                    merc.currentInterval = merc.attackInterval;
+                }
+            });
         }
 
         this.updateDisplay();
@@ -116,15 +134,18 @@ Page({
 
         // 格式化佣兵数据
         const mercenaries = globalData.mercenaries.map(merc => {
-            const cost = gameEngine.calculateUpgradeCost(merc);
-            const mercDPS = merc.count > 0 ? (merc.damage * merc.count / merc.attackInterval) : 0;
-            const canAfford = globalData.player.gold >= cost;
+            const recruitCost = gameEngine.calculateRecruitCost(merc);
+            const currentDamage = gameEngine.calculateUpgradedDamage(merc);
+            const currentInterval = gameEngine.calculateUpgradedInterval(merc);
+            const mercDPS = merc.recruited ? (currentDamage / currentInterval) : 0;
+            const canAfford = !merc.recruited && globalData.player.gold >= recruitCost;
 
             return {
                 ...merc,
-                costText: gameEngine.formatNumber(cost),
+                costText: merc.recruited ? '已雇佣' : gameEngine.formatNumber(recruitCost),
                 dpsText: gameEngine.formatNumber(mercDPS),
-                canAfford
+                canAfford,
+                recruited: merc.recruited
             };
         });
 
@@ -146,6 +167,7 @@ Page({
         const damage = globalData.player.manualDamage;
 
         this.dealDamage(damage);
+        // this.showDamageNumber(damage, e); // 暂时注释掉伤害数字，因为频率可能太高？不，只有手动点击才显示
         this.showDamageNumber(damage, e);
 
         // 触发攻击动画
@@ -163,6 +185,9 @@ Page({
         globalData.boss = result.boss;
         globalData.player.totalDamage += damage;
 
+        // 造成伤害即获得金币
+        globalData.player.gold += result.goldEarned;
+
         if (result.defeated) {
             this.onBossDefeated();
         } else {
@@ -173,9 +198,10 @@ Page({
     // Boss被击败
     onBossDefeated() {
         const globalData = app.globalData;
-        const reward = gameEngine.calculateBossReward(globalData.boss.level);
+        // Boss击败不再给予额外金币奖励，只推进关卡
+        // const reward = gameEngine.calculateBossReward(globalData.boss.level);
 
-        globalData.player.gold += reward;
+        // globalData.player.gold += reward;
         globalData.boss.defeated++;
 
         // 进入下一个Boss
@@ -183,7 +209,7 @@ Page({
         globalData.boss = newBoss;
 
         wx.showToast({
-            title: `+${gameEngine.formatNumber(reward)} 金币!`,
+            title: `Boss击败!`,
             icon: 'success',
             duration: 1000
         });
@@ -278,15 +304,15 @@ Page({
         const globalData = app.globalData;
 
         const mercenary = globalData.mercenaries.find(m => m.id === mercId);
-        if (!mercenary) {
+        if (!mercenary || mercenary.recruited) {
             return;
         }
 
-        const cost = gameEngine.calculateUpgradeCost(mercenary);
+        const cost = gameEngine.calculateRecruitCost(mercenary);
 
         if (globalData.player.gold >= cost) {
             globalData.player.gold -= cost;
-            mercenary.count++;
+            mercenary.recruited = true;
 
             wx.showToast({
                 title: '招募成功!',

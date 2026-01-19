@@ -55,9 +55,11 @@ function calculateTotalDPS(mercenaries) {
     let totalDPS = 0;
 
     mercenaries.forEach(merc => {
-        if (merc.count > 0) {
-            // 每个佣兵的DPS = 基础伤害 * 数量 * 攻击速度
-            const mercDPS = merc.damage * merc.count * (1 / merc.attackInterval);
+        if (merc.recruited) {
+            // 每个佣兵的DPS = 升级后伤害 / 升级后攻击间隔
+            const damage = calculateUpgradedDamage(merc);
+            const interval = calculateUpgradedInterval(merc);
+            const mercDPS = damage / interval;
             totalDPS += mercDPS;
         }
     });
@@ -66,13 +68,56 @@ function calculateTotalDPS(mercenaries) {
 }
 
 /**
- * 计算佣兵升级成本
+ * 计算升级后的攻击力
+ * @param {Object} mercenary - 佣兵对象
+ * @returns {number} - 升级后的攻击力
+ */
+function calculateUpgradedDamage(mercenary) {
+    // 每级提升10%攻击力
+    return Math.floor(mercenary.damage * Math.pow(1.1, mercenary.damageLevel));
+}
+
+/**
+ * 计算升级后的攻击间隔
+ * @param {Object} mercenary - 佣兵对象
+ * @returns {number} - 升级后的攻击间隔
+ */
+function calculateUpgradedInterval(mercenary) {
+    // 每级减少5%攻击间隔（最低0.1秒）
+    const interval = mercenary.attackInterval * Math.pow(0.95, mercenary.intervalLevel);
+    // 保留2位小数
+    return Math.max(0.1, Math.round(interval * 100) / 100);
+}
+
+/**
+ * 计算攻击力升级成本
  * @param {Object} mercenary - 佣兵对象
  * @returns {number} - 升级成本
  */
-function calculateUpgradeCost(mercenary) {
-    // 成本公式: 基础成本 * (1.15 ^ 当前数量)
-    return Math.floor(mercenary.baseCost * Math.pow(1.15, mercenary.count));
+function calculateDamageUpgradeCost(mercenary) {
+    const totalLevels = mercenary.damageLevel + mercenary.intervalLevel;
+    // 基础成本 * (1.5 ^ 总等级)
+    return Math.floor(mercenary.baseCost * Math.pow(1.5, totalLevels));
+}
+
+/**
+ * 计算攻击间隔升级成本
+ * @param {Object} mercenary - 佣兵对象
+ * @returns {number} - 升级成本
+ */
+function calculateIntervalUpgradeCost(mercenary) {
+    const totalLevels = mercenary.damageLevel + mercenary.intervalLevel;
+    // 基础成本 * (1.3 ^ 总等级)
+    return Math.floor(mercenary.baseCost * Math.pow(1.3, totalLevels));
+}
+
+/**
+ * 计算雇佣成本
+ * @param {Object} mercenary - 佣兵对象
+ * @returns {number} - 雇佣成本
+ */
+function calculateRecruitCost(mercenary) {
+    return mercenary.baseCost;
 }
 
 /**
@@ -90,7 +135,8 @@ function dealDamageToBoss(boss, damage) {
             ...boss,
             currentHp: newHp
         },
-        defeated
+        defeated,
+        goldEarned: damage  // 新增：造成的伤害=获得的金币
     };
 }
 
@@ -126,18 +172,18 @@ function calculateOfflineProgress(dps, offlineSeconds, bossLevel) {
     const offlineEfficiency = 0.7;
     const effectiveDPS = dps * offlineEfficiency;
 
-    let totalGold = 0;
-    let bossesDefeated = 0;
-    let currentLevel = bossLevel;
-    let remainingDamage = effectiveDPS * actualOfflineTime;
+    // 金币收益 = 总伤害 (因为伤害=金币)
+    totalGold = Math.floor(remainingDamage);
 
-    // 模拟击败Boss
-    while (remainingDamage > 0 && bossesDefeated < 100) {
+    // 模拟击败Boss (用于计算等级提升)
+    let tempDamage = remainingDamage;
+
+    while (tempDamage > 0 && bossesDefeated < 100) {
         const bossHp = calculateBossMaxHp(currentLevel);
 
-        if (remainingDamage >= bossHp) {
-            remainingDamage -= bossHp;
-            totalGold += calculateBossReward(currentLevel);
+        if (tempDamage >= bossHp) {
+            tempDamage -= bossHp;
+            // totalGold += calculateBossReward(currentLevel); // 不再给予击杀奖励
             bossesDefeated++;
             currentLevel++;
         } else {
@@ -158,7 +204,11 @@ module.exports = {
     calculateBossMaxHp,
     calculateBossReward,
     calculateTotalDPS,
-    calculateUpgradeCost,
+    calculateUpgradedDamage,
+    calculateUpgradedInterval,
+    calculateDamageUpgradeCost,
+    calculateIntervalUpgradeCost,
+    calculateRecruitCost,
     dealDamageToBoss,
     nextBoss,
     calculateOfflineProgress
