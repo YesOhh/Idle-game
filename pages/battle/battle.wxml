@@ -1,0 +1,95 @@
+<!-- pages/battle/battle.wxml -->
+<view class="battle-container">
+  <!-- Boss信息区域 -->
+  <view class="boss-section">
+    <view class="boss-level">Boss Lv.{{boss.level}}</view>
+    
+    <!-- Boss精灵 -->
+    <view class="boss-sprite" bindtap="onTapBoss">
+      <view class="boss-icon {{attacking ? 'shake' : ''}}">👹</view>
+      
+      <!-- 伤害数字动画 -->
+      <view wx:for="{{damageNumbers}}" wx:key="id" class="damage-number" 
+            style="left: {{item.x}}rpx; top: {{item.y}}rpx; animation-delay: {{item.delay}}ms">
+        {{item.damage}}
+      </view>
+    </view>
+    
+    <!-- Boss血条 -->
+    <view class="boss-hp-container">
+      <view class="boss-hp-label">
+        <text>{{bossHpText}}</text>
+      </view>
+      <view class="pixel-progress">
+        <view class="pixel-progress-fill" style="width: {{bossHpPercent}}%"></view>
+      </view>
+    </view>
+  </view>
+  
+  <!-- 紧凑的统计信息 -->
+  <view class="stats-compact">
+    <view class="stat-compact">
+      <text class="stat-compact-label">💰</text>
+      <text class="stat-compact-value">{{goldText}}</text>
+    </view>
+    <view class="stat-compact">
+      <text class="stat-compact-label">⚔️</text>
+      <text class="stat-compact-value">{{manualDamageText}}</text>
+    </view>
+    <view class="stat-compact">
+      <text class="stat-compact-label">🔥</text>
+      <text class="stat-compact-value">{{dpsText}}/s</text>
+    </view>
+  </view>
+  
+  <!-- 佣兵列表 -->
+  <view class="mercenaries-section">
+    <view class="section-title">佣兵管理</view>
+    
+    <scroll-view scroll-y class="mercenaries-scroll">
+      <view wx:for="{{mercenaries}}" wx:key="id" class="merc-item">
+        <view class="merc-left">
+          <text class="merc-icon-small">{{item.icon}}</text>
+          <view class="merc-info-compact">
+            <text class="merc-name-small">{{item.name}}</text>
+            <text class="merc-count">x{{item.count}}</text>
+          </view>
+        </view>
+        
+        <view class="merc-right">
+          <view class="merc-dps-info">
+            <text class="merc-dps-label">DPS:</text>
+            <text class="merc-dps-value">{{item.dpsText}}</text>
+          </view>
+          <button 
+            class="merc-recruit-btn {{item.canAfford ? '' : 'disabled'}}" 
+            bindtap="onRecruitMercenary" 
+            data-id="{{item.id}}"
+            disabled="{{!item.canAfford}}">
+            {{item.costText}}
+          </button>
+        </view>
+      </view>
+    </scroll-view>
+  </view>
+  
+  <!-- 升级点击伤害按钮（缩小） -->
+  <view class="upgrade-click-section">
+    <button class="upgrade-click-btn" bindtap="onUpgradeClick">
+      升级点击 ({{upgradeClickCostText}})
+    </button>
+  </view>
+</view>
+
+<!-- 离线收益弹窗 -->
+<view wx:if="{{showOfflineModal}}" class="modal-overlay" bindtap="closeOfflineModal">
+  <view class="modal-content pixel-card" catchtap="preventClose">
+    <view class="modal-title">离线收益</view>
+    <view class="modal-body">
+      <text>离线时间: {{offlineTimeText}}</text>
+      <text>获得金币: {{offlineGoldText}}</text>
+      <text>击败Boss: {{offlineBossesText}}</text>
+    </view>
+    <button class="pixel-button" bindtap="closeOfflineModal">领取</button>
+  </view>
+</view>

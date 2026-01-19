@@ -1,0 +1,32 @@
+{
+    "pages": [
+        "pages/battle/battle",
+        "pages/mercenaries/mercenaries"
+    ],
+    "window": {
+        "backgroundTextStyle": "dark",
+        "navigationBarBackgroundColor": "#2c3e50",
+        "navigationBarTitleText": "打BOSS",
+        "navigationBarTextStyle": "white",
+        "backgroundColor": "#1a1a2e"
+    },
+    "tabBar": {
+        "color": "#7e8c8d",
+        "selectedColor": "#e74c3c",
+        "backgroundColor": "#2c3e50",
+        "borderStyle": "black",
+        "list": [
+            {
+                "pagePath": "pages/battle/battle",
+                "text": "⚔️ 战斗"
+            },
+            {
+                "pagePath": "pages/mercenaries/mercenaries",
+                "text": "🛡️ 佣兵"
+            }
+        ]
+    },
+    "style": "v2",
+    "sitemapLocation": "sitemap.json",
+    "lazyCodeLoading": "requiredComponents"
+}

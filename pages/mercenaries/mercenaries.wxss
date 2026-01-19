@@ -1,0 +1,109 @@
+/* pages/mercenaries/mercenaries.wxss */
+
+.mercenaries-container {
+  min-height: 100vh;
+  background-color: var(--bg-dark);
+  padding: 30rpx;
+  padding-bottom: 120rpx;
+}
+
+/* 头部 */
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 30rpx;
+  padding: 20rpx;
+  background-color: var(--bg-light);
+  border: 4rpx solid var(--border-color);
+  box-shadow: 4rpx 4rpx 0 var(--shadow-color);
+}
+
+.header-title {
+  font-size: 36rpx;
+  font-weight: bold;
+  color: var(--primary-color);
+  text-shadow: 2rpx 2rpx 0 #000;
+}
+
+.header-gold {
+  font-size: 28rpx;
+  font-weight: bold;
+  color: var(--warning-color);
+}
+
+/* 佣兵列表 */
+.mercenaries-list {
+  display: flex;
+  flex-direction: column;
+  gap: 30rpx;
+}
+
+/* 佣兵卡片 */
+.mercenary-card {
+  padding: 30rpx;
+}
+
+.merc-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 20rpx;
+}
+
+.merc-icon {
+  font-size: 80rpx;
+  margin-right: 20rpx;
+  filter: drop-shadow(2rpx 2rpx 0 rgba(0, 0, 0, 0.5));
+}
+
+.merc-info {
+  flex: 1;
+}
+
+.merc-name {
+  font-size: 32rpx;
+  font-weight: bold;
+  color: var(--text-primary);
+  margin-bottom: 5rpx;
+}
+
+.merc-desc {
+  font-size: 24rpx;
+  color: var(--text-muted);
+}
+
+/* 佣兵属性 */
+.merc-stats {
+  margin: 20rpx 0;
+}
+
+.stat-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 10rpx 0;
+}
+
+.stat-label {
+  font-size: 26rpx;
+  color: var(--text-secondary);
+}
+
+.stat-value {
+  font-size: 26rpx;
+  font-weight: bold;
+  color: var(--text-primary);
+}
+
+/* 招募按钮 */
+.mercenary-card .pixel-button {
+  width: 100%;
+  margin-top: 20rpx;
+}
+
+/* 空状态 */
+.empty-state {
+  text-align: center;
+  padding: 100rpx 0;
+  color: var(--text-muted);
+  font-size: 28rpx;
+}

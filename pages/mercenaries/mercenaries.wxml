@@ -1,0 +1,52 @@
+<!-- pages/mercenaries/mercenaries.wxml -->
+<view class="mercenaries-container">
+  <view class="header">
+    <view class="header-title">佣兵管理</view>
+    <view class="header-gold">💰 {{goldText}}</view>
+  </view>
+  
+  <view class="mercenaries-list">
+    <view wx:for="{{mercenaries}}" wx:key="id" class="mercenary-card pixel-card">
+      <view class="merc-header">
+        <view class="merc-icon">{{item.icon}}</view>
+        <view class="merc-info">
+          <view class="merc-name">{{item.name}}</view>
+          <view class="merc-desc">{{item.description}}</view>
+        </view>
+      </view>
+      
+      <view class="pixel-divider"></view>
+      
+      <view class="merc-stats">
+        <view class="stat-row">
+          <text class="stat-label">拥有数量:</text>
+          <text class="stat-value">{{item.count}}</text>
+        </view>
+        <view class="stat-row">
+          <text class="stat-label">基础伤害:</text>
+          <text class="stat-value">{{item.damage}}</text>
+        </view>
+        <view class="stat-row">
+          <text class="stat-label">攻击间隔:</text>
+          <text class="stat-value">{{item.attackInterval}}秒</text>
+        </view>
+        <view class="stat-row">
+          <text class="stat-label">总DPS:</text>
+          <text class="stat-value text-success">{{item.dpsText}}</text>
+        </view>
+      </view>
+      
+      <button 
+        class="pixel-button {{item.canAfford ? '' : 'disabled'}}" 
+        bindtap="onRecruitMercenary" 
+        data-id="{{item.id}}"
+        disabled="{{!item.canAfford}}">
+        招募 ({{item.costText}})
+      </button>
+    </view>
+  </view>
+  
+  <view wx:if="{{mercenaries.length === 0}}" class="empty-state">
+    <text>暂无佣兵数据</text>
+  </view>
+</view>

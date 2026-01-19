@@ -1,0 +1,11 @@
+# Git attributes for WeChat mini-program project
+
+# Auto detect text files and normalize line endings
+* text=auto
+
+# Images (binary files)
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary

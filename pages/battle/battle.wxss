@@ -1,0 +1,459 @@
+/* pages/battle/battle.wxss */
+
+.battle-container {
+  min-height: 100vh;
+  background-color: var(--bg-dark);
+  padding: 20rpx;
+  padding-bottom: 120rpx;
+}
+
+/* Boss区域 - 缩小 */
+.boss-section {
+  margin-bottom: 20rpx;
+}
+
+.boss-level {
+  text-align: center;
+  font-size: 28rpx;
+  font-weight: bold;
+  color: var(--primary-color);
+  margin-bottom: 15rpx;
+  text-shadow: 2rpx 2rpx 0 #000;
+}
+
+.boss-sprite {
+  width: 100%;
+  height: 300rpx;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+  margin-bottom: 20rpx;
+}
+
+.boss-icon {
+  font-size: 150rpx;
+  cursor: pointer;
+  user-select: none;
+  transition: transform 0.1s;
+  filter: drop-shadow(4rpx 4rpx 0 rgba(0, 0, 0, 0.5));
+}
+
+.boss-icon:active {
+  transform: scale(0.95);
+}
+
+.boss-icon.shake {
+  animation: shake 0.3s;
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-10rpx); }
+  75% { transform: translateX(10rpx); }
+}
+
+/* 伤害数字动画 */
+.damage-number {
+  position: absolute;
+  font-size: 36rpx;
+  font-weight: bold;
+  color: #fff;
+  text-shadow: 2rpx 2rpx 0 #000, -2rpx -2rpx 0 #000, 2rpx -2rpx 0 #000, -2rpx 2rpx 0 #000;
+  pointer-events: none;
+  animation: floatUp 1s ease-out forwards;
+  z-index: 100;
+}
+
+@keyframes floatUp {
+  0% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  50% {
+    transform: translateY(-80rpx) scale(1.2);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-150rpx) scale(0.8);
+  }
+}
+
+/* Boss血条 */
+.boss-hp-container {
+  margin-bottom: 15rpx;
+}
+
+.boss-hp-label {
+  text-align: center;
+  font-size: 22rpx;
+  color: var(--text-secondary);
+  margin-bottom: 8rpx;
+}
+
+/* 紧凑的统计信息 */
+.stats-compact {
+  display: flex;
+  justify-content: space-around;
+  background-color: var(--bg-light);
+  border: 3rpx solid var(--border-color);
+  padding: 15rpx;
+  margin-bottom: 20rpx;
+  box-shadow: 3rpx 3rpx 0 var(--shadow-color);
+}
+
+.stat-compact {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5rpx;
+}
+
+.stat-compact-label {
+  font-size: 28rpx;
+}
+
+.stat-compact-value {
+  font-size: 22rpx;
+  font-weight: bold;
+  color: var(--success-color);
+}
+
+/* 佣兵列表区域 */
+.mercenaries-section {
+  background-color: var(--bg-light);
+  border: 4rpx solid var(--border-color);
+  padding: 20rpx;
+  margin-bottom: 15rpx;
+  box-shadow: 4rpx 4rpx 0 var(--shadow-color);
+}
+
+.section-title {
+  font-size: 28rpx;
+  font-weight: bold;
+  color: var(--primary-color);
+  margin-bottom: 15rpx;
+  text-align: center;
+}
+
+.mercenaries-scroll {
+  max-height: 500rpx;
+}
+
+/* 佣兵列表项 */
+.merc-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: var(--bg-medium);
+  border: 2rpx solid var(--border-color);
+  padding: 15rpx;
+  margin-bottom: 10rpx;
+}
+
+.merc-item:last-child {
+  margin-bottom: 0;
+}
+
+.merc-left {
+  display: flex;
+  align-items: center;
+  gap: 15rpx;
+  flex: 1;
+}
+
+.merc-icon-small {
+  font-size: 50rpx;
+}
+
+.merc-info-compact {
+  display: flex;
+  flex-direction: column;
+  gap: 3rpx;
+}
+
+.merc-name-small {
+  font-size: 24rpx;
+  font-weight: bold;
+  color: var(--text-primary);
+}
+
+.merc-count {
+  font-size: 20rpx;
+  color: var(--text-muted);
+}
+
+.merc-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8rpx;
+}
+
+.merc-dps-info {
+  display: flex;
+  gap: 5rpx;
+  align-items: baseline;
+}
+
+.merc-dps-label {
+  font-size: 18rpx;
+  color: var(--text-muted);
+}
+
+.merc-dps-value {
+  font-size: 20rpx;
+  font-weight: bold;
+  color: var(--success-color);
+}
+
+.merc-recruit-btn {
+  background-color: var(--primary-color);
+  color: var(--text-primary);
+  border: 3rpx solid #000;
+  padding: 8rpx 20rpx;
+  font-size: 20rpx;
+  font-weight: bold;
+  box-shadow: 2rpx 2rpx 0 #000;
+}
+
+.merc-recruit-btn:active {
+  box-shadow: 1rpx 1rpx 0 #000;
+  transform: translate(1rpx, 1rpx);
+}
+
+.merc-recruit-btn.disabled {
+  background-color: var(--text-muted);
+  opacity: 0.6;
+}
+
+/* 升级点击按钮 - 缩小 */
+.upgrade-click-section {
+  margin-top: 10rpx;
+}
+
+.upgrade-click-btn {
+  width: 100%;
+  background-color: var(--secondary-color);
+  color: var(--text-primary);
+  border: 3rpx solid #000;
+  padding: 15rpx;
+  font-size: 22rpx;
+  font-weight: bold;
+  text-align: center;
+  box-shadow: 3rpx 3rpx 0 #000;
+}
+
+.upgrade-click-btn:active {
+  box-shadow: 2rpx 2rpx 0 #000;
+  transform: translate(1rpx, 1rpx);
+}
+
+/* 离线收益弹窗 */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.8);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  width: 80%;
+  max-width: 600rpx;
+  padding: 40rpx;
+}
+
+.modal-title {
+  font-size: 36rpx;
+  font-weight: bold;
+  text-align: center;
+  color: var(--primary-color);
+  margin-bottom: 30rpx;
+}
+
+.modal-body {
+  display: flex;
+  flex-direction: column;
+  gap: 15rpx;
+  margin-bottom: 30rpx;
+}
+
+.modal-body text {
+  font-size: 28rpx;
+  color: var(--text-primary);
+  padding: 10rpx 0;
+}
+
+
+/* Boss区域 */
+.boss-section {
+  margin-bottom: 40rpx;
+}
+
+.boss-level {
+  text-align: center;
+  font-size: 32rpx;
+  font-weight: bold;
+  color: var(--primary-color);
+  margin-bottom: 20rpx;
+  text-shadow: 2rpx 2rpx 0 #000;
+}
+
+.boss-sprite {
+  width: 100%;
+  height: 400rpx;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+  margin-bottom: 30rpx;
+}
+
+.boss-icon {
+  font-size: 200rpx;
+  cursor: pointer;
+  user-select: none;
+  transition: transform 0.1s;
+  filter: drop-shadow(4rpx 4rpx 0 rgba(0, 0, 0, 0.5));
+}
+
+.boss-icon:active {
+  transform: scale(0.95);
+}
+
+.boss-icon.shake {
+  animation: shake 0.3s;
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-10rpx); }
+  75% { transform: translateX(10rpx); }
+}
+
+/* 伤害数字动画 */
+.damage-number {
+  position: absolute;
+  font-size: 40rpx;
+  font-weight: bold;
+  color: #fff;
+  text-shadow: 2rpx 2rpx 0 #000, -2rpx -2rpx 0 #000, 2rpx -2rpx 0 #000, -2rpx 2rpx 0 #000;
+  pointer-events: none;
+  animation: floatUp 1s ease-out forwards;
+  z-index: 100;
+}
+
+@keyframes floatUp {
+  0% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  50% {
+    transform: translateY(-80rpx) scale(1.2);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-150rpx) scale(0.8);
+  }
+}
+
+/* Boss血条 */
+.boss-hp-container {
+  margin-bottom: 20rpx;
+}
+
+.boss-hp-label {
+  text-align: center;
+  font-size: 24rpx;
+  color: var(--text-secondary);
+  margin-bottom: 10rpx;
+}
+
+/* 统计信息 */
+.stats-section {
+  background-color: var(--bg-light);
+  border: 4rpx solid var(--border-color);
+  padding: 30rpx;
+  margin-bottom: 30rpx;
+  box-shadow: 4rpx 4rpx 0 var(--shadow-color);
+}
+
+.stat-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15rpx 0;
+  border-bottom: 2rpx dashed var(--border-color);
+}
+
+.stat-item:last-child {
+  border-bottom: none;
+}
+
+.stat-label {
+  font-size: 28rpx;
+  color: var(--text-secondary);
+}
+
+.stat-value {
+  font-size: 28rpx;
+  font-weight: bold;
+  color: var(--success-color);
+}
+
+/* 操作按钮 */
+.action-section {
+  margin-top: 20rpx;
+}
+
+.action-section .pixel-button {
+  width: 100%;
+  margin-bottom: 20rpx;
+}
+
+/* 离线收益弹窗 */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.8);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  width: 80%;
+  max-width: 600rpx;
+  padding: 40rpx;
+}
+
+.modal-title {
+  font-size: 36rpx;
+  font-weight: bold;
+  text-align: center;
+  color: var(--primary-color);
+  margin-bottom: 30rpx;
+}
+
+.modal-body {
+  display: flex;
+  flex-direction: column;
+  gap: 15rpx;
+  margin-bottom: 30rpx;
+}
+
+.modal-body text {
+  font-size: 28rpx;
+  color: var(--text-primary);
+  padding: 10rpx 0;
+}

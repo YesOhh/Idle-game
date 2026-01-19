@@ -1,0 +1,164 @@
+/* 全局样式 - 像素风格 */
+
+/* CSS变量定义 */
+page {
+  --primary-color: #e74c3c;
+  --secondary-color: #3498db;
+  --success-color: #2ecc71;
+  --warning-color: #f39c12;
+  --danger-color: #e74c3c;
+  
+  --bg-dark: #1a1a2e;
+  --bg-medium: #16213e;
+  --bg-light: #2c3e50;
+  
+  --text-primary: #ecf0f1;
+  --text-secondary: #bdc3c7;
+  --text-muted: #7f8c8d;
+  
+  --border-color: #34495e;
+  --shadow-color: rgba(0, 0, 0, 0.5);
+  
+  /* 像素字体 */
+  font-family: 'Courier New', Courier, monospace;
+  background-color: var(--bg-dark);
+  color: var(--text-primary);
+  font-size: 28rpx;
+}
+
+/* 重置样式 */
+view, text, button, image, scroll-view {
+  box-sizing: border-box;
+}
+
+
+/* 像素风格按钮 */
+.pixel-button {
+  background-color: var(--primary-color);
+  color: var(--text-primary);
+  border: 4rpx solid #000;
+  padding: 20rpx 40rpx;
+  font-size: 28rpx;
+  font-weight: bold;
+  text-align: center;
+  cursor: pointer;
+  position: relative;
+  box-shadow: 4rpx 4rpx 0 #000;
+  transition: all 0.1s;
+}
+
+.pixel-button:active {
+  box-shadow: 2rpx 2rpx 0 #000;
+  transform: translate(2rpx, 2rpx);
+}
+
+.pixel-button.disabled {
+  background-color: var(--text-muted);
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+/* 像素风格卡片 */
+.pixel-card {
+  background-color: var(--bg-light);
+  border: 4rpx solid var(--border-color);
+  padding: 30rpx;
+  margin: 20rpx 0;
+  box-shadow: 4rpx 4rpx 0 var(--shadow-color);
+}
+
+/* 进度条 */
+.pixel-progress {
+  width: 100%;
+  height: 40rpx;
+  background-color: var(--bg-medium);
+  border: 4rpx solid #000;
+  position: relative;
+  overflow: hidden;
+}
+
+.pixel-progress-fill {
+  height: 100%;
+  background-color: var(--success-color);
+  transition: width 0.3s ease;
+  position: relative;
+}
+
+
+
+/* 文本样式 */
+.text-large {
+  font-size: 36rpx;
+  font-weight: bold;
+}
+
+.text-medium {
+  font-size: 28rpx;
+}
+
+.text-small {
+  font-size: 24rpx;
+}
+
+.text-primary {
+  color: var(--primary-color);
+}
+
+.text-success {
+  color: var(--success-color);
+}
+
+.text-warning {
+  color: var(--warning-color);
+}
+
+.text-muted {
+  color: var(--text-muted);
+}
+
+/* 布局工具类 */
+.flex {
+  display: flex;
+}
+
+.flex-column {
+  flex-direction: column;
+}
+
+.flex-center {
+  justify-content: center;
+  align-items: center;
+}
+
+.flex-between {
+  justify-content: space-between;
+  align-items: center;
+}
+
+.flex-1 {
+  flex: 1;
+}
+
+/* 间距工具类 */
+.mt-10 { margin-top: 10rpx; }
+.mt-20 { margin-top: 20rpx; }
+.mt-30 { margin-top: 30rpx; }
+.mb-10 { margin-bottom: 10rpx; }
+.mb-20 { margin-bottom: 20rpx; }
+.mb-30 { margin-bottom: 30rpx; }
+.p-20 { padding: 20rpx; }
+.p-30 { padding: 30rpx; }
+
+/* 像素风格分割线 */
+.pixel-divider {
+  height: 4rpx;
+  background-color: var(--border-color);
+  margin: 20rpx 0;
+  background-image: repeating-linear-gradient(
+    90deg,
+    var(--border-color),
+    var(--border-color) 8rpx,
+    transparent 8rpx,
+    transparent 16rpx
+  );
+}
