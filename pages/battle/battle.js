@@ -146,7 +146,13 @@ Page({
         const player = globalData.player;
 
         const hpPercent = (boss.maxHp > 0) ? (boss.currentHp / boss.maxHp) * 100 : 0;
-        const dps = gameEngine.calculateTotalDPS(globalData.mercenaries);
+
+        // 传入全局Buff
+        const dps = gameEngine.calculateTotalDPS(
+            globalData.mercenaries,
+            this.data._globalDamageBuff || 0,
+            this.data._globalSpeedBuff || 0
+        );
 
         this.setData({
             boss: boss,
@@ -165,8 +171,19 @@ Page({
         // 格式化佣兵数据
         const mercenaries = globalData.mercenaries.map(merc => {
             const recruitCost = gameEngine.calculateRecruitCost(merc);
-            const currentDamage = gameEngine.calculateUpgradedDamage(merc);
-            const currentInterval = gameEngine.calculateUpgradedInterval(merc);
+
+            // 获取基础值
+            let currentDamage = gameEngine.calculateUpgradedDamage(merc);
+            let currentInterval = gameEngine.calculateUpgradedInterval(merc);
+
+            // 应用全局Buff展示
+            if (this.data._globalDamageBuff) {
+                currentDamage *= (1 + this.data._globalDamageBuff);
+            }
+            if (this.data._globalSpeedBuff) {
+                currentInterval *= (1 - this.data._globalSpeedBuff);
+            }
+
             const mercDPS = merc.recruited ? (currentDamage / currentInterval) : 0;
             const canAfford = !merc.recruited && globalData.player.gold >= recruitCost;
 
@@ -175,7 +192,7 @@ Page({
                 costText: merc.recruited ? '已雇佣' : gameEngine.formatNumber(recruitCost),
                 dpsText: gameEngine.formatNumber(mercDPS),
                 damageText: gameEngine.formatNumber(currentDamage),
-                intervalText: currentInterval,
+                intervalText: currentInterval.toFixed(2),
                 canAfford,
                 recruited: merc.recruited
             };
@@ -332,7 +349,12 @@ Page({
                     merc._attackTimer += deltaTime;
 
                     // 获取当前攻击间隔
-                    const interval = gameEngine.calculateUpgradedInterval(merc);
+                    let interval = gameEngine.calculateUpgradedInterval(merc);
+
+                    // 应用全局加速Buff (法师奥术激涌)
+                    if (this.data._globalSpeedBuff) {
+                        interval *= (1 - this.data._globalSpeedBuff);
+                    }
 
                     // 如果计时器超过攻击间隔，触发攻击
                     if (merc._attackTimer >= interval) {
@@ -360,7 +382,49 @@ Page({
                                     // 飘字提示暴击触发
                                     this.showDamageNumber('暴击!', null, 'skill-crit');
                                 }
+                            } else if (skill.type === 'global_speed_buff') {
+                                // 法师技能：全体加速
+                                if (Math.random() < skill.chance) {
+                                    // 应用全局加速Buff
+                                    this.data._globalSpeedBuff = skill.val;
+                                    this.setData({ isSpeedBuffActive: true });
+                                    this.updateDisplay();
+
+                                    clearTimeout(this.data._globalSpeedTimer);
+                                    this.data._globalSpeedTimer = setTimeout(() => {
+                                        this.data._globalSpeedBuff = 0;
+                                        this.setData({ isSpeedBuffActive: false });
+                                        this.updateDisplay();
+                                    }, skill.duration);
+
+                                    this.showDamageNumber('奥术激涌!', null, 'skill-mage');
+                                }
+                            } else if (skill.type === 'burst_boost') {
+                                // 龙骑士技能：毁灭龙息 + 全体伤害提升
+                                if (Math.random() < skill.chance) {
+                                    thisHitDamage *= skill.multiplier;
+                                    isCrit = true;
+
+                                    // 应用全局伤害Buff
+                                    this.data._globalDamageBuff = skill.buffVal;
+                                    this.setData({ isDamageBuffActive: true });
+                                    this.updateDisplay();
+
+                                    clearTimeout(this.data._globalDamageTimer);
+                                    this.data._globalDamageTimer = setTimeout(() => {
+                                        this.data._globalDamageBuff = 0;
+                                        this.setData({ isDamageBuffActive: false });
+                                        this.updateDisplay();
+                                    }, skill.duration);
+
+                                    this.showDamageNumber('毁灭龙息!', null, 'skill-dragon');
+                                }
                             }
+                        }
+
+                        // 应用全局伤害Buff (龙骑士龙威)
+                        if (this.data._globalDamageBuff) {
+                            thisHitDamage *= (1 + this.data._globalDamageBuff);
                         }
 
                         thisHitDamage = Math.floor(thisHitDamage);

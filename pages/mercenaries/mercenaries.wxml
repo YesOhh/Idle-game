@@ -49,14 +49,12 @@
         </view>
 
         <!-- 技能显示区域 -->
-        <view wx:if="{{item.skillInfo}}" class="stat-row skill-row" style="margin-top: 10rpx; padding-top: 10rpx; border-top: 2rpx dashed #ccc;">
-            <view style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
-                <text class="{{item.skillInfo.isUnlocked ? 'text-gold' : 'text-muted'}}" style="font-weight: bold;">
-                    {{item.skillInfo.name}}
-                </text>
-                <text class="stat-value" style="font-size: 22rpx; max-width: 70%; text-align: right;">
-                    {{item.skillInfo.desc}}
-                </text>
+        <view wx:if="{{item.skillInfo}}" class="skill-container" style="margin-top: 10rpx; padding-top: 10rpx; border-top: 2rpx dashed #ccc; display: flex; flex-direction: column; width: 100%;">
+            <view class="{{item.skillInfo.isUnlocked ? 'text-gold' : 'text-muted'}}" style="font-weight: bold; font-size: 24rpx; margin-bottom: 4rpx;">
+                {{item.skillInfo.name}}
+            </view>
+            <view class="stat-value" style="font-size: 22rpx; color: #bdc3c7; line-height: 1.4;">
+                {{item.skillInfo.desc}}
             </view>
         </view>
       </view>

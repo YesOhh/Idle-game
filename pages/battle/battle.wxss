@@ -86,6 +86,43 @@
   z-index: 115;
 }
 
+.damage-number.skill-mage {
+  color: #9b59b6; /* 奥术紫色 */
+  font-size: 44rpx;
+  text-shadow: 2rpx 2rpx 0 #8e44ad;
+  z-index: 120;
+}
+
+.damage-number.skill-dragon {
+  color: #e74c3c; /* 毁灭红色 */
+  font-size: 58rpx;
+  text-shadow: 2rpx 2rpx 0 #c0392b;
+  z-index: 130;
+}
+
+/* 全局Buff视觉效果 */
+.battle-container.buff-speed {
+  box-shadow: inset 0 0 100rpx rgba(155, 89, 182, 0.4);
+  background-color: #1e1e3f; /* 稍微带点紫色调 */
+  animation: pulse-purple 1.5s infinite alternate;
+}
+
+.battle-container.buff-damage {
+  box-shadow: inset 0 0 120rpx rgba(231, 76, 60, 0.4);
+  background-color: #2a1a1a; /* 稍微带点红色调 */
+  animation: pulse-red 1s infinite alternate;
+}
+
+@keyframes pulse-purple {
+  from { box-shadow: inset 0 0 60rpx rgba(155, 89, 182, 0.3); }
+  to { box-shadow: inset 0 0 120rpx rgba(155, 89, 182, 0.6); }
+}
+
+@keyframes pulse-red {
+  from { box-shadow: inset 0 0 80rpx rgba(231, 76, 60, 0.3); }
+  to { box-shadow: inset 0 0 160rpx rgba(231, 76, 60, 0.7); }
+}
+
 @keyframes floatUp {
   0% {
     opacity: 1;

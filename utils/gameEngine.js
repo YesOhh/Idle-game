@@ -57,14 +57,19 @@ function calculateBossReward(level) {
  * @param {Array} mercenaries - 佣兵数组
  * @returns {number} - 总DPS
  */
-function calculateTotalDPS(mercenaries) {
+function calculateTotalDPS(mercenaries, globalDamageBuff = 0, globalSpeedBuff = 0) {
     let totalDPS = 0;
 
     mercenaries.forEach(merc => {
         if (merc.recruited) {
             // 每个佣兵的DPS = 升级后伤害 / 升级后攻击间隔
-            const damage = calculateUpgradedDamage(merc);
-            const interval = calculateUpgradedInterval(merc);
+            let damage = calculateUpgradedDamage(merc);
+            let interval = calculateUpgradedInterval(merc);
+
+            // 应用全局Buff
+            if (globalDamageBuff) damage *= (1 + globalDamageBuff);
+            if (globalSpeedBuff) interval *= (1 - globalSpeedBuff);
+
             const mercDPS = damage / interval;
             totalDPS += mercDPS;
         }
@@ -302,6 +307,33 @@ function getMercenarySkill(mercenary) {
         };
     }
 
+    // Mage Skill: "Arcane Surge" (Unlock Lv 20)
+    if (mercenary.id === 'mage' && totalLevel >= 20) {
+        const bonusSpeed = 0.05 + Math.floor((totalLevel - 20) / 10) * 0.05;
+        return {
+            type: 'global_speed_buff',
+            name: '奥术激涌',
+            chance: 0.05,
+            val: bonusSpeed, // Dynamic speed increase
+            duration: 3000, // 3 seconds
+            desc: `5%几率使全体攻速提升${(bonusSpeed * 100).toFixed(0)}% (持续3秒)`
+        };
+    }
+
+    // Dragon Rider Skill: "Devastating Breath" (Unlock Lv 40)
+    if (mercenary.id === 'dragon' && totalLevel >= 40) {
+        const leaderBuff = Math.min(0.50, 0.20 + Math.floor((totalLevel - 40) / 10) * 0.10);
+        return {
+            type: 'burst_boost',
+            name: '毁灭龙息',
+            chance: 0.10,
+            multiplier: 30, // 30x damage
+            buffVal: leaderBuff, // Dynamic damage boost
+            duration: 2000, // 2 seconds
+            desc: `10%几率造成30倍伤害，并使全队伤害提升${(leaderBuff * 100).toFixed(0)}% (持续2秒)`
+        };
+    }
+
     return null;
 }
 
@@ -327,7 +359,7 @@ function getMercenarySkillDisplay(mercenary) {
         }
 
         return {
-            name: '技能:【熟练】',
+            name: '【熟练】',
             isUnlocked,
             desc
         };
@@ -347,7 +379,7 @@ function getMercenarySkillDisplay(mercenary) {
         }
 
         return {
-            name: '技能:【爆裂】',
+            name: '【爆裂】',
             isUnlocked,
             desc
         };
@@ -356,9 +388,39 @@ function getMercenarySkillDisplay(mercenary) {
     if (mercenary.id === 'legend') {
         const isUnlocked = mercenary.recruited;
         return {
-            name: '技能:【全能】',
+            name: '【全能】',
             isUnlocked: !!isUnlocked,
             desc: isUnlocked ? '升级攻击力时攻击速度也会提升，反之亦然' : '（招募后解锁）'
+        };
+    }
+
+    if (mercenary.id === 'mage') {
+        const unlockLv = 20;
+        const isUnlocked = totalLevel >= unlockLv;
+        let bonusStr = '';
+        if (isUnlocked) {
+            const bonusSpeed = 0.05 + Math.floor((totalLevel - unlockLv) / 10) * 0.05;
+            bonusStr = ` (当前: ${(bonusSpeed * 100).toFixed(0)}%)`;
+        }
+        return {
+            name: '【奥术激涌】',
+            isUnlocked,
+            desc: isUnlocked ? `5%几率使全体攻速提升${bonusStr} (持续3秒)` : `（达到 Lv.${unlockLv} 解锁）`
+        };
+    }
+
+    if (mercenary.id === 'dragon') {
+        const unlockLv = 40;
+        const isUnlocked = totalLevel >= unlockLv;
+        let bonusStr = '';
+        if (isUnlocked) {
+            const leaderBuff = Math.min(0.50, 0.20 + Math.floor((totalLevel - unlockLv) / 10) * 0.10);
+            bonusStr = ` (当前增伤: ${(leaderBuff * 100).toFixed(0)}%)`;
+        }
+        return {
+            name: '【毁灭龙息】',
+            isUnlocked,
+            desc: isUnlocked ? `10%几率触发30倍伤害及全队${bonusStr}` : `（达到 Lv.${unlockLv} 解锁）`
         };
     }
 

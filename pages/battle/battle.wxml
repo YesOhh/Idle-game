@@ -1,5 +1,5 @@
 <!-- pages/battle/battle.wxml -->
-<view class="battle-container">
+<view class="battle-container {{isSpeedBuffActive ? 'buff-speed' : ''}} {{isDamageBuffActive ? 'buff-damage' : ''}}">
   <!-- Boss信息区域 -->
   <view class="boss-section">
     <view class="boss-level">Boss Lv.{{boss.level}}</view>
