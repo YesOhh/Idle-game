@@ -78,15 +78,21 @@ function calculateTotalDPS(mercenaries, globalDamageBuff = 0, globalSpeedBuff = 
     return totalDPS;
 }
 
-/**
- * 计算升级后的攻击力
- * @param {Object} mercenary - 佣兵对象
- * @returns {number} - 升级后的攻击力
- */
 function calculateUpgradedDamage(mercenary, prestigeDamageMult = 1) {
-    // 动态伤害系数精修：基础 1.24，成长 0.0007
+    // 1. 计算基础伤害 (包含等级加成、里程碑、佣兵个体技能)
+    let baseDamage = calculateMercenaryBaseDamage(mercenary);
 
-    // [传说] 核心：等级独立，但数值联动
+    // 2. 应用周目/圣物全局加成
+    let finalDamage = baseDamage * prestigeDamageMult;
+
+    return Math.floor(finalDamage);
+}
+
+/**
+ * 计算佣兵的基础伤害 (不含周目/圣物加成)
+ */
+function calculateMercenaryBaseDamage(mercenary) {
+    // 动态伤害系数精修
     let effectiveLevel = mercenary.damageLevel;
     if (mercenary.id === 'legend') {
         effectiveLevel = (mercenary.damageLevel || 0) + (mercenary.intervalLevel || 0);
@@ -95,7 +101,7 @@ function calculateUpgradedDamage(mercenary, prestigeDamageMult = 1) {
     const dynamicDmgExp = 1.24 + (effectiveLevel * 0.0007);
     let damage = Math.floor(mercenary.damage * Math.pow(dynamicDmgExp, effectiveLevel));
 
-    // 应用等级里程碑加成 (基于总投入等级)
+    // 里程碑
     const totalLevel = (mercenary.damageLevel || 0) + (mercenary.intervalLevel || 0);
     if (totalLevel >= 100) {
         damage *= 4;
@@ -103,15 +109,28 @@ function calculateUpgradedDamage(mercenary, prestigeDamageMult = 1) {
         damage *= 2;
     }
 
-    // 应用战士等技能加成
+    // 战士等自带的堆叠Buff (属于该佣兵个体的成长)
     if (mercenary._stackingBuff) {
         damage *= (1 + mercenary._stackingBuff);
     }
 
-    // 应用重生加成 (永久)
-    damage *= prestigeDamageMult;
-
     return Math.floor(damage);
+}
+
+/**
+ * 获取用于显示的属性信息 (基础 + 额外)
+ */
+function getDamageDisplayInfo(mercenary, prestigeDamageMult = 1) {
+    const base = calculateMercenaryBaseDamage(mercenary);
+    const final = Math.floor(base * prestigeDamageMult);
+    const bonus = final - base;
+
+    return {
+        base,
+        bonus,
+        final,
+        text: bonus > 0 ? `${formatNumber(base)} (+${formatNumber(bonus)})` : `${formatNumber(base)}`
+    };
 }
 
 /**
@@ -144,6 +163,11 @@ function calculateUpgradedInterval(mercenary) {
     if (totalLevel >= 75) interval *= 0.8;
     if (totalLevel >= 100) interval *= 0.8;
 
+    // 应用圣物全局攻速加成 (如果有)
+    if (mercenary._prestigeSpeedBuff) {
+        interval *= (1 - mercenary._prestigeSpeedBuff);
+    }
+
     return Math.max(0.1, Number(interval.toFixed(2)));
 }
 
@@ -153,7 +177,14 @@ function calculateUpgradedInterval(mercenary) {
  * @returns {Object} - 加成倍率 (damage, gold, costReduction)
  */
 function calculatePrestigeBonus(player) {
-    if (!player) return { damage: 1, gold: 1, costReduction: 1 };
+    if (!player) return {
+        damage: 1,
+        gold: 1,
+        costReduction: 1,
+        speed: 0,
+        critChance: 0,
+        critMult: 0
+    };
 
     const prestigeCount = player.prestigeCount || 0;
     // 基础重生加成：每一周目提升 100% 伤害 (即 1, 2, 3...)
@@ -161,16 +192,31 @@ function calculatePrestigeBonus(player) {
     let goldMult = 1 + prestigeCount * 0.5; // 每周目提升 50% 金币产出
     let costReduction = 1;
 
+    // 新增属性
+    let speedBuff = 0;
+    let critChance = 0;
+    let critMult = 0;
+
     // 遗物加成
     if (player.relics && player.relics.length > 0) {
         player.relics.forEach(relic => {
-            if (relic.type === 'damage') damageMult += relic.val; // 改为加法堆叠
-            if (relic.type === 'gold') goldMult += relic.val;     // 改为加法堆叠
-            if (relic.type === 'cost') costReduction *= (1 - relic.val); // 成本降低是乘法 (0.95 * 0.95...)
+            if (relic.type === 'damage') damageMult += relic.val;
+            if (relic.type === 'gold') goldMult += relic.val;
+            if (relic.type === 'cost') costReduction *= (1 - relic.val);
+            if (relic.type === 'speed') speedBuff += relic.val;
+            if (relic.type === 'crit_chance') critChance += relic.val;
+            if (relic.type === 'crit_mult') critMult += relic.val;
         });
     }
 
-    return { damage: damageMult, gold: goldMult, costReduction: costReduction };
+    return {
+        damage: damageMult,
+        gold: goldMult,
+        costReduction: costReduction,
+        speed: speedBuff,
+        critChance: critChance,
+        critMult: critMult
+    };
 }
 
 /**
@@ -207,6 +253,11 @@ function calculateRecruitCost(mercenary) {
  * @returns {Object} - 更新后的Boss对象和是否击败
  */
 function dealDamageToBoss(boss, damage, prestigeGoldMult = 1) {
+    // 核心修复：如果Boss已经死亡，不再产生伤害或触发击败逻辑
+    if (boss.currentHp <= 0) {
+        return { boss, defeated: false, goldEarned: 0 };
+    }
+
     const newHp = Math.max(0, boss.currentHp - damage);
     const defeated = newHp === 0;
     return {
@@ -456,11 +507,14 @@ function getMercenarySkillDisplay(mercenary) {
  * 遗物定义池
  */
 const RELIC_POOL = [
-    { id: 'relic_dmg_1', name: '破损枪头', type: 'damage', val: 0.2, desc: '伤害 +20%', icon: '🔪' },
-    { id: 'relic_gold_1', name: '贪婪金坠', type: 'gold', val: 0.2, desc: '收益 +20%', icon: '🪙' },
-    { id: 'relic_cost_1', name: '学者纹章', type: 'cost', val: 0.1, desc: '升级成本 -10%', icon: '📜' },
-    { id: 'relic_dmg_2', name: '力量宝石', type: 'damage', val: 0.5, desc: '伤害 +50%', icon: '💎' },
-    { id: 'relic_gold_2', name: '聚宝盆', type: 'gold', val: 0.5, desc: '收益 +50%', icon: '🏺' }
+    { id: 'relic_dmg_low', name: '士兵的磨刀石', type: 'damage', val: 0.10, desc: '伤害 +10%', icon: '🪵' },
+    { id: 'relic_gold_low', name: '褪色的铜币', type: 'gold', val: 0.10, desc: '金币收益 +10%', icon: '🪙' },
+    { id: 'relic_speed_1', name: '机械发条', type: 'speed', val: 0.05, desc: '攻击速度 +5%', icon: '⚙️' },
+    { id: 'relic_cost_low', name: '战术速记本', type: 'cost', val: 0.05, desc: '升级成本 -5%', icon: '📖' },
+    { id: 'relic_crit_c_1', name: '鹰眼瞄具', type: 'crit_chance', val: 0.02, desc: '暴击率 +2%', icon: '🎯' },
+    { id: 'relic_crit_m_1', name: '锋利刀刃', type: 'crit_mult', val: 0.20, desc: '暴击伤害 +20%', icon: '🔪' },
+    { id: 'relic_dmg_mid', name: '勇士之证', type: 'damage', val: 0.30, desc: '伤害 +30%', icon: '🏅' },
+    { id: 'relic_gold_mid', name: '商人的契约', type: 'gold', val: 0.30, desc: '金币收益 +30%', icon: '📜' }
 ];
 
 /**
@@ -486,5 +540,7 @@ module.exports = {
     getMercenarySkill,
     getMercenarySkillDisplay,
     calculatePrestigeBonus,
-    getRandomRelicChoices
+    getRandomRelicChoices,
+    getDamageDisplayInfo,
+    calculateMercenaryBaseDamage
 };

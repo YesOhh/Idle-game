@@ -653,3 +653,112 @@
   margin-top: 4rpx;
 }
 
+/* 兑换码区域样式 */
+.redeem-section {
+  padding: 40rpx 20rpx;
+  border-top: 2rpx dashed var(--border-color);
+  margin-top: 20rpx;
+}
+
+.redeem-title {
+  font-size: 24rpx;
+  color: var(--text-secondary);
+  margin-bottom: 15rpx;
+  text-align: center;
+}
+
+.redeem-input-group {
+  display: flex;
+  gap: 15rpx;
+  align-items: center;
+}
+
+.redeem-input {
+  flex: 1;
+  height: 70rpx;
+  background-color: var(--bg-dark);
+  border: 4rpx solid var(--border-color);
+  color: var(--text-primary);
+  padding: 0 20rpx;
+  font-size: 24rpx;
+  box-shadow: inset 4rpx 4rpx 0 rgba(0,0,0,0.5);
+}
+
+.redeem-btn {
+  width: 160rpx;
+  height: 70rpx;
+  line-height: 70rpx;
+  padding: 0;
+  background-color: var(--primary-color);
+  color: var(--text-primary);
+  font-size: 24rpx;
+  font-weight: bold;
+  border: 4rpx solid #000;
+  box-shadow: 4rpx 4rpx 0 #000;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.redeem-btn:active {
+  transform: translate(2rpx, 2rpx);
+  box-shadow: 2rpx 2rpx 0 #000;
+}
+/* 圣物库弹窗增强 */
+.relic-inventory-modal {
+  width: 90% !important;
+  max-height: 80vh !important;
+}
+
+.bonus-summary-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10rpx;
+  background: rgba(255,255,255,0.05);
+  padding: 20rpx;
+  border: 2rpx solid var(--border-color);
+  margin-bottom: 20rpx;
+}
+
+.summary-item {
+  font-size: 22rpx;
+  color: var(--text-secondary);
+}
+
+.relic-list-scroll {
+  max-height: 400rpx;
+}
+
+.relic-item-mini {
+  display: flex;
+  align-items: center;
+  padding: 15rpx;
+  border-bottom: 1rpx solid rgba(255,255,255,0.1);
+}
+
+.relic-icon-mini {
+  font-size: 40rpx;
+  margin-right: 20rpx;
+}
+
+.relic-info-mini {
+  flex: 1;
+}
+
+.relic-name-mini {
+  font-size: 24rpx;
+  color: var(--text-primary);
+  font-weight: bold;
+}
+
+.relic-desc-mini {
+  font-size: 20rpx;
+  color: var(--success-color);
+}
+
+.empty-relics {
+  text-align: center;
+  color: var(--text-muted);
+  padding: 40rpx;
+  font-size: 24rpx;
+}

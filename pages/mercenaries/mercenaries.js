@@ -51,7 +51,8 @@ Page({
             // 使用统一的升级成本 (应用遗物减费)
             const upgradeCost = gameEngine.calculateMercenaryUpgradeCost(merc, prestigeBonus.costReduction);
 
-            const currentDamage = gameEngine.calculateUpgradedDamage(merc, prestigeBonus.damage);
+            const dmgInfo = gameEngine.getDamageDisplayInfo(merc, prestigeBonus.damage);
+            const currentDamage = dmgInfo.final;
             const currentInterval = gameEngine.calculateUpgradedInterval(merc);
 
             // 获取技能显示信息
@@ -67,7 +68,7 @@ Page({
 
             return {
                 ...merc,
-                currentDamage,
+                currentDamageText: dmgInfo.text, // 统一使用解耦后的显示格式
                 currentInterval,
                 recruitCostText: gameEngine.formatNumber(recruitCost),
                 // 两个按钮显示相同的成本

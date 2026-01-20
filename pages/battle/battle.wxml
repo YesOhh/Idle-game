@@ -37,6 +37,16 @@
     </view>
   </view>
   
+    <view class="game-stats">
+      <view class="stat-item">
+        <text class="stat-label">周目:</text>
+        <text class="stat-value">{{player.prestigeCount + 1}}</text>
+      </view>
+      <view class="stat-item" bindtap="onToggleMyRelicsModal" style="margin-left: 20rpx; background: rgba(0,0,0,0.3); padding: 4rpx 10rpx; border-radius: 4rpx;">
+        <text class="stat-value">📜 我的圣物</text>
+      </view>
+    </view>
+  
   <!-- 佣兵列表 -->
   <scroll-view scroll-y class="mercenaries-scroll" style="max-height: 60vh;">
     <view class="mercenaries-section">
@@ -93,12 +103,52 @@
         </view>
       </view>
     </view>
+  </scroll-view>
     
     <!-- 重置游戏按钮 -->
     <view class="reset-section">
       <button class="reset-btn" bindtap="onResetGame">🔄 重新开始游戏</button>
     </view>
-  </scroll-view>
+
+    <!-- 兑换码区域 -->
+    <view class="redeem-section">
+      <view class="redeem-title">兑换码</view>
+      <view class="redeem-input-group">
+        <input class="redeem-input" placeholder="输入兑换码" bindinput="onInputCode" value="{{redemptionCode}}" />
+        <button class="redeem-btn" bindtap="onRedeem">兑换</button>
+      </view>
+    </view>
+
+    <!-- 我的圣物弹窗 -->
+    <view class="modal-mask" wx:if="{{showMyRelicsModal}}" bindtap="onToggleMyRelicsModal">
+      <view class="modal-content relic-inventory-modal" catchtap="preventClose">
+        <view class="modal-header">
+          <text>我的圣物库</text>
+          <text class="close-btn" bindtap="onToggleMyRelicsModal">×</text>
+        </view>
+        
+        <!-- 总加成汇总 -->
+        <view class="bonus-summary-grid">
+          <view class="summary-item">伤害: <text class="text-success">+{{relicBonusSummary.damage}}%</text></view>
+          <view class="summary-item">金币: <text class="text-success">+{{relicBonusSummary.gold}}%</text></view>
+          <view class="summary-item">攻速: <text class="text-success">+{{relicBonusSummary.speed}}%</text></view>
+          <view class="summary-item">成本: <text class="text-success">-{{relicBonusSummary.costReduction}}%</text></view>
+          <view class="summary-item">暴击率: <text class="text-success">+{{relicBonusSummary.critChance}}%</text></view>
+          <view class="summary-item">暴伤: <text class="text-success">+{{relicBonusSummary.critMult}}%</text></view>
+        </view>
+
+        <scroll-view scroll-y class="relic-list-scroll">
+          <view wx:if="{{myRelics.length === 0}}" class="empty-relics">尚未获得任何圣物</view>
+          <view wx:for="{{myRelics}}" wx:key="index" class="relic-item-mini">
+            <text class="relic-icon-mini">{{item.icon}}</text>
+            <view class="relic-info-mini">
+              <view class="relic-name-mini">{{item.name}}</view>
+              <view class="relic-desc-mini">{{item.desc}}</view>
+            </view>
+          </view>
+        </scroll-view>
+      </view>
+    </view>
 </view>
 
 <!-- 离线收益弹窗 -->

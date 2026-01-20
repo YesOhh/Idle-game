@@ -35,7 +35,13 @@ Page({
 
         // 遗物选择
         showRelicModal: false,
-        relicChoices: []
+        // 兑换码
+        redemptionCode: '',
+
+        // 我的圣物展示
+        showMyRelicsModal: false,
+        myRelics: [],
+        relicBonusSummary: null
     },
 
     onLoad() {
@@ -103,7 +109,10 @@ Page({
                 if (merc.intervalLevel === undefined) merc.intervalLevel = 0;
 
                 // 实时重算当前显示数值，确保算法更新后数值同步
-                merc.currentDamage = gameEngine.calculateUpgradedDamage(merc);
+                const prestigeBonus = gameEngine.calculatePrestigeBonus(globalData.player);
+                merc._prestigeSpeedBuff = prestigeBonus.speed; // 设置永久攻速加成
+
+                merc.currentDamage = gameEngine.calculateUpgradedDamage(merc, prestigeBonus.damage);
                 merc.currentInterval = gameEngine.calculateUpgradedInterval(merc);
             });
         }
@@ -183,8 +192,12 @@ Page({
         const mercenaries = globalData.mercenaries.map(merc => {
             const recruitCost = gameEngine.calculateRecruitCost(merc);
 
-            // 获取基础值 (包含重生加成)
-            let currentDamage = gameEngine.calculateUpgradedDamage(merc, prestigeBonus.damage);
+            // 同步最新的圣物攻速加成
+            merc._prestigeSpeedBuff = prestigeBonus.speed;
+
+            // 获取基础值与显示文本 (Base + Bonus)
+            const dmgInfo = gameEngine.getDamageDisplayInfo(merc, prestigeBonus.damage);
+            let currentDamage = dmgInfo.final;
             let currentInterval = gameEngine.calculateUpgradedInterval(merc);
 
             // 应用全局Buff展示
@@ -202,7 +215,7 @@ Page({
                 ...merc,
                 costText: merc.recruited ? '已雇佣' : gameEngine.formatNumber(recruitCost),
                 dpsText: gameEngine.formatNumber(mercDPS),
-                damageText: gameEngine.formatNumber(currentDamage),
+                damageText: dmgInfo.text, // 使用 Base (+Bonus) 格式
                 intervalText: currentInterval.toFixed(2),
                 canAfford,
                 recruited: merc.recruited
@@ -210,7 +223,6 @@ Page({
         });
 
         // 只有当数据真正变化时才调用setData
-        // 简单的 JSON 比较可以有效防止对象引用变化导致的无谓重绘
         const currentJson = JSON.stringify(mercenaries);
         if (currentJson !== this.data._lastMercenariesJson) {
             this.setData({
@@ -230,11 +242,18 @@ Page({
     onTapBoss(e) {
         const globalData = app.globalData;
         const prestigeBonus = gameEngine.calculatePrestigeBonus(globalData.player);
-        const damage = globalData.player.manualDamage * prestigeBonus.damage;
+        let damage = globalData.player.manualDamage * prestigeBonus.damage;
+        let isCrit = false;
+
+        // 全局暴击判定 (来自圣物)
+        if (prestigeBonus.critChance > 0 && Math.random() < prestigeBonus.critChance) {
+            const mult = 2.0 + (prestigeBonus.critMult || 0); // 基础暴击2倍
+            damage *= mult;
+            isCrit = true;
+        }
 
         this.dealDamage(damage);
-        // this.showDamageNumber(damage, e); // 暂时注释掉伤害数字，因为频率可能太高？不，只有手动点击才显示
-        this.showDamageNumber(damage, e);
+        this.showDamageNumber(damage, e, isCrit ? 'crit' : '');
 
         // 触发攻击动画
         this.setData({ attacking: true });
@@ -316,6 +335,7 @@ Page({
 
         // 重新初始化并显示
         this.initGame();
+        this.startAutoAttack(); // 修复：重生后重启定时器以刷新UI和自动攻击
         this.updateDisplay();
 
         wx.showToast({
@@ -448,7 +468,7 @@ Page({
                                     thisHitDamage *= skill.multiplier;
                                     isCrit = true;
                                     // 飘字提示暴击触发
-                                    this.showDamageNumber('暴击!', null, 'skill-crit');
+                                    this.showDamageNumber('爆裂!', null, 'skill-crit');
                                 }
                             } else if (skill.type === 'global_speed_buff') {
                                 // 法师技能：全体加速
@@ -487,6 +507,14 @@ Page({
 
                                     this.showDamageNumber('毁灭龙息!', null, 'skill-dragon');
                                 }
+                            }
+                        }
+
+                        // 全局暴击判定 (圣物加成，且如果该次攻击还没触发技能暴击)
+                        if (!isCrit && prestigeBonus.critChance > 0) {
+                            if (Math.random() < prestigeBonus.critChance) {
+                                thisHitDamage *= (2.0 + prestigeBonus.critMult);
+                                isCrit = true;
                             }
                         }
 
@@ -653,6 +681,70 @@ Page({
                 icon: 'none'
             });
         }
+    },
+
+    // 兑换码输入绑定
+    onInputCode(e) {
+        this.setData({
+            redemptionCode: e.detail.value
+        });
+    },
+
+    // 兑换逻辑
+    onRedeem() {
+        // ... (保持不变)
+        const code = this.data.redemptionCode.trim();
+        const globalData = app.globalData;
+
+        if (code === 'SUPER_TEST') {
+            // 一键到达最后一个Boss并设定血量为100
+            const lastBossLevel = 12;
+            const testHp = 100;
+
+            const bossInfo = require('../../data/bosses.js').BOSS_DATA[lastBossLevel - 1];
+
+            globalData.boss = {
+                level: lastBossLevel,
+                currentHp: testHp,
+                maxHp: testHp,
+                name: bossInfo.name,
+                icon: bossInfo.icon,
+                desc: bossInfo.desc,
+                isMaxLevel: true
+            };
+
+            this.updateDisplay();
+            this.setData({ redemptionCode: '' });
+
+            wx.showToast({
+                title: '测试模式激活！',
+                icon: 'success'
+            });
+        } else if (code !== '') {
+            wx.showToast({
+                title: '无效兑换码',
+                icon: 'none'
+            });
+        }
+    },
+
+    // 切换圣物弹窗
+    onToggleMyRelicsModal() {
+        const globalData = app.globalData;
+        const prestigeBonus = gameEngine.calculatePrestigeBonus(globalData.player);
+
+        this.setData({
+            showMyRelicsModal: !this.data.showMyRelicsModal,
+            myRelics: globalData.player.relics || [],
+            relicBonusSummary: {
+                damage: ((prestigeBonus.damage - 1) * 100).toFixed(0),
+                gold: ((prestigeBonus.gold - 1) * 100).toFixed(0),
+                speed: (prestigeBonus.speed * 100).toFixed(0),
+                critChance: (prestigeBonus.critChance * 100).toFixed(0),
+                critMult: (prestigeBonus.critMult * 100).toFixed(0),
+                costReduction: ((1 - prestigeBonus.costReduction) * 100).toFixed(0)
+            }
+        });
     },
 
     // 阻止事件冒泡

@@ -25,13 +25,9 @@
           </text>
         </view>
         
-        <view wx:if="{{item.recruited}}" class="stat-row">
-          <text class="stat-label">攻击力:</text>
-          <text class="stat-value">{{item.currentDamage}} (Lv.{{item.damageLevel}})</text>
-        </view>
-        <view wx:else class="stat-row">
-          <text class="stat-label">基础伤害:</text>
-          <text class="stat-value">{{item.damage}}</text>
+        <view class="stat-row">
+          <text class="stat-label">{{item.recruited ? '攻击力:' : '初始攻击:'}}</text>
+          <text class="stat-value">{{item.currentDamageText}} {{item.recruited ? '(Lv.' + item.damageLevel + ')' : ''}}</text>
         </view>
 
         <view wx:if="{{item.recruited}}" class="stat-row">
