@@ -65,27 +65,42 @@ Page({
             this.processOfflineProgress(globalData.offlineSeconds);
         }
 
-        // 初始化佣兵数据（如果没有）
+        // 初始化/同步佣兵数据
+        const mercData = require('../../data/mercenaries.js');
+        const defaultMercs = mercData.initMercenaries();
+
         if (!globalData.mercenaries || globalData.mercenaries.length === 0) {
-            const mercData = require('../../data/mercenaries.js');
-            globalData.mercenaries = mercData.initMercenaries();
+            globalData.mercenaries = defaultMercs;
         } else {
-            // 数据迁移：处理旧存档
+            // 数据迁移与同步：合并新英雄与由于数据更新导致的属性变化
+            defaultMercs.forEach(defaultMerc => {
+                const existingMerc = globalData.mercenaries.find(m => m.id === defaultMerc.id);
+                if (!existingMerc) {
+                    // 如果存档中没有这个英雄（比如新出的传说），则添加进去
+                    globalData.mercenaries.push(defaultMerc);
+                    console.log(`同步新英雄: ${defaultMerc.name}`);
+                } else {
+                    // 强制同步基础配置属性 (成本、基础伤害、基础攻速、图标、描述)
+                    // 这样即使存档里存了旧的 25w，也会被强制更新为新的 200w
+                    existingMerc.baseCost = defaultMerc.baseCost;
+                    existingMerc.damage = defaultMerc.damage;
+                    existingMerc.attackInterval = defaultMerc.attackInterval;
+                    existingMerc.icon = defaultMerc.icon;
+                    existingMerc.description = defaultMerc.description;
+                }
+            });
+
+            // 统一检查迁移字段
             globalData.mercenaries.forEach(merc => {
                 if (merc.recruited === undefined) {
                     merc.recruited = (merc.count > 0);
-                    merc.damageLevel = 0;
-                    merc.intervalLevel = 0;
-                    merc.currentDamage = merc.damage;
-                    merc.currentInterval = merc.attackInterval;
                 }
-                // 确保有currentDamage和currentInterval字段（即使已迁移也可能因为升级逻辑变更需要重算? 暂时不需要重算，初始值为base即可，后续升级会覆盖）
-                if (merc.currentDamage === undefined) {
-                    merc.currentDamage = merc.damage;
-                }
-                if (merc.currentInterval === undefined) {
-                    merc.currentInterval = merc.attackInterval;
-                }
+                if (merc.damageLevel === undefined) merc.damageLevel = 0;
+                if (merc.intervalLevel === undefined) merc.intervalLevel = 0;
+
+                // 实时重算当前显示数值，确保算法更新后数值同步
+                merc.currentDamage = gameEngine.calculateUpgradedDamage(merc);
+                merc.currentInterval = gameEngine.calculateUpgradedInterval(merc);
             });
         }
 

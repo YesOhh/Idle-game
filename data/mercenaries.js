@@ -51,11 +51,20 @@ const MERCENARIES_DATA = [
     {
         id: 'dragon',
         name: '龙骑士',
-        baseCost: 50000,
+        baseCost: 100000,
         damage: 80000,
         attackInterval: 2.5,
         description: '传说中的龙骑士，毁天灭地',
         icon: '🐉'
+    },
+    {
+        id: 'legend',
+        name: '传说',
+        baseCost: 2000000,
+        damage: 400000,
+        attackInterval: 3.0,
+        description: '全能的传说，通晓万物之理',
+        icon: '👑'
     }
 ];
 

@@ -79,31 +79,27 @@ function calculateTotalDPS(mercenaries) {
  * @returns {number} - 升级后的攻击力
  */
 function calculateUpgradedDamage(mercenary) {
-    // 动态伤害系数精修：
-    // 玩家要求：初期提高（不再那么慢），但后期增长要平缓，不能太高
-    // 基础系数提升至 1.24 (接近原本好评的1.25固定值)
-    // 增长斜率大幅降低 0.002 -> 0.0007
-    // Lv 0: 1.24 (强力起步)
-    // Lv 50: 1.24 + 0.035 = 1.275
-    // Lv 100: 1.24 + 0.07 = 1.31 (基本持平之前的 1.32，保持长线可控)
-    const dynamicDmgExp = 1.24 + (mercenary.damageLevel * 0.0007);
+    // 动态伤害系数精修：基础 1.24，成长 0.0007
 
-    // 基础伤害计算
-    let damage = Math.floor(mercenary.damage * Math.pow(dynamicDmgExp, mercenary.damageLevel));
+    // [传说] 核心：等级独立，但数值联动
+    // 攻击力等级不直接上升，但在计算时使用 (攻击等级 + 攻速等级)
+    let effectiveLevel = mercenary.damageLevel;
+    if (mercenary.id === 'legend') {
+        effectiveLevel = (mercenary.damageLevel || 0) + (mercenary.intervalLevel || 0);
+    }
 
-    // 总等级 = 攻击等级 + 间隔等级
-    // 假设初始等级是0? 或者 mercenary.damageLevel 就是等级。
-    // 看代码 mercenary.damageLevel 初始是0。所以 totalLevel 就是投入的点数。
-    const totalLevel = mercenary.damageLevel + mercenary.intervalLevel;
+    const dynamicDmgExp = 1.24 + (effectiveLevel * 0.0007);
+    let damage = Math.floor(mercenary.damage * Math.pow(dynamicDmgExp, effectiveLevel));
 
-    // 4. 应用等级里程碑加成
+    // 应用等级里程碑加成 (基于总投入等级)
+    const totalLevel = (mercenary.damageLevel || 0) + (mercenary.intervalLevel || 0);
     if (totalLevel >= 100) {
         damage *= 4;
     } else if (totalLevel >= 50) {
         damage *= 2;
     }
 
-    // 5. 应用技能属性加成 (如战士的永久叠加Buff)
+    // 应用战士等技能加成
     if (mercenary._stackingBuff) {
         damage *= (1 + mercenary._stackingBuff);
     }
@@ -112,35 +108,36 @@ function calculateUpgradedDamage(mercenary) {
 }
 
 /**
- * 计算升级后的攻击间隔
+ * 计算当前攻击间隔
  * @param {Object} mercenary - 佣兵对象
- * @returns {number} - 升级后的攻击间隔
+ * @returns {number} - 攻击间隔（秒）
  */
 function calculateUpgradedInterval(mercenary) {
-    // 最小攻击间隔阈值 (秒)
-    const minInterval = 0.3;
+    // 还原之前的“当前算法” (渐进式衰减)
+    // 玩家反馈攻速升级太快，这里调慢衰减速度
+    // minInterval 是理论极限
+    const minInterval = 0.1;
 
-    // 动态衰减系数：初始攻速越慢，提升越难（衰减系数越大）
-    // 基础系数 0.9 (对应1.0s的单位)
-    // 每慢 1秒，系数 +0.015 (变得更接近1，即衰减更慢)
-    // 上限 0.99 (防止变成1或更大导致不衰减)
-    let decayRate = 0.9 + (mercenary.attackInterval - 1) * 0.015;
-    decayRate = Math.min(0.99, Math.max(0.9, decayRate));
+    // 调整衰减率：从 0.9 提升到 0.94 (越大越慢)
+    // 修正计算：让攻速越慢的英雄，每级提升的幅度相对更大一点，但整体速度放缓
+    let decayRate = 0.94 + (mercenary.attackInterval - 1) * 0.01;
+    decayRate = Math.min(0.995, Math.max(0.92, decayRate));
 
-    // 渐进式公式
-    const decayFactor = Math.pow(decayRate, mercenary.intervalLevel);
+    // [传说] 核心：如果是传说，攻速算法中的“等级”参数 = (攻速等级 + 攻击等级)
+    let effectiveLevel = mercenary.intervalLevel;
+    if (mercenary.id === 'legend') {
+        effectiveLevel = (mercenary.intervalLevel || 0) + (mercenary.damageLevel || 0);
+    }
+
+    const decayFactor = Math.pow(decayRate, effectiveLevel);
     let interval = minInterval + (mercenary.attackInterval - minInterval) * decayFactor;
 
-    // 里程碑加成
-    const totalLevel = mercenary.damageLevel + mercenary.intervalLevel;
-
-    // Lv 75: 间隔减少20%
+    // 应用里程碑奖励 (Lv 75, Lv 100) - 这里的直接乘算依然保留
+    const totalLevel = (mercenary.damageLevel || 0) + (mercenary.intervalLevel || 0);
     if (totalLevel >= 75) interval *= 0.8;
-    // Lv 100: 间隔再减少20% (总共x0.64)
     if (totalLevel >= 100) interval *= 0.8;
 
-    // 保留2位小数
-    return Math.round(interval * 100) / 100;
+    return Math.max(0.1, Number(interval.toFixed(2)));
 }
 
 /**
@@ -353,6 +350,15 @@ function getMercenarySkillDisplay(mercenary) {
             name: '技能:【爆裂】',
             isUnlocked,
             desc
+        };
+    }
+
+    if (mercenary.id === 'legend') {
+        const isUnlocked = mercenary.recruited;
+        return {
+            name: '技能:【全能】',
+            isUnlocked: !!isUnlocked,
+            desc: isUnlocked ? '升级攻击力时攻击速度也会提升，反之亦然' : '（招募后解锁）'
         };
     }
 
