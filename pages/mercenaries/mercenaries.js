@@ -44,12 +44,14 @@ Page({
             globalData.mercenaries = mercData.initMercenaries();
         }
 
+        const prestigeBonus = gameEngine.calculatePrestigeBonus(globalData.player);
+
         const mercenaries = globalData.mercenaries.map(merc => {
             const recruitCost = gameEngine.calculateRecruitCost(merc);
-            // 使用统一的升级成本
-            const upgradeCost = gameEngine.calculateMercenaryUpgradeCost(merc);
+            // 使用统一的升级成本 (应用遗物减费)
+            const upgradeCost = gameEngine.calculateMercenaryUpgradeCost(merc, prestigeBonus.costReduction);
 
-            const currentDamage = gameEngine.calculateUpgradedDamage(merc);
+            const currentDamage = gameEngine.calculateUpgradedDamage(merc, prestigeBonus.damage);
             const currentInterval = gameEngine.calculateUpgradedInterval(merc);
 
             // 获取技能显示信息
@@ -112,8 +114,10 @@ Page({
         if (globalData.player.gold >= cost) {
             globalData.player.gold -= cost;
             mercenary.recruited = true;
+
+            const prestigeBonus = gameEngine.calculatePrestigeBonus(globalData.player);
             // 首次招募，伤害和间隔使用当前等级（初始为0）计算的值
-            mercenary.currentDamage = gameEngine.calculateUpgradedDamage(mercenary);
+            mercenary.currentDamage = gameEngine.calculateUpgradedDamage(mercenary, prestigeBonus.damage);
             mercenary.currentInterval = gameEngine.calculateUpgradedInterval(mercenary);
 
             wx.showToast({
@@ -140,12 +144,13 @@ Page({
             return;
         }
 
-        const cost = gameEngine.calculateMercenaryUpgradeCost(mercenary);
+        const prestigeBonus = gameEngine.calculatePrestigeBonus(globalData.player);
+        const cost = gameEngine.calculateMercenaryUpgradeCost(mercenary, prestigeBonus.costReduction);
 
         if (globalData.player.gold >= cost) {
             globalData.player.gold -= cost;
             mercenary.damageLevel++;
-            mercenary.currentDamage = gameEngine.calculateUpgradedDamage(mercenary);
+            mercenary.currentDamage = gameEngine.calculateUpgradedDamage(mercenary, prestigeBonus.damage);
 
             wx.showToast({
                 title: '攻击力升级成功!',
@@ -171,7 +176,8 @@ Page({
             return;
         }
 
-        const cost = gameEngine.calculateMercenaryUpgradeCost(mercenary);
+        const prestigeBonus = gameEngine.calculatePrestigeBonus(globalData.player);
+        const cost = gameEngine.calculateMercenaryUpgradeCost(mercenary, prestigeBonus.costReduction);
 
         if (globalData.player.gold >= cost) {
             globalData.player.gold -= cost;

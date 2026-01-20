@@ -31,7 +31,11 @@ Page({
         offlineBossesText: '',
 
         // 自动攻击定时器
-        autoAttackTimer: null
+        autoAttackTimer: null,
+
+        // 遗物选择
+        showRelicModal: false,
+        relicChoices: []
     },
 
     onLoad() {
@@ -147,12 +151,16 @@ Page({
 
         const hpPercent = (boss.maxHp > 0) ? (boss.currentHp / boss.maxHp) * 100 : 0;
 
-        // 传入全局Buff
+        const prestigeBonus = gameEngine.calculatePrestigeBonus(player);
         const dps = gameEngine.calculateTotalDPS(
             globalData.mercenaries,
             this.data._globalDamageBuff || 0,
-            this.data._globalSpeedBuff || 0
+            this.data._globalSpeedBuff || 0,
+            prestigeBonus.damage
         );
+
+        // 计算下一级点击成本
+        const nextClickCost = Math.floor(10 * Math.pow(1.5, player.manualDamage) * prestigeBonus.costReduction);
 
         this.setData({
             boss: boss,
@@ -160,20 +168,23 @@ Page({
             bossHpText: `${gameEngine.formatNumber(boss.currentHp)} / ${gameEngine.formatNumber(boss.maxHp)}`,
             goldText: gameEngine.formatNumber(player.gold),
             dpsText: gameEngine.formatNumber(dps),
-            manualDamageText: gameEngine.formatNumber(player.manualDamage)
+            manualDamageText: gameEngine.formatNumber(player.manualDamage * prestigeBonus.damage),
+            upgradeClickCostText: gameEngine.formatNumber(nextClickCost),
+            prestigeCount: player.prestigeCount || 0
         });
     },
 
     // 更新佣兵列表状态（低频：按钮状态、列表渲染）
     updateMercenaryList() {
         const globalData = app.globalData;
+        const prestigeBonus = gameEngine.calculatePrestigeBonus(globalData.player);
 
         // 格式化佣兵数据
         const mercenaries = globalData.mercenaries.map(merc => {
             const recruitCost = gameEngine.calculateRecruitCost(merc);
 
-            // 获取基础值
-            let currentDamage = gameEngine.calculateUpgradedDamage(merc);
+            // 获取基础值 (包含重生加成)
+            let currentDamage = gameEngine.calculateUpgradedDamage(merc, prestigeBonus.damage);
             let currentInterval = gameEngine.calculateUpgradedInterval(merc);
 
             // 应用全局Buff展示
@@ -218,7 +229,8 @@ Page({
     // 点击Boss
     onTapBoss(e) {
         const globalData = app.globalData;
-        const damage = globalData.player.manualDamage;
+        const prestigeBonus = gameEngine.calculatePrestigeBonus(globalData.player);
+        const damage = globalData.player.manualDamage * prestigeBonus.damage;
 
         this.dealDamage(damage);
         // this.showDamageNumber(damage, e); // 暂时注释掉伤害数字，因为频率可能太高？不，只有手动点击才显示
@@ -234,12 +246,13 @@ Page({
     // 造成伤害
     dealDamage(damage) {
         const globalData = app.globalData;
-        const result = gameEngine.dealDamageToBoss(globalData.boss, damage);
+        const prestigeBonus = gameEngine.calculatePrestigeBonus(globalData.player);
+        const result = gameEngine.dealDamageToBoss(globalData.boss, damage, prestigeBonus.gold);
 
         globalData.boss = result.boss;
         globalData.player.totalDamage += damage;
 
-        // 造成伤害即获得金币
+        // 造成伤害即获得金币 (已在 dealDamageToBoss 中应用 goldMult)
         globalData.player.gold += result.goldEarned;
 
         if (result.defeated) {
@@ -253,10 +266,24 @@ Page({
     // Boss被击败
     onBossDefeated() {
         const globalData = app.globalData;
+        const currentLevel = globalData.boss.level;
         globalData.boss.defeated++;
 
+        // 检查是否通关 (击败 12 号 Boss)
+        if (currentLevel === 12) {
+            this.stopAutoAttack();
+
+            // 生成 3 个随机遗物
+            const choices = gameEngine.getRandomRelicChoices();
+            this.setData({
+                showRelicModal: true,
+                relicChoices: choices
+            });
+            return;
+        }
+
         // 进入下一个Boss
-        const newBoss = gameEngine.nextBoss(globalData.boss.level);
+        const newBoss = gameEngine.nextBoss(currentLevel);
         globalData.boss = newBoss;
 
         wx.showToast({
@@ -267,6 +294,44 @@ Page({
 
         // Boss击败时可以做一次全量更新
         this.updateDisplay();
+    },
+
+    // 触发重生
+    onPrestige(selectedRelic) {
+        const globalData = app.globalData;
+        globalData.player.prestigeCount = (globalData.player.prestigeCount || 0) + 1;
+
+        // 添加选中的遗物
+        if (selectedRelic) {
+            if (!globalData.player.relics) globalData.player.relics = [];
+            globalData.player.relics.push(selectedRelic);
+        }
+
+        // 调用 app.js 的初始化方法重置变量，但保留永久加成
+        app.initNewGame(true);
+
+        // 重载基础佣兵数据
+        const mercData = require('../../data/mercenaries.js');
+        app.globalData.mercenaries = mercData.initMercenaries();
+
+        // 重新初始化并显示
+        this.initGame();
+        this.updateDisplay();
+
+        wx.showToast({
+            title: `开启第 ${globalData.player.prestigeCount + 1} 周目!`,
+            icon: 'none',
+            duration: 2000
+        });
+    },
+
+    // 选择遗物
+    onSelectRelic(e) {
+        const index = e.currentTarget.dataset.index;
+        const selectedRelic = this.data.relicChoices[index];
+
+        this.setData({ showRelicModal: false });
+        this.onPrestige(selectedRelic);
     },
 
     // 显示伤害数字
@@ -300,7 +365,8 @@ Page({
     // 升级点击伤害
     onUpgradeClick() {
         const globalData = app.globalData;
-        const cost = Math.floor(10 * Math.pow(1.5, globalData.player.manualDamage));
+        const prestigeBonus = gameEngine.calculatePrestigeBonus(globalData.player);
+        const cost = Math.floor(10 * Math.pow(1.5, globalData.player.manualDamage) * prestigeBonus.costReduction);
 
         if (globalData.player.gold >= cost) {
             globalData.player.gold -= cost;
@@ -337,6 +403,8 @@ Page({
             const globalData = app.globalData;
             let totalFrameDamage = 0;
 
+            const prestigeBonus = gameEngine.calculatePrestigeBonus(globalData.player);
+
             // 遍历所有佣兵，计算各自的攻击CD
             globalData.mercenaries.forEach(merc => {
                 if (merc.recruited) {
@@ -358,8 +426,8 @@ Page({
 
                     // 如果计时器超过攻击间隔，触发攻击
                     if (merc._attackTimer >= interval) {
-                        // 计算基础单次伤害
-                        let damage = gameEngine.calculateUpgradedDamage(merc);
+                        // 计算基础单次伤害 (加上重生倍率)
+                        let damage = gameEngine.calculateUpgradedDamage(merc, prestigeBonus.damage);
 
                         // 获取并应用技能
                         const skill = gameEngine.getMercenarySkill(merc);

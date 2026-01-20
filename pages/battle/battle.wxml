@@ -2,7 +2,10 @@
 <view class="battle-container {{isSpeedBuffActive ? 'buff-speed' : ''}} {{isDamageBuffActive ? 'buff-damage' : ''}}">
   <!-- Boss信息区域 -->
   <view class="boss-section">
-    <view class="boss-level">Boss Lv.{{boss.level}}</view>
+    <view class="boss-level">
+      Boss Lv.{{boss.level}}
+      <text wx:if="{{prestigeCount > 0}}" style="color: #f1c40f; font-size: 22rpx; margin-left: 10rpx;">🎖️ 第{{prestigeCount + 1}}周目</text>
+    </view>
     
     <!-- Boss精灵 -->
     <view class="boss-sprite" bindtap="onTapBoss">
@@ -108,5 +111,22 @@
       <text>击败Boss: {{offlineBossesText}}</text>
     </view>
     <button class="pixel-button" bindtap="closeOfflineModal">领取</button>
+  </view>
+</view>
+
+<!-- 遗物选择弹窗 -->
+<view wx:if="{{showRelicModal}}" class="modal-overlay">
+  <view class="modal-content pixel-card" style="width: 90%; max-height: 80vh;">
+    <view class="modal-title">🏆 凯旋归来！请选择一件战利品</view>
+    <view class="modal-body" style="padding: 20rpx 0;">
+        <view class="relic-list">
+            <view wx:for="{{relicChoices}}" wx:key="id" class="relic-card" bindtap="onSelectRelic" data-index="{{index}}">
+                <view class="relic-icon">{{item.icon}}</view>
+                <view class="relic-name">{{item.name}}</view>
+                <view class="relic-desc">{{item.desc}}</view>
+            </view>
+        </view>
+    </view>
+    <view class="text-muted" style="text-align: center; font-size: 20rpx; margin-top: 20rpx;">提示：选择后将开启下一周目</view>
   </view>
 </view>

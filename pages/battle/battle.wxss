@@ -605,3 +605,51 @@
   background-color: #e74c3c;
   color: #fff;
 }
+
+/* 遗物卡片样式 */
+.relic-list {
+  display: flex;
+  flex-direction: column;
+  gap: 20rpx;
+}
+
+.relic-card {
+  background-color: var(--bg-medium);
+  border: 4rpx solid var(--border-color);
+  padding: 20rpx;
+  display: flex;
+  align-items: center;
+  transition: all 0.1s;
+  box-shadow: 4rpx 4rpx 0 rgba(0,0,0,0.5);
+}
+
+.relic-card:active {
+  transform: translate(2rpx, 2rpx);
+  box-shadow: 2rpx 2rpx 0 rgba(0,0,0,0.5);
+  border-color: var(--success-color);
+}
+
+.relic-icon {
+  font-size: 60rpx;
+  margin-right: 30rpx;
+  width: 80rpx;
+  text-align: center;
+}
+
+.relic-card-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.relic-name {
+  font-weight: bold;
+  font-size: 28rpx;
+  color: var(--text-primary);
+}
+
+.relic-desc {
+  font-size: 24rpx;
+  color: var(--success-color);
+  margin-top: 4rpx;
+}
+

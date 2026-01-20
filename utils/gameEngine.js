@@ -57,16 +57,16 @@ function calculateBossReward(level) {
  * @param {Array} mercenaries - 佣兵数组
  * @returns {number} - 总DPS
  */
-function calculateTotalDPS(mercenaries, globalDamageBuff = 0, globalSpeedBuff = 0) {
+function calculateTotalDPS(mercenaries, globalDamageBuff = 0, globalSpeedBuff = 0, prestigeDamageMult = 1) {
     let totalDPS = 0;
 
     mercenaries.forEach(merc => {
         if (merc.recruited) {
             // 每个佣兵的DPS = 升级后伤害 / 升级后攻击间隔
-            let damage = calculateUpgradedDamage(merc);
+            let damage = calculateUpgradedDamage(merc, prestigeDamageMult);
             let interval = calculateUpgradedInterval(merc);
 
-            // 应用全局Buff
+            // 应用临时全局Buff
             if (globalDamageBuff) damage *= (1 + globalDamageBuff);
             if (globalSpeedBuff) interval *= (1 - globalSpeedBuff);
 
@@ -83,11 +83,10 @@ function calculateTotalDPS(mercenaries, globalDamageBuff = 0, globalSpeedBuff = 
  * @param {Object} mercenary - 佣兵对象
  * @returns {number} - 升级后的攻击力
  */
-function calculateUpgradedDamage(mercenary) {
+function calculateUpgradedDamage(mercenary, prestigeDamageMult = 1) {
     // 动态伤害系数精修：基础 1.24，成长 0.0007
 
     // [传说] 核心：等级独立，但数值联动
-    // 攻击力等级不直接上升，但在计算时使用 (攻击等级 + 攻速等级)
     let effectiveLevel = mercenary.damageLevel;
     if (mercenary.id === 'legend') {
         effectiveLevel = (mercenary.damageLevel || 0) + (mercenary.intervalLevel || 0);
@@ -108,6 +107,9 @@ function calculateUpgradedDamage(mercenary) {
     if (mercenary._stackingBuff) {
         damage *= (1 + mercenary._stackingBuff);
     }
+
+    // 应用重生加成 (永久)
+    damage *= prestigeDamageMult;
 
     return Math.floor(damage);
 }
@@ -146,24 +148,47 @@ function calculateUpgradedInterval(mercenary) {
 }
 
 /**
+ * 计算重生/遗物加成
+ * @param {Object} player - 玩家对象
+ * @returns {Object} - 加成倍率 (damage, gold, costReduction)
+ */
+function calculatePrestigeBonus(player) {
+    if (!player) return { damage: 1, gold: 1, costReduction: 1 };
+
+    const prestigeCount = player.prestigeCount || 0;
+    // 基础重生加成：每一周目提升 100% 伤害 (即 1, 2, 3...)
+    let damageMult = 1 + prestigeCount * 1.0;
+    let goldMult = 1 + prestigeCount * 0.5; // 每周目提升 50% 金币产出
+    let costReduction = 1;
+
+    // 遗物加成
+    if (player.relics && player.relics.length > 0) {
+        player.relics.forEach(relic => {
+            if (relic.type === 'damage') damageMult += relic.val; // 改为加法堆叠
+            if (relic.type === 'gold') goldMult += relic.val;     // 改为加法堆叠
+            if (relic.type === 'cost') costReduction *= (1 - relic.val); // 成本降低是乘法 (0.95 * 0.95...)
+        });
+    }
+
+    return { damage: damageMult, gold: goldMult, costReduction: costReduction };
+}
+
+/**
  * 计算佣兵升级成本 (统一)
  * @param {Object} mercenary - 佣兵对象
  * @returns {number} - 升级成本
  */
-function calculateMercenaryUpgradeCost(mercenary) {
+function calculateMercenaryUpgradeCost(mercenary, costReduction = 1) {
     // 统一等级 = 攻击等级 + 间隔等级
     const totalLevel = mercenary.damageLevel + mercenary.intervalLevel;
 
-    // 动态成本系数算法：
-    // 玩家要求：把初期系数稍微增加一点
-    // 基础系数 1.25 -> 1.28
-    // 每级增加 0.003
-    // Lv 0: 1.28
-    // Lv 43: 1.28 + 0.129 = 1.409 (合适)
-    // Lv 100: 1.28 + 0.3 = 1.58 (硬上限)
+    // 动态成本系数算法
     const dynamicExponent = 1.28 + (totalLevel * 0.003);
 
-    return Math.floor(mercenary.baseCost * Math.pow(dynamicExponent, totalLevel));
+    let cost = Math.floor(mercenary.baseCost * Math.pow(dynamicExponent, totalLevel));
+
+    // 应用遗物成本削减
+    return Math.floor(cost * costReduction);
 }
 
 /**
@@ -181,7 +206,7 @@ function calculateRecruitCost(mercenary) {
  * @param {number} damage - 伤害值
  * @returns {Object} - 更新后的Boss对象和是否击败
  */
-function dealDamageToBoss(boss, damage) {
+function dealDamageToBoss(boss, damage, prestigeGoldMult = 1) {
     const newHp = Math.max(0, boss.currentHp - damage);
     const defeated = newHp === 0;
     return {
@@ -190,7 +215,7 @@ function dealDamageToBoss(boss, damage) {
             currentHp: newHp
         },
         defeated,
-        goldEarned: damage  // 新增：造成的伤害=获得的金币
+        goldEarned: Math.floor(damage * prestigeGoldMult)  // 造成的伤害 * 重生金币加成 = 获得的金币
     };
 }
 
@@ -427,6 +452,25 @@ function getMercenarySkillDisplay(mercenary) {
     return null;
 }
 
+/**
+ * 遗物定义池
+ */
+const RELIC_POOL = [
+    { id: 'relic_dmg_1', name: '破损枪头', type: 'damage', val: 0.2, desc: '伤害 +20%', icon: '🔪' },
+    { id: 'relic_gold_1', name: '贪婪金坠', type: 'gold', val: 0.2, desc: '收益 +20%', icon: '🪙' },
+    { id: 'relic_cost_1', name: '学者纹章', type: 'cost', val: 0.1, desc: '升级成本 -10%', icon: '📜' },
+    { id: 'relic_dmg_2', name: '力量宝石', type: 'damage', val: 0.5, desc: '伤害 +50%', icon: '💎' },
+    { id: 'relic_gold_2', name: '聚宝盆', type: 'gold', val: 0.5, desc: '收益 +50%', icon: '🏺' }
+];
+
+/**
+ * 随机获取 3 个不重复的遗物选项
+ */
+function getRandomRelicChoices() {
+    const shuffled = [...RELIC_POOL].sort(() => 0.5 - Math.random());
+    return shuffled.slice(0, 3);
+}
+
 module.exports = {
     calculateTotalDPS,
     calculateUpgradedDamage,
@@ -440,5 +484,7 @@ module.exports = {
     calculateOfflineProgress,
     formatNumber,
     getMercenarySkill,
-    getMercenarySkillDisplay // 导出显示函数
+    getMercenarySkillDisplay,
+    calculatePrestigeBonus,
+    getRandomRelicChoices
 };
