@@ -5,7 +5,8 @@ const gameEngine = require('../../utils/gameEngine.js');
 Page({
     data: {
         mercenaries: [],
-        goldText: '0'
+        goldText: '0',
+        refreshTimer: null
     },
 
     onLoad() {
@@ -14,6 +15,24 @@ Page({
 
     onShow() {
         this.updateDisplay();
+        // 开启自动刷新定时器，实时同步金币变化
+        this.data.refreshTimer = setInterval(() => {
+            this.updateDisplay();
+        }, 500);
+    },
+
+    onHide() {
+        if (this.data.refreshTimer) {
+            clearInterval(this.data.refreshTimer);
+            this.data.refreshTimer = null;
+        }
+    },
+
+    onUnload() {
+        if (this.data.refreshTimer) {
+            clearInterval(this.data.refreshTimer);
+            this.data.refreshTimer = null;
+        }
     },
 
     // 更新显示
@@ -27,36 +46,52 @@ Page({
 
         const mercenaries = globalData.mercenaries.map(merc => {
             const recruitCost = gameEngine.calculateRecruitCost(merc);
-            const damageCost = gameEngine.calculateDamageUpgradeCost(merc);
-            const intervalCost = gameEngine.calculateIntervalUpgradeCost(merc);
+            // 使用统一的升级成本
+            const upgradeCost = gameEngine.calculateMercenaryUpgradeCost(merc);
 
             const currentDamage = gameEngine.calculateUpgradedDamage(merc);
             const currentInterval = gameEngine.calculateUpgradedInterval(merc);
+
+            // 获取技能显示信息
+            const skillInfo = gameEngine.getMercenarySkillDisplay(merc);
 
             // 计算DPS: 只有雇佣了才计算
             const mercDPS = merc.recruited ? (currentDamage / currentInterval) : 0;
 
             // 判断是否买得起
             const canAffordRecruit = !merc.recruited && globalData.player.gold >= recruitCost;
-            const canAffordDamage = merc.recruited && globalData.player.gold >= damageCost;
-            const canAffordInterval = merc.recruited && globalData.player.gold >= intervalCost;
+            // 升级成本相同
+            const canAffordUpgrade = merc.recruited && globalData.player.gold >= upgradeCost;
 
             return {
                 ...merc,
                 currentDamage,
                 currentInterval,
                 recruitCostText: gameEngine.formatNumber(recruitCost),
-                damageCostText: gameEngine.formatNumber(damageCost),
-                intervalCostText: gameEngine.formatNumber(intervalCost),
+                // 两个按钮显示相同的成本
+                damageCostText: gameEngine.formatNumber(upgradeCost),
+                intervalCostText: gameEngine.formatNumber(upgradeCost),
                 dpsText: gameEngine.formatNumber(mercDPS),
                 canAffordRecruit,
-                canAffordDamage,
-                canAffordInterval
+                // 用于样式判断
+                canAffordDamage: canAffordUpgrade,
+                canAffordInterval: canAffordUpgrade,
+                skillInfo // 传递给WXML
             };
         });
 
+        const currentJson = JSON.stringify(mercenaries);
+
+        // 只有当数据真正变化时才更新列表，防止闪烁
+        if (currentJson !== this.data._lastJson) {
+            this.setData({
+                mercenaries
+            });
+            this.data._lastJson = currentJson;
+        }
+
+        // 金币总是需要更新的
         this.setData({
-            mercenaries,
             goldText: gameEngine.formatNumber(globalData.player.gold)
         });
     },
@@ -105,7 +140,7 @@ Page({
             return;
         }
 
-        const cost = gameEngine.calculateDamageUpgradeCost(mercenary);
+        const cost = gameEngine.calculateMercenaryUpgradeCost(mercenary);
 
         if (globalData.player.gold >= cost) {
             globalData.player.gold -= cost;
@@ -136,7 +171,7 @@ Page({
             return;
         }
 
-        const cost = gameEngine.calculateIntervalUpgradeCost(mercenary);
+        const cost = gameEngine.calculateMercenaryUpgradeCost(mercenary);
 
         if (globalData.player.gold >= cost) {
             globalData.player.gold -= cost;

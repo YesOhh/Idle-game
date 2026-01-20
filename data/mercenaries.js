@@ -16,7 +16,7 @@ const MERCENARIES_DATA = [
         id: 'warrior',
         name: '战士',
         baseCost: 10,
-        damage: 1,
+        damage: 10,
         attackInterval: 1.0,
         description: '基础近战单位，攻击稳定',
         icon: '⚔️'
@@ -24,8 +24,8 @@ const MERCENARIES_DATA = [
     {
         id: 'archer',
         name: '弓箭手',
-        baseCost: 50,
-        damage: 3,
+        baseCost: 500,
+        damage: 400,
         attackInterval: 1.5,
         description: '远程攻击，伤害较高',
         icon: '🏹'
@@ -33,8 +33,8 @@ const MERCENARIES_DATA = [
     {
         id: 'mage',
         name: '法师',
-        baseCost: 200,
-        damage: 10,
+        baseCost: 2000,
+        damage: 2000,
         attackInterval: 2.0,
         description: '魔法攻击，伤害巨大',
         icon: '🔮'
@@ -42,8 +42,8 @@ const MERCENARIES_DATA = [
     {
         id: 'knight',
         name: '骑士',
-        baseCost: 800,
-        damage: 40,
+        baseCost: 8000,
+        damage: 10000,
         attackInterval: 1.2,
         description: '重装骑兵，攻守兼备',
         icon: '🛡️'
@@ -51,8 +51,8 @@ const MERCENARIES_DATA = [
     {
         id: 'dragon',
         name: '龙骑士',
-        baseCost: 5000,
-        damage: 200,
+        baseCost: 50000,
+        damage: 80000,
         attackInterval: 2.5,
         description: '传说中的龙骑士，毁天灭地',
         icon: '🐉'

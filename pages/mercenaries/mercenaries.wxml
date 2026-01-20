@@ -47,6 +47,18 @@
           <text class="stat-label">总DPS:</text>
           <text class="stat-value text-success">{{item.dpsText}}</text>
         </view>
+
+        <!-- 技能显示区域 -->
+        <view wx:if="{{item.skillInfo}}" class="stat-row skill-row" style="margin-top: 10rpx; padding-top: 10rpx; border-top: 2rpx dashed #ccc;">
+            <view style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                <text class="{{item.skillInfo.isUnlocked ? 'text-gold' : 'text-muted'}}" style="font-weight: bold;">
+                    {{item.skillInfo.name}}
+                </text>
+                <text class="stat-value" style="font-size: 22rpx; max-width: 70%; text-align: right;">
+                    {{item.skillInfo.desc}}
+                </text>
+            </view>
+        </view>
       </view>
       
       <!-- 未雇佣时显示招募按钮 -->

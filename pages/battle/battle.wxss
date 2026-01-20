@@ -65,6 +65,27 @@
   z-index: 100;
 }
 
+.damage-number.crit {
+  color: #f1c40f; /* 暴击金色 */
+  font-size: 50rpx; /* 更大 */
+  text-shadow: 2rpx 2rpx 0 #c0392b; /* 红色描边 */
+  z-index: 110;
+}
+
+.damage-number.skill {
+  color: #3498db; /* 技能蓝色 */
+  font-size: 40rpx;
+  text-shadow: 2rpx 2rpx 0 #2c3e50;
+  z-index: 105;
+}
+
+.damage-number.skill-crit {
+  color: #e67e22; /* 暴击橙色 */
+  font-size: 52rpx;
+  text-shadow: 2rpx 2rpx 0 #d35400;
+  z-index: 115;
+}
+
 @keyframes floatUp {
   0% {
     opacity: 1;
@@ -456,4 +477,94 @@
   font-size: 28rpx;
   color: var(--text-primary);
   padding: 10rpx 0;
+}
+/* 弹窗样式结束 */
+
+/* 新的佣兵属性网格布局 */
+.merc-stats-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 6rpx;
+  align-items: flex-end;
+  width: 100%; /* 确保占满右侧空间 */
+}
+
+.stats-row-compact {
+  display: flex;
+  gap: 6rpx;
+  width: 100%;
+  justify-content: flex-end;
+}
+
+.stat-pill {
+  display: flex;
+  align-items: center;
+  gap: 6rpx;
+  padding: 4rpx 8rpx;
+  border-radius: 6rpx;
+  background-color: rgba(0, 0, 0, 0.2);
+  border: 1rpx solid rgba(255, 255, 255, 0.1);
+  /* min-width由内容撑开，不再强制 */
+}
+
+.stat-pill.small {
+  flex: 1; /* 平分空间 */
+  justify-content: center;
+}
+
+.stat-pill.dps {
+  width: 100%;
+  box-sizing: border-box;
+  justify-content: space-between;
+}
+
+.stat-pill.damage { border-color: rgba(231, 76, 60, 0.3); background-color: rgba(231, 76, 60, 0.1); }
+.stat-pill.speed { border-color: rgba(243, 156, 18, 0.3); background-color: rgba(243, 156, 18, 0.1); }
+.stat-pill.dps { border-color: rgba(46, 204, 113, 0.3); background-color: rgba(46, 204, 113, 0.1); }
+
+.stat-icon {
+  font-size: 18rpx;
+  flex-shrink: 0; /* 防止图标被压缩 */
+}
+
+.stat-val {
+  font-size: 20rpx;
+  font-weight: bold;
+  color: var(--text-primary);
+  text-align: right;
+  white-space: nowrap; /* 核心修复：禁止换行 */
+  overflow: hidden;
+  text-overflow: ellipsis; /* 如果实在太长显示省略号，虽然后面有很大空间 */
+  flex: 1; /* 占据剩余空间 */
+}
+
+.stat-lvl {
+  font-size: 16rpx;
+  color: var(--text-secondary);
+  background-color: rgba(0, 0, 0, 0.3);
+  padding: 2rpx 4rpx;
+  border-radius: 4rpx;
+  white-space: nowrap; /* 禁止等级换行 */
+  flex-shrink: 0;
+}
+
+/* 重置按钮 */
+.reset-section {
+  padding: 40rpx 20rpx;
+  display: flex;
+  justify-content: center;
+}
+
+.reset-btn {
+  background-color: var(--bg-dark);
+  color: #e74c3c;
+  border: 2rpx solid #e74c3c;
+  font-size: 24rpx;
+  padding: 10rpx 30rpx;
+  border-radius: 10rpx;
+}
+
+.reset-btn:active {
+  background-color: #e74c3c;
+  color: #fff;
 }

@@ -9,7 +9,7 @@
       <view class="boss-icon {{attacking ? 'shake' : ''}}">👹</view>
       
       <!-- 伤害数字动画 -->
-      <view wx:for="{{damageNumbers}}" wx:key="id" class="damage-number" 
+      <view wx:for="{{damageNumbers}}" wx:key="id" class="damage-number {{item.type}}" 
             style="left: {{item.x}}rpx; top: {{item.y}}rpx; animation-delay: {{item.delay}}ms">
         {{item.damage}}
       </view>
@@ -32,21 +32,12 @@
       <text class="stat-compact-label">💰</text>
       <text class="stat-compact-value">{{goldText}}</text>
     </view>
-    <view class="stat-compact">
-      <text class="stat-compact-label">⚔️</text>
-      <text class="stat-compact-value">{{manualDamageText}}</text>
-    </view>
-    <view class="stat-compact">
-      <text class="stat-compact-label">🔥</text>
-      <text class="stat-compact-value">{{dpsText}}/s</text>
-    </view>
   </view>
   
   <!-- 佣兵列表 -->
-  <view class="mercenaries-section">
-    <view class="section-title">佣兵管理</view>
-    
-    <scroll-view scroll-y class="mercenaries-scroll">
+  <scroll-view scroll-y class="mercenaries-scroll" style="max-height: 60vh;">
+    <view class="mercenaries-section">
+      
       <view wx:for="{{mercenaries}}" wx:key="id" class="merc-item">
         <view class="merc-left">
           <text class="merc-icon-small">{{item.icon}}</text>
@@ -57,30 +48,54 @@
         </view>
         
         <view class="merc-right">
-          <view class="merc-dps-info">
+          <!-- 未雇佣显示DPS预览 -->
+          <view wx:if="{{!item.recruited}}" class="merc-dps-info">
             <text class="merc-dps-label">DPS:</text>
             <text class="merc-dps-value">{{item.dpsText}}</text>
           </view>
+
+          <!-- 已雇佣显示详细属性 (Grid布局 - 2行) -->
+          <view wx:else class="merc-stats-grid">
+             <!-- 第一行: 攻击 + 攻速 -->
+             <view class="stats-row-compact">
+                <view class="stat-pill damage small">
+                   <text class="stat-icon">⚔️</text>
+                   <text class="stat-val">{{item.damageText}}</text>
+                   <!-- 空间不够时可以隐藏Lv，或者缩小 -->
+                   <!-- <text class="stat-lvl">Lv.{{item.damageLevel}}</text> -->
+                </view>
+                
+                <view class="stat-pill speed small">
+                   <text class="stat-icon">⚡</text>
+                   <text class="stat-val">{{item.intervalText}}s</text>
+                </view>
+             </view>
+
+             <!-- 第二行: DPS -->
+             <view class="stat-pill dps">
+                <text class="stat-icon">🔥</text>
+                <text class="stat-val">DPS: {{item.dpsText}}</text>
+             </view>
+          </view>
+
+          <!-- 仅未雇佣时显示招募按钮 -->
           <button 
+            wx:if="{{!item.recruited}}"
             class="merc-recruit-btn {{item.canAfford ? '' : 'disabled'}}" 
             bindtap="onRecruitMercenary" 
             data-id="{{item.id}}"
-            hidden="{{item.recruited}}"
             disabled="{{!item.canAfford}}">
             {{item.costText}}
           </button>
-          <text wx:if="{{item.recruited}}" class="merc-recruited-label" style="font-size: 20rpx; color: #888;">已雇佣</text>
         </view>
       </view>
-    </scroll-view>
-  </view>
-  
-  <!-- 升级点击伤害按钮（缩小） -->
-  <view class="upgrade-click-section">
-    <button class="upgrade-click-btn" bindtap="onUpgradeClick">
-      升级点击 ({{upgradeClickCostText}})
-    </button>
-  </view>
+    </view>
+    
+    <!-- 重置游戏按钮 -->
+    <view class="reset-section">
+      <button class="reset-btn" bindtap="onResetGame">🔄 重新开始游戏</button>
+    </view>
+  </scroll-view>
 </view>
 
 <!-- 离线收益弹窗 -->
