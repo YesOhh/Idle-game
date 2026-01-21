@@ -187,9 +187,9 @@ function calculatePrestigeBonus(player) {
     };
 
     const prestigeCount = player.prestigeCount || 0;
-    // 基础重生加成：每一周目提升 100% 伤害 (即 1, 2, 3...)
-    let damageMult = 1 + prestigeCount * 1.0;
-    let goldMult = 1 + prestigeCount * 0.5; // 每周目提升 50% 金币产出
+    // 基础重生加成：移除自动加成，转为完全靠圣物
+    let damageMult = 1;
+    let goldMult = 1;
     let costReduction = 1;
 
     // 新增属性
@@ -200,12 +200,21 @@ function calculatePrestigeBonus(player) {
     // 遗物加成
     if (player.relics && player.relics.length > 0) {
         player.relics.forEach(relic => {
-            if (relic.type === 'damage') damageMult += relic.val;
-            if (relic.type === 'gold') goldMult += relic.val;
-            if (relic.type === 'cost') costReduction *= (1 - relic.val);
-            if (relic.type === 'speed') speedBuff += relic.val;
-            if (relic.type === 'crit_chance') critChance += relic.val;
-            if (relic.type === 'crit_mult') critMult += relic.val;
+            const level = relic.level || 1;
+            const totalVal = relic.val * level;
+
+            if (relic.type === 'damage') damageMult += totalVal;
+            if (relic.type === 'gold') goldMult += totalVal;
+            if (relic.type === 'cost') {
+                // 成本削减堆叠：1 - (1-val)^level 或 简单线性？
+                // 推荐线性但封顶，或者乘法：
+                for (let i = 0; i < level; i++) {
+                    costReduction *= (1 - relic.val);
+                }
+            }
+            if (relic.type === 'speed') speedBuff += totalVal;
+            if (relic.type === 'crit_chance') critChance += totalVal;
+            if (relic.type === 'crit_mult') critMult += totalVal;
         });
     }
 

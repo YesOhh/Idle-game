@@ -1,0 +1,164 @@
+/* pages/relics/relics.wxss */
+.relic-container {
+  min-height: 100vh;
+  background-color: #1a1a2e;
+  padding: 30rpx;
+  color: #ecf0f1;
+  font-family: monospace;
+}
+
+.header {
+  text-align: center;
+  margin-bottom: 40rpx;
+}
+
+.title {
+  font-size: 44rpx;
+  font-weight: bold;
+  color: #f1c40f;
+  display: block;
+}
+
+.subtitle {
+  font-size: 24rpx;
+  color: #95a5a6;
+  margin-top: 10rpx;
+}
+
+.bonus-card {
+  background: rgba(44, 62, 80, 0.8);
+  border: 4rpx solid #34495e;
+  border-radius: 12rpx;
+  padding: 20rpx;
+  margin-bottom: 40rpx;
+}
+
+.card-title {
+  font-size: 28rpx;
+  color: #f1c40f;
+  margin-bottom: 20rpx;
+  text-align: center;
+}
+
+.bonus-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20rpx;
+}
+
+.bonus-item {
+  background: rgba(0, 0, 0, 0.2);
+  padding: 15rpx;
+  border-radius: 8rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.label {
+  font-size: 20rpx;
+  color: #bdc3c7;
+}
+
+.value {
+  font-size: 28rpx;
+  color: #2ecc71;
+  font-weight: bold;
+  margin-top: 4rpx;
+}
+
+.relic-list-scroll {
+  height: calc(100vh - 500rpx);
+}
+
+.relic-card {
+  background: rgba(52, 73, 94, 0.6);
+  border: 4rpx solid #2c3e50;
+  border-radius: 12rpx;
+  padding: 24rpx;
+  margin-bottom: 20rpx;
+  transition: all 0.2s;
+}
+
+.relic-card.selected {
+  border-color: #f1c40f;
+  background: rgba(52, 73, 94, 0.9);
+}
+
+.relic-main {
+  display: flex;
+  align-items: center;
+}
+
+.relic-icon {
+  font-size: 60rpx;
+  margin-right: 24rpx;
+}
+
+.relic-info {
+  flex: 1;
+}
+
+.relic-name-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.relic-name {
+  font-size: 30rpx;
+  font-weight: bold;
+  color: #ecf0f1;
+}
+
+.relic-level {
+  font-size: 24rpx;
+  color: #f1c40f;
+  background: rgba(0,0,0,0.3);
+  padding: 2rpx 10rpx;
+  border-radius: 4rpx;
+}
+
+.relic-desc {
+  font-size: 22rpx;
+  color: #bdc3c7;
+  margin-top: 8rpx;
+}
+
+.relic-detail {
+  margin-top: 20rpx;
+  animation: fadeIn 0.3s;
+}
+
+.divider {
+  height: 2rpx;
+  background: rgba(255,255,255,0.1);
+  margin-bottom: 15rpx;
+}
+
+.detail-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 22rpx;
+  margin-bottom: 10rpx;
+}
+
+.detail-val {
+  color: #2ecc71;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 100rpx 0;
+  color: #7f8c8d;
+}
+
+.empty-icon {
+  font-size: 80rpx;
+  margin-bottom: 20rpx;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-10rpx); }
+  to { opacity: 1; transform: translateY(0); }
+}

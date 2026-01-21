@@ -1,7 +1,8 @@
 {
     "pages": [
         "pages/battle/battle",
-        "pages/mercenaries/mercenaries"
+        "pages/mercenaries/mercenaries",
+        "pages/relics/relics"
     ],
     "window": {
         "backgroundTextStyle": "dark",
@@ -23,6 +24,10 @@
             {
                 "pagePath": "pages/mercenaries/mercenaries",
                 "text": "🛡️ 佣兵"
+            },
+            {
+                "pagePath": "pages/relics/relics",
+                "text": "📜 圣物"
             }
         ]
     },

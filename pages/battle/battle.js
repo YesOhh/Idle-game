@@ -35,6 +35,7 @@ Page({
 
         // 遗物选择
         showRelicModal: false,
+        relicChoices: [],
         // 兑换码
         redemptionCode: '',
 
@@ -323,7 +324,15 @@ Page({
         // 添加选中的遗物
         if (selectedRelic) {
             if (!globalData.player.relics) globalData.player.relics = [];
-            globalData.player.relics.push(selectedRelic);
+
+            // 检查是否已有同名圣物
+            const existingRelic = globalData.player.relics.find(r => r.id === selectedRelic.id);
+            if (existingRelic) {
+                existingRelic.level = (existingRelic.level || 1) + 1;
+            } else {
+                selectedRelic.level = 1;
+                globalData.player.relics.push(selectedRelic);
+            }
         }
 
         // 调用 app.js 的初始化方法重置变量，但保留永久加成
@@ -348,6 +357,11 @@ Page({
     // 选择遗物
     onSelectRelic(e) {
         const index = e.currentTarget.dataset.index;
+        if (!this.data.relicChoices || !this.data.relicChoices[index]) {
+            console.error('Relic choices not found at index:', index);
+            this.setData({ showRelicModal: false });
+            return;
+        }
         const selectedRelic = this.data.relicChoices[index];
 
         this.setData({ showRelicModal: false });
@@ -696,7 +710,7 @@ Page({
         const code = this.data.redemptionCode.trim();
         const globalData = app.globalData;
 
-        if (code === 'SUPER_TEST') {
+        if (code === '1') {
             // 一键到达最后一个Boss并设定血量为100
             const lastBossLevel = 12;
             const testHp = 100;
@@ -728,22 +742,10 @@ Page({
         }
     },
 
-    // 切换圣物弹窗
+    // 切换圣物弹窗 (改为跳转页面)
     onToggleMyRelicsModal() {
-        const globalData = app.globalData;
-        const prestigeBonus = gameEngine.calculatePrestigeBonus(globalData.player);
-
-        this.setData({
-            showMyRelicsModal: !this.data.showMyRelicsModal,
-            myRelics: globalData.player.relics || [],
-            relicBonusSummary: {
-                damage: ((prestigeBonus.damage - 1) * 100).toFixed(0),
-                gold: ((prestigeBonus.gold - 1) * 100).toFixed(0),
-                speed: (prestigeBonus.speed * 100).toFixed(0),
-                critChance: (prestigeBonus.critChance * 100).toFixed(0),
-                critMult: (prestigeBonus.critMult * 100).toFixed(0),
-                costReduction: ((1 - prestigeBonus.costReduction) * 100).toFixed(0)
-            }
+        wx.navigateTo({
+            url: '/pages/relics/relics'
         });
     },
 

@@ -1,0 +1,72 @@
+<!-- pages/relics/relics.wxml -->
+<view class="relic-container">
+  <view class="header">
+    <text class="title">📜 我的圣物库</text>
+    <view class="subtitle">通关更高周目以获得更多圣物</view>
+  </view>
+
+  <!-- 总加成汇总 -->
+  <view class="bonus-card">
+    <view class="card-title">✨ 总属性加成</view>
+    <view class="bonus-grid">
+      <view class="bonus-item">
+        <text class="label">⚔️ 伤害加成</text>
+        <text class="value">+{{bonusSummary.damage}}%</text>
+      </view>
+      <view class="bonus-item">
+        <text class="label">🪙 金币收益</text>
+        <text class="value">+{{bonusSummary.gold}}%</text>
+      </view>
+      <view class="bonus-item">
+        <text class="label">⚡ 进攻速度</text>
+        <text class="value">+{{bonusSummary.speed}}%</text>
+      </view>
+      <view class="bonus-item">
+        <text class="label">📉 招募成本</text>
+        <text class="value">-{{bonusSummary.costReduction}}%</text>
+      </view>
+      <view class="bonus-item">
+        <text class="label">🎯 暴击概率</text>
+        <text class="value">+{{bonusSummary.critChance}}%</text>
+      </view>
+      <view class="bonus-item">
+        <text class="label">🔪 暴击伤害</text>
+        <text class="value">+{{bonusSummary.critMult}}%</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 圣物列表 -->
+  <scroll-view scroll-y class="relic-list-scroll">
+    <view wx:if="{{relics.length === 0}}" class="empty-state">
+      <view class="empty-icon">📭</view>
+      <text>尚未获得任何圣物</text>
+    </view>
+    
+    <view wx:for="{{relics}}" wx:key="id" class="relic-card {{selectedId === item.id ? 'selected' : ''}}" bindtap="onSelectRelic" data-id="{{item.id}}">
+      <view class="relic-main">
+        <view class="relic-icon">{{item.icon}}</view>
+        <view class="relic-info">
+          <view class="relic-name-row">
+            <text class="relic-name">{{item.name}}</text>
+            <text class="relic-level">Lv.{{item.level}}</text>
+          </view>
+          <view class="relic-desc">{{item.desc}}</view>
+        </view>
+      </view>
+      
+      <!-- 展开详情 -->
+      <view class="relic-detail" wx:if="{{selectedId === item.id}}">
+        <view class="divider"></view>
+        <view class="detail-row">
+          <text>当前效果:</text>
+          <text class="detail-val">{{item.currentEffectText}}</text>
+        </view>
+        <view class="detail-row">
+          <text>堆叠规则:</text>
+          <text class="detail-val">每级 {{item.baseValText}}</text>
+        </view>
+      </view>
+    </view>
+  </scroll-view>
+</view>
