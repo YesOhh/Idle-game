@@ -18,13 +18,7 @@
       <view class="pixel-divider"></view>
       
       <view class="merc-stats">
-        <view class="stat-row">
-          <text class="stat-label">状态:</text>
-          <text class="stat-value {{item.recruited ? 'text-success' : 'text-muted'}}">
-            {{item.recruited ? '已雇佣' : '未雇佣'}}
-          </text>
-        </view>
-        
+
         <view class="stat-row">
           <text class="stat-label">{{item.recruited ? '攻击力:' : '初始攻击:'}}</text>
           <text class="stat-value">{{item.currentDamageText}} {{item.recruited ? '(Lv.' + item.damageLevel + ')' : ''}}</text>

@@ -505,7 +505,7 @@ function getMercenarySkillDisplay(mercenary) {
         return {
             name: '【毁灭龙息】',
             isUnlocked,
-            desc: isUnlocked ? `10%几率触发30倍伤害及全队${bonusStr}` : `（达到 Lv.${unlockLv} 解锁）`
+            desc: isUnlocked ? `10%几率触发30倍伤害及全队${bonusStr} (持续2秒)` : `（达到 Lv.${unlockLv} 解锁）`
         };
     }
 
