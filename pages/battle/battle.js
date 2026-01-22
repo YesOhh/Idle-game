@@ -42,21 +42,42 @@ Page({
         // 我的圣物展示
         showMyRelicsModal: false,
         myRelics: [],
-        relicBonusSummary: null
+        relicBonusSummary: null,
+
+        // 战况统计相关
+        showStatsModal: false,
+        bossStats: [], // { level, name, timeTaken }
+        totalTimeSeconds: 0,
+
+        // 自动化测试相关
+        upgradeTypes: [
+            { id: 'damage', label: '⚔️ 攻击' },
+            { id: 'interval', label: '⚡ 攻速' }
+        ],
+        autoUpgradeEnabled: false,
+        autoUpgradeMercId: '',
+        autoUpgradeMercName: '',
+        autoUpgradeType: 'damage',
+        autoUpgradeTypeLabel: '⚔️ 攻击'
     },
 
     onLoad() {
         this.initGame();
         this.startAutoAttack();
+        // 记录第一个Boss的开始时间
+        this.data.currentBossStartTime = Date.now();
     },
 
     onUnload() {
         this.stopAutoAttack();
+        // 清理缓存的各种 Buff 定时器
+        if (this._globalSpeedTimer) clearTimeout(this._globalSpeedTimer);
+        if (this._globalDamageTimer) clearTimeout(this._globalDamageTimer);
     },
 
     onHide() {
-        // 切换到其他页面（如佣兵页）时不停止攻击，保持后台运行
-        // this.stopAutoAttack(); 
+        // 建议在隐藏时也停止心跳，节约后台功耗
+        this.stopAutoAttack();
     },
 
     onShow() {
@@ -154,7 +175,14 @@ Page({
     },
 
     // 更新战斗统计信息（高频：HP、金币）
-    updateBattleStats() {
+    updateBattleStats(force = false) {
+        // 性能优化：节流，每 150ms 最多真实更新一次 UI，除非 force 为 true
+        const now = Date.now();
+        if (!force && this._lastStatsUpdateTime && now - this._lastStatsUpdateTime < 150) {
+            return;
+        }
+        this._lastStatsUpdateTime = now;
+
         const globalData = app.globalData;
         const boss = globalData.boss;
         const player = globalData.player;
@@ -234,8 +262,8 @@ Page({
     },
 
     // 综合更新（用于初始化或重要事件）
-    updateDisplay() {
-        this.updateBattleStats();
+    updateDisplay(force = false) {
+        this.updateBattleStats(force);
         this.updateMercenaryList();
     },
 
@@ -289,6 +317,26 @@ Page({
         const currentLevel = globalData.boss.level;
         globalData.boss.defeated++;
 
+        // 记录时间统计
+        const endTime = Date.now();
+        const startTime = this.data.currentBossStartTime || endTime;
+        const timeTaken = Math.floor((endTime - startTime) / 1000);
+
+        const newStat = {
+            level: currentLevel,
+            name: globalData.boss.name,
+            timeTaken: timeTaken
+        };
+
+        const bossStats = [...(this.data.bossStats || []), newStat];
+        const totalTimeSeconds = (this.data.totalTimeSeconds || 0) + timeTaken;
+
+        this.setData({
+            bossStats,
+            totalTimeSeconds,
+            currentBossStartTime: endTime // 为下一个Boss重置开始时间
+        });
+
         // 检查是否通关 (击败 12 号 Boss)
         if (currentLevel === 12) {
             this.stopAutoAttack();
@@ -312,8 +360,8 @@ Page({
             duration: 1000
         });
 
-        // Boss击败时可以做一次全量更新
-        this.updateDisplay();
+        // Boss击败时可以做一次全量更新 (强制刷新以确保视觉一致)
+        this.updateDisplay(true);
     },
 
     // 触发重生
@@ -490,13 +538,13 @@ Page({
                                     // 应用全局加速Buff
                                     this.data._globalSpeedBuff = skill.val;
                                     this.setData({ isSpeedBuffActive: true });
-                                    this.updateDisplay();
+                                    this.updateDisplay(true);
 
-                                    clearTimeout(this.data._globalSpeedTimer);
-                                    this.data._globalSpeedTimer = setTimeout(() => {
+                                    if (this._globalSpeedTimer) clearTimeout(this._globalSpeedTimer);
+                                    this._globalSpeedTimer = setTimeout(() => {
                                         this.data._globalSpeedBuff = 0;
                                         this.setData({ isSpeedBuffActive: false });
-                                        this.updateDisplay();
+                                        this.updateDisplay(true);
                                     }, skill.duration);
 
                                     this.showDamageNumber('奥术激涌!', null, 'skill-mage');
@@ -510,13 +558,13 @@ Page({
                                     // 应用全局伤害Buff
                                     this.data._globalDamageBuff = skill.buffVal;
                                     this.setData({ isDamageBuffActive: true });
-                                    this.updateDisplay();
+                                    this.updateDisplay(true);
 
-                                    clearTimeout(this.data._globalDamageTimer);
-                                    this.data._globalDamageTimer = setTimeout(() => {
+                                    if (this._globalDamageTimer) clearTimeout(this._globalDamageTimer);
+                                    this._globalDamageTimer = setTimeout(() => {
                                         this.data._globalDamageBuff = 0;
                                         this.setData({ isDamageBuffActive: false });
-                                        this.updateDisplay();
+                                        this.updateDisplay(true);
                                     }, skill.duration);
 
                                     this.showDamageNumber('毁灭龙息!', null, 'skill-dragon');
@@ -559,12 +607,79 @@ Page({
                 this.dealDamage(totalFrameDamage);
             }
 
+            // 3. 自动化测试检测 (每100ms检测一次金币是否足够升级)
+            if (this.data.autoUpgradeEnabled) {
+                this.handleAutoUpgradeLogic();
+            }
+
         }, 100);
 
         // 2. 界面状态循环 (0.5秒) - 此时才刷新按钮状态，避免闪烁
         this.data.uiTimer = setInterval(() => {
             this.updateMercenaryList();
         }, 500);
+    },
+
+    // 自动化测试控制器
+    onMercChange(e) {
+        const index = e.detail.value;
+        const merc = this.data.mercenaries[index];
+        this.setData({
+            autoUpgradeMercId: merc.id,
+            autoUpgradeMercName: merc.name
+        });
+    },
+
+    onTypeChange(e) {
+        const index = e.detail.value;
+        const typeObj = this.data.upgradeTypes[index];
+        this.setData({
+            autoUpgradeType: typeObj.id,
+            autoUpgradeTypeLabel: typeObj.label
+        });
+    },
+
+    onToggleAutoUpgrade(e) {
+        this.setData({
+            autoUpgradeEnabled: e.detail.value
+        });
+        if (e.detail.value) {
+            wx.showToast({
+                title: '自动升级已开启',
+                icon: 'none'
+            });
+        }
+    },
+
+    // 自动化升级逻辑核心
+    handleAutoUpgradeLogic() {
+        if (!this.data.autoUpgradeEnabled || !this.data.autoUpgradeMercId) return;
+
+        const globalData = app.globalData;
+        const merc = globalData.mercenaries.find(m => m.id === this.data.autoUpgradeMercId);
+
+        if (!merc || !merc.recruited) return;
+
+        const prestigeBonus = gameEngine.calculatePrestigeBonus(globalData.player);
+        const cost = gameEngine.calculateMercenaryUpgradeCost(merc, prestigeBonus.costReduction);
+
+        if (globalData.player.gold >= cost) {
+            globalData.player.gold -= cost;
+
+            if (this.data.autoUpgradeType === 'damage') {
+                merc.damageLevel++;
+                merc.currentDamage = gameEngine.calculateUpgradedDamage(merc, prestigeBonus.damage);
+            } else {
+                merc.intervalLevel++;
+                merc.currentInterval = gameEngine.calculateUpgradedInterval(merc);
+            }
+
+            // 提示一下，但不刷屏
+            console.log(`[AutoTest] 自动升级了 ${merc.name} 的 ${this.data.autoUpgradeType}`);
+
+            // 只有当有升级发生时，才可能需要刷新统计信息显示
+            this.updateDisplay();
+        }
     },
 
     // 停止自动攻击
@@ -603,6 +718,11 @@ Page({
                     app.globalData.mercenaries = mercData.initMercenaries();
 
                     // 5. 重新初始化页面
+                    this.setData({
+                        bossStats: [],
+                        totalTimeSeconds: 0,
+                        currentBossStartTime: Date.now()
+                    });
                     this.initGame();
                     this.updateDisplay();
 
@@ -617,49 +737,76 @@ Page({
 
     // 显示伤害数字
     showDamageNumber(damage, e, type = '') {
-        // 限制同屏数字数量，防止卡顿
-        if (this.data.damageNumbers.length > 20) {
-            this.data.damageNumbers.shift();
+        // 性能优化：不再为每个数字设置移除定时器，以免 2 小时后闭包过多造成 OOM
+        // 依靠数组上限（20个）自动更替旧数字。CSS 动画结束后会自动看不见，不影响逻辑。
+        let damageNumbers = [...this.data.damageNumbers];
+        if (damageNumbers.length >= 20) {
+            damageNumbers.shift();
         }
 
         const id = this.data.damageNumberId + 1;
         let x, y;
 
         if (e && e.touches && e.touches.length > 0) {
-            // 点击位置
-            x = e.touches[0].clientX * 2; // px转rpx大概倍率，或者直接用px
-            y = e.touches[0].clientY * 2;
-            // 小程序单位对其比较麻烦，这里简化处理：
-            // 直接随机位置，忽略点击精确位置，为了视觉统一
             x = Math.random() * 200 + 150;
             y = Math.random() * 100 + 100;
         } else {
-            // 自动攻击（暴击）随机位置
             x = Math.random() * 300 + 100;
             y = Math.random() * 100 + 150;
         }
 
-        const damageNumbers = [...this.data.damageNumbers, {
+        damageNumbers.push({
             id,
             damage: typeof damage === 'string' ? damage : gameEngine.formatNumber(damage),
             x,
             y,
             delay: 0,
-            type // 'crit' or ''
-        }];
+            type
+        });
 
         this.setData({
             damageNumbers,
             damageNumberId: id
         });
-
-        // 1秒后移除
-        setTimeout(() => {
-            this.setData({
-                damageNumbers: this.data.damageNumbers.filter(item => item.id !== id)
-            });
-        }, 1000);
     },
+
+    // 格式化时间显示
+    formatTime(seconds) {
+        if (seconds < 60) return `${seconds}s`;
+        if (seconds < 3600) {
+            const m = Math.floor(seconds / 60);
+            const s = seconds % 60;
+            return `${m}m ${s}s`;
+        }
+        const h = Math.floor(seconds / 3600);
+        const m = Math.floor((seconds % 3600) / 60);
+        const s = seconds % 60;
+        return `${h}h ${m}m ${s}s`;
+    },
+
+    // 战况统计弹窗控制
+    onShowStats() {
+        // 在显示前可以做一些时间处理
+        const stats = this.data.bossStats.map(s => ({
+            ...s,
+            timeStr: this.formatTime(s.timeTaken)
+        }));
+
+        const totalTimeStr = this.formatTime(this.data.totalTimeSeconds);
+
+        this.setData({
+            showStatsModal: true,
+            displayBossStats: stats,
+            displayTotalTime: totalTimeStr
+        });
+    },
+
+    closeStatsModal() {
+        this.setData({
+            showStatsModal: false
+        });
+    },
+
     // 关闭离线收益弹窗
     closeOfflineModal() {
         this.setData({

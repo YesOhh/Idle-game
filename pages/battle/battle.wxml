@@ -36,13 +36,7 @@
       <text class="stat-compact-value">{{goldText}}</text>
     </view>
   </view>
-  
-    <view class="game-stats">
-      <view class="stat-item">
-        <text class="stat-label">周目:</text>
-        <text class="stat-value">{{prestigeCount + 1}}</text>
-      </view>
-    </view>
+  <!-- 佣兵列表 -->
   
   <!-- 佣兵列表 -->
   <scroll-view scroll-y class="mercenaries-scroll" style="max-height: 60vh;">
@@ -104,6 +98,7 @@
     
     <!-- 重置游戏按钮 -->
     <view class="reset-section">
+      <button class="stats-btn" bindtap="onShowStats">📊 战况统计</button>
       <button class="reset-btn" bindtap="onResetGame">🔄 重新开始游戏</button>
     </view>
 
@@ -113,6 +108,23 @@
       <view class="redeem-input-group">
         <input class="redeem-input" placeholder="输入兑换码" bindinput="onInputCode" value="{{redemptionCode}}" />
         <button class="redeem-btn" bindtap="onRedeem">兑换</button>
+      </view>
+    </view>
+
+    <!-- 自动化测试区域 (开发调试) -->
+    <view class="test-section">
+      <view class="test-title">🛠️ 自动化测试 (开发调试)</view>
+      <view class="test-row">
+        <picker class="test-picker" bindchange="onMercChange" range="{{mercenaries}}" range-key="name">
+          <view class="picker-val">{{autoUpgradeMercId ? autoUpgradeMercName : '选择佣兵'}}</view>
+        </picker>
+        <picker class="test-picker" bindchange="onTypeChange" range="{{upgradeTypes}}" range-key="label">
+          <view class="picker-val">{{autoUpgradeTypeLabel}}</view>
+        </picker>
+        <view class="test-switch-wrapper">
+          <text class="test-switch-label">开启自动升级</text>
+          <switch checked="{{autoUpgradeEnabled}}" bindchange="onToggleAutoUpgrade" color="#2ecc71" size="20" />
+        </view>
       </view>
     </view>
 
@@ -146,5 +158,30 @@
         </view>
     </view>
     <view class="text-muted" style="text-align: center; font-size: 20rpx; margin-top: 20rpx;">提示：选择后将开启下一周目</view>
+  </view>
+</view>
+
+<!-- 战况统计弹窗 -->
+<view wx:if="{{showStatsModal}}" class="modal-overlay" bindtap="closeStatsModal">
+  <view class="modal-content pixel-card" catchtap="preventClose">
+    <view class="modal-title">📉 战况统计</view>
+    <scroll-view scroll-y class="stats-scroll" style="max-height: 400rpx; margin-bottom: 20rpx;">
+      <view class="stats-table">
+        <view class="stats-header">
+          <text class="col-lvl">Boss</text>
+          <text class="col-time">击杀时长</text>
+        </view>
+        <view wx:for="{{displayBossStats}}" wx:key="level" class="stats-row">
+          <text class="col-lvl">Lv.{{item.level}} {{item.name}}</text>
+          <text class="col-time">{{item.timeStr}}</text>
+        </view>
+        <view wx:if="{{!displayBossStats.length}}" class="empty-stats">暂无击杀记录</view>
+      </view>
+    </scroll-view>
+    <view class="total-stats">
+      <text>总通关耗时:</text>
+      <text class="total-val">{{displayTotalTime}}</text>
+    </view>
+    <button class="pixel-button" bindtap="closeStatsModal">关闭</button>
   </view>
 </view>

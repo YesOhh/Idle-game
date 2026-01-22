@@ -33,13 +33,8 @@ function formatNumber(num) {
  * @returns {number} - 最大血量
  */
 function calculateBossMaxHp(level) {
-    // 只有12个Boss，数值需要指数级爆炸
-    // 玩家要求：提高到500倍
-    // Boss 1: 30,000 (3万)
-    // Boss 2: 30,000 * 500 = 15,000,000 (1500万)
-    // Boss 3: 1500万 * 500 = 75亿
-    // 每一级都是500倍的跨度，这真的是天文数字了
-    return Math.floor(30000 * Math.pow(500.0, level - 1));
+    // 每一级都是135倍的跨度
+    return Math.floor(30000 * Math.pow(135.0, level - 1));
 }
 
 /**
@@ -92,13 +87,14 @@ function calculateUpgradedDamage(mercenary, prestigeDamageMult = 1) {
  * 计算佣兵的基础伤害 (不含周目/圣物加成)
  */
 function calculateMercenaryBaseDamage(mercenary) {
-    // 动态伤害系数精修
+    // 动态伤害系数精修 (底数 1.38 + 动态增长)
+    // 确保 100 级时输出能达到 2 小时通关 Boss 12 的水平
     let effectiveLevel = mercenary.damageLevel;
     if (mercenary.id === 'legend') {
         effectiveLevel = (mercenary.damageLevel || 0) + (mercenary.intervalLevel || 0);
     }
 
-    const dynamicDmgExp = 1.24 + (effectiveLevel * 0.0007);
+    const dynamicDmgExp = 1.38 + (effectiveLevel * 0.0005);
     let damage = Math.floor(mercenary.damage * Math.pow(dynamicDmgExp, effectiveLevel));
 
     // 里程碑
@@ -237,8 +233,9 @@ function calculateMercenaryUpgradeCost(mercenary, costReduction = 1) {
     // 统一等级 = 攻击等级 + 间隔等级
     const totalLevel = mercenary.damageLevel + mercenary.intervalLevel;
 
-    // 动态成本系数算法
-    const dynamicExponent = 1.28 + (totalLevel * 0.003);
+    // 动态成本系数算法 (底数 1.45 + 动态增长)
+    // 核心设计：成本增长底数(1.45) > 伤害增长底数(1.38)，防止无限升级
+    const dynamicExponent = 1.45 + (totalLevel * 0.001);
 
     let cost = Math.floor(mercenary.baseCost * Math.pow(dynamicExponent, totalLevel));
 
