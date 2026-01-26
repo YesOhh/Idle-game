@@ -1,38 +1,16 @@
 <!-- pages/mercenaries/mercenaries.wxml -->
-<view class="battle-container">
-  <!-- ========== 固定的Boss区域 ========== -->
-  <view class="boss-section">
-    <view class="boss-level">
-      Boss Lv.{{boss.level}}
-      <text wx:if="{{prestigeCount > 0}}" class="prestige-badge">🎖️ 第{{prestigeCount + 1}}周目</text>
-    </view>
-    
-    <!-- Boss精灵 -->
-    <view class="boss-sprite" bindtap="onTapBoss">
-      <view class="boss-icon">👹</view>
-    </view>
-    
-    <!-- Boss血条 -->
-    <view class="boss-hp-container">
-      <view class="boss-hp-label">
-        <text>{{bossHpText}}</text>
-      </view>
-      <view class="pixel-progress">
-        <view class="pixel-progress-fill" style="width: {{bossHpPercent}}%"></view>
-      </view>
-    </view>
-  </view>
-  
-  <!-- ========== 金币统计栏 ========== -->
-  <view class="stats-compact">
-    <view class="stat-compact">
-      <text class="stat-compact-label">💰</text>
-      <text class="stat-compact-value">{{goldText}}</text>
+<view class="manage-container">
+  <!-- ========== 页面标题 ========== -->
+  <view class="page-header">
+    <text class="page-title">佣兵管理</text>
+    <view class="gold-display">
+      <text class="gold-icon">💰</text>
+      <text class="gold-value">{{goldText}}</text>
     </view>
   </view>
 
   <!-- ========== 佣兵管理内容 ========== -->
-  <scroll-view scroll-y class="manage-scroll">
+  <scroll-view scroll-y class="manage-scroll-full">
     <view wx:for="{{manageMercRows}}" wx:key="rowIndex" wx:for-item="row" class="merc-row-wrapper">
       <!-- 该行的佣兵卡片 -->
       <view class="merc-grid-row">
@@ -65,10 +43,8 @@
         <view wx:if="{{selectedMerc.skillInfo}}" class="detail-skill">
           <view class="skill-detail-header">
             <text class="skill-name {{selectedMerc.skillInfo.isUnlocked ? 'unlocked' : 'locked'}}">{{selectedMerc.skillInfo.shortName}}</text>
-            <!-- 未雇佣时只显示技能名，不显示解锁条件 -->
             <text wx:if="{{selectedMerc.recruited && !selectedMerc.skillInfo.isUnlocked}}" class="skill-unlock-condition">{{selectedMerc.skillInfo.unlockCondition}}</text>
           </view>
-          <!-- 未雇佣时不显示技能描述 -->
           <view wx:if="{{selectedMerc.recruited}}" class="skill-detail-desc">{{selectedMerc.skillInfo.desc}}</view>
         </view>
         

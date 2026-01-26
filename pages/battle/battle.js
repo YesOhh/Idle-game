@@ -94,9 +94,6 @@ Page({
     },
 
     onShow() {
-        // 战斗页面始终显示战斗tab
-        this.setData({ currentTab: 'battle' });
-        
         // 只有当定时器未运行时才启动（避免重复启动或重置节奏）
         if (!this.data.autoAttackTimer) {
             this.startAutoAttack();
@@ -586,32 +583,23 @@ Page({
         this.onPrestige(selectedRelic);
     },
 
-    // 显示伤害数字
-    showDamageNumber(damage, e) {
-        // ... (保持不变)
-        const id = this.data.damageNumberId + 1;
-        const x = Math.random() * 200 + 150; // 随机位置
-        const y = Math.random() * 100 + 100;
-
-        const damageNumbers = [...this.data.damageNumbers, {
+    // 显示伤害数字（简化版，避免频繁重渲染）
+    showDamageNumber(damage, e, type = '') {
+        const id = (this.data.damageNumberId || 0) + 1;
+        // 只保留最新的2个，加上新的共3个
+        let damageNumbers = this.data.damageNumbers.slice(-2);
+        damageNumbers.push({
             id,
             damage: gameEngine.formatNumber(damage),
-            x,
-            y,
-            delay: 0
-        }];
+            x: Math.random() * 200 + 150,
+            y: Math.random() * 60 + 120,
+            type
+        });
 
         this.setData({
             damageNumbers,
             damageNumberId: id
         });
-
-        // 1秒后移除
-        setTimeout(() => {
-            this.setData({
-                damageNumbers: this.data.damageNumbers.filter(item => item.id !== id)
-            });
-        }, 1000);
     },
 
     // 升级点击伤害

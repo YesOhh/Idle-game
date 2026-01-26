@@ -1,3 +1,49 @@
 /* pages/mercenaries/mercenaries.wxss */
 /* 复用battle页面的样式 */
 @import "../battle/battle.wxss";
+
+/* 佣兵管理页面专用样式 */
+.manage-container {
+  min-height: 100vh;
+  background: linear-gradient(180deg, var(--bg-darkest) 0%, var(--bg-dark) 100%);
+  padding: 20rpx;
+  padding-bottom: 120rpx;
+}
+
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20rpx;
+  margin-bottom: 20rpx;
+  background: var(--bg-card);
+  border-radius: 16rpx;
+  border: 1rpx solid var(--border-color);
+}
+
+.page-title {
+  font-size: 36rpx;
+  font-weight: bold;
+  color: var(--text-primary);
+}
+
+.gold-display {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+}
+
+.gold-icon {
+  font-size: 32rpx;
+}
+
+.gold-value {
+  font-size: 28rpx;
+  color: var(--text-gold);
+  font-weight: bold;
+}
+
+.manage-scroll-full {
+  height: calc(100vh - 200rpx);
+  background: transparent;
+}
