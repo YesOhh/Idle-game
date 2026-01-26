@@ -163,7 +163,6 @@
 .pixel-progress {
   height: 16rpx;
   background: rgba(0, 0, 0, 0.5);
-  border-radius: 8rpx;
   overflow: hidden;
   border: 1rpx solid rgba(255, 255, 255, 0.1);
 }
@@ -171,7 +170,6 @@
 .pixel-progress-fill {
   height: 100%;
   background: linear-gradient(90deg, #ef4444 0%, #f97316 30%, #eab308 60%, #22c55e 100%);
-  border-radius: 8rpx;
   transition: width 0.3s ease;
   box-shadow: 0 0 8rpx rgba(34, 197, 94, 0.5);
 }

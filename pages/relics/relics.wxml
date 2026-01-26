@@ -37,12 +37,12 @@
   </view>
 
   <!-- 圣物列表 -->
-  <scroll-view scroll-y class="relic-list-scroll">
+  <scroll-view scroll-y class="relic-list-scroll" show-scrollbar="{{false}}" enhanced="{{true}}">
     <view wx:if="{{relics.length === 0}}" class="empty-state">
       <view class="empty-icon">📭</view>
       <text>尚未获得任何圣物</text>
     </view>
-    
+
     <view wx:for="{{relics}}" wx:key="id" class="relic-card {{selectedId === item.id ? 'selected' : ''}}" bindtap="onSelectRelic" data-id="{{item.id}}">
       <view class="relic-main">
         <view class="relic-icon">{{item.icon}}</view>
@@ -54,7 +54,7 @@
           <view class="relic-desc">{{item.desc}}</view>
         </view>
       </view>
-      
+
       <!-- 展开详情 -->
       <view class="relic-detail" wx:if="{{selectedId === item.id}}">
         <view class="divider"></view>

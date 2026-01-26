@@ -10,7 +10,7 @@
   </view>
 
   <!-- ========== 佣兵管理内容 ========== -->
-  <scroll-view scroll-y class="manage-scroll-full">
+  <scroll-view scroll-y class="manage-scroll-full" show-scrollbar="{{false}}" enhanced="{{true}}">
     <view wx:for="{{manageMercRows}}" wx:key="rowIndex" wx:for-item="row" class="merc-row-wrapper">
       <!-- 该行的佣兵卡片 -->
       <view class="merc-grid-row">
@@ -21,7 +21,7 @@
           <view class="merc-grid-name">{{merc.name}}</view>
         </view>
       </view>
-      
+
       <!-- 如果选中的佣兵在这一行，显示详情 -->
       <view wx:if="{{selectedRowIndex === row.rowIndex && selectedMerc}}" class="merc-detail-panel">
         <view class="detail-header">
@@ -38,7 +38,7 @@
             <text class="detail-value">{{selectedMerc.currentInterval}}</text>
           </view>
         </view>
-        
+
         <!-- 技能显示 -->
         <view wx:if="{{selectedMerc.skillInfo}}" class="detail-skill">
           <view class="skill-detail-header">
@@ -47,7 +47,7 @@
           </view>
           <view wx:if="{{selectedMerc.recruited}}" class="skill-detail-desc">{{selectedMerc.skillInfo.desc}}</view>
         </view>
-        
+
         <!-- 雇佣费用 -->
         <view wx:if="{{!selectedMerc.recruited}}" class="detail-cost">
           <text>雇佣花费：</text>
@@ -55,13 +55,13 @@
             <text>💰 {{selectedMerc.recruitCostText}}</text>
           </view>
         </view>
-        
+
         <!-- 操作按钮 -->
         <view class="detail-actions">
-          <button 
+          <button
             wx:if="{{!selectedMerc.recruited}}"
-            class="action-btn recruit-btn {{selectedMerc.canAffordRecruit ? '' : 'disabled'}}" 
-            bindtap="onRecruitMercenary" 
+            class="action-btn recruit-btn {{selectedMerc.canAffordRecruit ? '' : 'disabled'}}"
+            bindtap="onRecruitMercenary"
             data-id="{{selectedMerc.id}}"
             disabled="{{!selectedMerc.canAffordRecruit}}">
             雇佣
@@ -72,7 +72,7 @@
         </view>
       </view>
     </view>
-    
+
     <view wx:if="{{manageMercenaries.length === 0}}" class="empty-state">
       <text>暂无佣兵数据</text>
     </view>

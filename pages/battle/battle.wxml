@@ -6,18 +6,18 @@
       Boss Lv.{{boss.level}}
       <text wx:if="{{prestigeCount > 0}}" class="prestige-badge">🎖️ 第{{prestigeCount + 1}}周目</text>
     </view>
-    
+
     <!-- Boss精灵 -->
     <view class="boss-sprite" bindtap="onTapBoss">
       <view class="boss-icon {{attacking ? 'shake' : ''}}">👹</view>
-      
+
       <!-- 伤害数字动画 -->
-      <view wx:for="{{damageNumbers}}" wx:key="id" class="damage-number {{item.type}}" 
+      <view wx:for="{{damageNumbers}}" wx:key="id" class="damage-number {{item.type}}"
             style="left: {{item.x}}rpx; top: {{item.y}}rpx;">
         {{item.damage}}
       </view>
     </view>
-    
+
     <!-- Boss血条 -->
     <view class="boss-hp-container">
       <view class="boss-hp-label">
@@ -28,7 +28,7 @@
       </view>
     </view>
   </view>
-  
+
   <!-- ========== 金币统计栏 ========== -->
   <view class="stats-compact">
     <view class="stat-compact">
@@ -47,14 +47,14 @@
             <view class="merc-icon-box">
               <text class="merc-icon-large">{{item.icon}}</text>
             </view>
-            
+
             <view class="merc-info-main">
               <!-- 第一行：名称 + 等级 -->
               <view class="merc-title-row">
                 <text class="merc-name">{{item.name}}</text>
                 <text class="merc-level">等级：{{item.totalLevel}}</text>
               </view>
-              
+
               <!-- 已雇佣显示属性 -->
               <view wx:if="{{item.recruited}}" class="merc-stats-row">
                 <text class="merc-stat">攻击力　{{item.damageText}}</text>
@@ -62,7 +62,7 @@
               <view wx:if="{{item.recruited}}" class="merc-stats-row">
                 <text class="merc-stat">攻击间隔　{{item.intervalText}}秒</text>
               </view>
-              
+
               <!-- 未雇佣显示预览 -->
               <view wx:if="{{!item.recruited}}" class="merc-stats-row">
                 <text class="merc-stat">初始攻击　{{item.baseDamage}}</text>
@@ -70,24 +70,24 @@
               <view wx:if="{{!item.recruited}}" class="merc-stats-row">
                 <text class="merc-stat">攻击间隔　{{item.baseInterval}}秒</text>
               </view>
-              
+
               <!-- 技能标签 -->
               <view wx:if="{{item.skillInfo}}" class="merc-skill-tag">
                 <text class="skill-tag {{item.skillInfo.isUnlocked ? 'unlocked' : 'locked'}}">[{{item.skillInfo.shortName}}]</text>
               </view>
             </view>
-            
+
             <!-- 未雇佣显示招募按钮 -->
-            <button 
+            <button
               wx:if="{{!item.recruited}}"
-              class="merc-recruit-btn {{item.canAfford ? '' : 'disabled'}}" 
-              catchtap="onRecruitMercenary" 
+              class="merc-recruit-btn {{item.canAfford ? '' : 'disabled'}}"
+              catchtap="onRecruitMercenary"
               data-id="{{item.id}}"
               disabled="{{!item.canAfford}}">
               💰{{item.costText}}
             </button>
           </view>
-          
+
           <!-- 展开内容 - 仅已雇佣且展开时显示 -->
           <view wx:if="{{item.recruited && item.expanded}}" class="merc-expand-content">
             <!-- 升级攻击力 -->
@@ -100,7 +100,7 @@
                 <text>花费　💰 {{item.upgradeCostText}}</text>
               </view>
             </view>
-            
+
             <!-- 升级攻击速度 -->
             <view class="upgrade-box" catchtap="onUpgradeInterval" data-id="{{item.id}}">
               <view class="upgrade-info">
@@ -111,12 +111,12 @@
                 <text>花费　💰 {{item.upgradeCostText}}</text>
               </view>
             </view>
-            
+
             <!-- 佣兵描述 -->
             <view class="merc-description">
               <text>{{item.description}}</text>
             </view>
-            
+
             <!-- 技能详情 - 始终显示效果 -->
             <view wx:if="{{item.skillInfo}}" class="skill-detail">
               <view class="skill-detail-header">
@@ -129,7 +129,7 @@
         </view>
       </view>
     </scroll-view>
-    
+
     <!-- 重置游戏按钮 -->
     <view class="reset-section">
       <button class="stats-btn" bindtap="onShowStats">📊 战况统计</button>
