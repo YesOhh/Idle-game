@@ -23,7 +23,7 @@ Page({
 
         // 佣兵列表
         mercenaries: [],
-        
+
         // 佣兵展开状态
         expandedMercIds: {},
 
@@ -65,7 +65,7 @@ Page({
 
         // Tab切换（通过底部tabBar控制）
         currentTab: 'battle',  // 'battle' | 'manage'
-        
+
         // 佣兵管理相关
         manageMercenaries: [],
         manageMercRows: [],
@@ -76,29 +76,136 @@ Page({
 
     onLoad() {
         this.initGame();
-        this.startAutoAttack();
+        // 订阅全局战斗更新
+        this.subscribeToBattleUpdates();
         // 记录第一个Boss的开始时间
         this.data.currentBossStartTime = Date.now();
     },
 
     onUnload() {
-        this.stopAutoAttack();
+        // 取消订阅
+        app.unsubscribeBattleUpdate();
         // 清理缓存的各种 Buff 定时器
         if (this._globalSpeedTimer) clearTimeout(this._globalSpeedTimer);
         if (this._globalDamageTimer) clearTimeout(this._globalDamageTimer);
     },
 
     onHide() {
-        // 建议在隐藏时也停止心跳，节约后台功耗
-        this.stopAutoAttack();
+        // 页面隐藏时不再停止战斗，因为战斗在全局进行
+        // 只需要停止UI更新定时器
+        this.stopUITimer();
     },
 
     onShow() {
-        // 只有当定时器未运行时才启动（避免重复启动或重置节奏）
-        if (!this.data.autoAttackTimer) {
-            this.startAutoAttack();
-        }
+        // 恢复UI更新
+        this.startUITimer();
+        // 同步buff状态
+        const buffState = app.getBuffState();
+        this.setData({
+            isSpeedBuffActive: buffState.speedBuffActive,
+            isDamageBuffActive: buffState.damageBuffActive
+        });
         this.updateDisplay();
+    },
+
+    // 订阅全局战斗更新
+    subscribeToBattleUpdates() {
+        app.subscribeBattleUpdate((data) => {
+            this.handleBattleUpdate(data);
+        });
+        // 启动UI更新定时器
+        this.startUITimer();
+    },
+
+    // 处理战斗更新事件
+    handleBattleUpdate(data) {
+        if (data.skill) {
+            this.showDamageNumber(data.skill.text, null, this.getSkillClass(data.skill.type));
+        }
+        if (data.crit && data.damage) {
+            this.showDamageNumber(data.damage, null, 'crit');
+        }
+        if (data.buffChanged) {
+            const buffState = app.getBuffState();
+            this.setData({
+                isSpeedBuffActive: buffState.speedBuffActive,
+                isDamageBuffActive: buffState.damageBuffActive
+            });
+            this.updateDisplay(true);
+        }
+        if (data.statsChanged) {
+            this.updateBattleStats();
+        }
+        if (data.bossDefeated) {
+            if (data.showRelicModal) {
+                // 通关，显示遗物选择
+                const choices = gameEngine.getRandomRelicChoices();
+                this.setData({
+                    showRelicModal: true,
+                    relicChoices: choices
+                });
+                // 记录Boss统计
+                this.recordBossStat(data.bossLevel);
+            } else {
+                // 普通击败Boss
+                wx.showToast({
+                    title: `Boss击败!`,
+                    icon: 'success',
+                    duration: 1000
+                });
+                this.recordBossStat(data.bossLevel);
+                this.updateDisplay(true);
+            }
+        }
+    },
+
+    // 记录Boss统计
+    recordBossStat(level) {
+        const endTime = Date.now();
+        const startTime = this.data.currentBossStartTime || endTime;
+        const timeTaken = Math.floor((endTime - startTime) / 1000);
+
+        const newStat = {
+            level: level,
+            name: app.globalData.boss ? app.globalData.boss.name : `Boss ${level}`,
+            timeTaken: timeTaken
+        };
+
+        const bossStats = [...(this.data.bossStats || []), newStat];
+        const totalTimeSeconds = (this.data.totalTimeSeconds || 0) + timeTaken;
+
+        this.setData({
+            bossStats,
+            totalTimeSeconds,
+            currentBossStartTime: Date.now()
+        });
+    },
+
+    // 获取技能样式类名
+    getSkillClass(skillType) {
+        const classMap = {
+            'stacking_buff': 'skill',
+            'crit': 'skill-crit',
+            'speed_buff': 'skill-mage',
+            'damage_buff': 'skill-dragon'
+        };
+        return classMap[skillType] || 'skill';
+    },
+
+    // 启动UI更新定时器
+    startUITimer() {
+        this.stopUITimer();
+        this.data.uiTimer = setInterval(() => {
+            this.updateMercenaryList();
+        }, 500);
+    },
+
+    // 停止UI更新定时器
+    stopUITimer() {
+        if (this.data.uiTimer) {
+            clearInterval(this.data.uiTimer);
+            this.data.uiTimer = null;
+        }
     },
 
     // 初始化游戏
@@ -254,11 +361,11 @@ Page({
 
             const mercDPS = merc.recruited ? (currentDamage / currentInterval) : 0;
             const canAfford = !merc.recruited && globalData.player.gold >= recruitCost;
-            
+
             // 计算升级成本
             const upgradeCost = gameEngine.calculateMercenaryUpgradeCost(merc, prestigeBonus.costReduction);
             const canAffordUpgrade = merc.recruited && globalData.player.gold >= upgradeCost;
-            
+
             // 获取技能信息
             let skillInfo = gameEngine.getMercenarySkillDisplay(merc);
             // 添加技能简称用于标签显示
@@ -267,18 +374,18 @@ Page({
                 const match = skillInfo.name.match(/【(.+?)】/);
                 skillInfo.shortName = match ? match[1] : skillInfo.name;
             }
-            
+
             // 计算升级效果预览 - 模拟升级后的数值
             // 攻击力：创建临时对象模拟升级后的状态
             const tempMercDamage = { ...merc, damageLevel: (merc.damageLevel || 0) + 1 };
             const nextDmgInfo = gameEngine.getDamageDisplayInfo(tempMercDamage, prestigeBonus.damage);
             const damageUpgradeEffect = nextDmgInfo.final - dmgInfo.final;
-            
+
             // 攻击间隔：每级减少约1%
             const tempMercInterval = { ...merc, intervalLevel: (merc.intervalLevel || 0) + 1 };
             const nextInterval = gameEngine.calculateUpgradedInterval(tempMercInterval);
             const intervalUpgradeEffect = (currentInterval - nextInterval).toFixed(4);
-            
+
             // 总等级 = 攻击等级 + 攻速等级 + 1（雇佣时初始等级为1）
             const totalLevel = (merc.damageLevel || 0) + (merc.intervalLevel || 0) + 1;
 
@@ -323,23 +430,23 @@ Page({
     updateManageMercenaryList() {
         const globalData = app.globalData;
         if (!globalData.mercenaries) return;
-        
+
         const prestigeBonus = gameEngine.calculatePrestigeBonus(globalData.player);
-        
+
         // 格式化所有佣兵数据（包括未招募的）
         let manageMercenaries = globalData.mercenaries.map(merc => {
             const recruitCost = gameEngine.calculateRecruitCost(merc);
             const dmgInfo = gameEngine.getDamageDisplayInfo(merc, prestigeBonus.damage);
             const currentDamage = dmgInfo.final;
             const currentInterval = gameEngine.calculateUpgradedInterval(merc);
-            
+
             // 获取技能信息
             let skillInfo = gameEngine.getMercenarySkillDisplay(merc);
             if (skillInfo && skillInfo.name) {
                 const match = skillInfo.name.match(/【(.+?)】/);
                 skillInfo.shortName = match ? match[1] : skillInfo.name;
             }
-            
+
             return {
                 ...merc,
                 recruitCost,
@@ -350,10 +457,10 @@ Page({
                 skillInfo
             };
         });
-        
+
         // 按价格从低到高排序
         manageMercenaries.sort((a, b) => a.recruitCost - b.recruitCost);
-        
+
         // 每行3个，分组
         const ITEMS_PER_ROW = 3;
         const manageMercRows = [];
@@ -363,13 +470,13 @@ Page({
                 items: manageMercenaries.slice(i, i + ITEMS_PER_ROW)
             });
         }
-        
+
         // 更新选中的佣兵信息
         let selectedMerc = null;
         if (this.data.selectedMercId) {
             selectedMerc = manageMercenaries.find(m => m.id === this.data.selectedMercId);
         }
-        
+
         this.setData({
             manageMercenaries,
             manageMercRows,
@@ -381,12 +488,12 @@ Page({
     onSelectMerc(e) {
         const mercId = e.currentTarget.dataset.id;
         const manageMercenaries = this.data.manageMercenaries;
-        
+
         // 找到该佣兵所在的行
         const mercIndex = manageMercenaries.findIndex(m => m.id === mercId);
         const ITEMS_PER_ROW = 3;
         const rowIndex = Math.floor(mercIndex / ITEMS_PER_ROW);
-        
+
         // 如果点击的是同一个，取消选择
         if (this.data.selectedMercId === mercId) {
             this.setData({
@@ -506,7 +613,7 @@ Page({
 
         // 检查是否通关 (击败 12 号 Boss)
         if (currentLevel === 12) {
-            this.stopAutoAttack();
+            app.pauseGlobalBattle();
 
             // 生成 3 个随机遗物
             const choices = gameEngine.getRandomRelicChoices();
@@ -559,7 +666,7 @@ Page({
 
         // 重新初始化并显示
         this.initGame();
-        this.startAutoAttack(); // 修复：重生后重启定时器以刷新UI和自动攻击
+        app.resumeGlobalBattle(); // 恢复全局战斗
         this.updateDisplay();
 
         wx.showToast({
@@ -626,158 +733,6 @@ Page({
         }
     },
 
-    // 开始自动攻击
-    startAutoAttack() {
-        this.stopAutoAttack();
-
-        // 记录上一帧时间
-        this.lastFrameTime = Date.now();
-
-        // 1. 伤害循环 (0.1秒)
-        this.data.autoAttackTimer = setInterval(() => {
-            const now = Date.now();
-            // 计算两帧之间的时间差（秒）
-            const deltaTime = (now - this.lastFrameTime) / 1000;
-            this.lastFrameTime = now;
-
-            const globalData = app.globalData;
-            let totalFrameDamage = 0;
-
-            const prestigeBonus = gameEngine.calculatePrestigeBonus(globalData.player);
-
-            // 遍历所有佣兵，计算各自的攻击CD
-            globalData.mercenaries.forEach(merc => {
-                if (merc.recruited) {
-                    // 初始化计时器
-                    if (typeof merc._attackTimer === 'undefined') {
-                        merc._attackTimer = 0;
-                    }
-
-                    // 累加时间
-                    merc._attackTimer += deltaTime;
-
-                    // 获取当前攻击间隔
-                    let interval = gameEngine.calculateUpgradedInterval(merc);
-
-                    // 应用全局加速Buff (法师奥术激涌)
-                    if (this.data._globalSpeedBuff) {
-                        interval *= (1 - this.data._globalSpeedBuff);
-                    }
-
-                    // 如果计时器超过攻击间隔，触发攻击
-                    if (merc._attackTimer >= interval) {
-                        // 计算基础单次伤害 (加上重生倍率)
-                        let damage = gameEngine.calculateUpgradedDamage(merc, prestigeBonus.damage);
-
-                        // 获取并应用技能
-                        const skill = gameEngine.getMercenarySkill(merc);
-                        let isCrit = false;
-                        let thisHitDamage = damage;
-
-                        if (skill) {
-                            if (skill.type === 'stacking_buff') {
-                                // 战士技能：叠加攻击力
-                                if (Math.random() < skill.chance) {
-                                    merc._stackingBuff = (merc._stackingBuff || 0) + skill.val;
-                                    // 飘字提示技能触发
-                                    this.showDamageNumber('熟练+1%', null, 'skill');
-                                }
-                            } else if (skill.type === 'crit') {
-                                // 弓箭手技能：暴击
-                                if (Math.random() < skill.chance) {
-                                    thisHitDamage *= skill.multiplier;
-                                    isCrit = true;
-                                    // 飘字提示暴击触发
-                                    this.showDamageNumber('爆裂!', null, 'skill-crit');
-                                }
-                            } else if (skill.type === 'global_speed_buff') {
-                                // 法师技能：全体加速
-                                if (Math.random() < skill.chance) {
-                                    // 应用全局加速Buff
-                                    this.data._globalSpeedBuff = skill.val;
-                                    this.setData({ isSpeedBuffActive: true });
-                                    this.updateDisplay(true);
-
-                                    if (this._globalSpeedTimer) clearTimeout(this._globalSpeedTimer);
-                                    this._globalSpeedTimer = setTimeout(() => {
-                                        this.data._globalSpeedBuff = 0;
-                                        this.setData({ isSpeedBuffActive: false });
-                                        this.updateDisplay(true);
-                                    }, skill.duration);
-
-                                    this.showDamageNumber('奥术激涌!', null, 'skill-mage');
-                                }
-                            } else if (skill.type === 'burst_boost') {
-                                // 龙骑士技能：毁灭龙息 + 全体伤害提升
-                                if (Math.random() < skill.chance) {
-                                    thisHitDamage *= skill.multiplier;
-                                    isCrit = true;
-
-                                    // 应用全局伤害Buff
-                                    this.data._globalDamageBuff = skill.buffVal;
-                                    this.setData({ isDamageBuffActive: true });
-                                    this.updateDisplay(true);
-
-                                    if (this._globalDamageTimer) clearTimeout(this._globalDamageTimer);
-                                    this._globalDamageTimer = setTimeout(() => {
-                                        this.data._globalDamageBuff = 0;
-                                        this.setData({ isDamageBuffActive: false });
-                                        this.updateDisplay(true);
-                                    }, skill.duration);
-
-                                    this.showDamageNumber('毁灭龙息!', null, 'skill-dragon');
-                                }
-                            }
-                        }
-
-                        // 全局暴击判定 (圣物加成，且如果该次攻击还没触发技能暴击)
-                        if (!isCrit && prestigeBonus.critChance > 0) {
-                            if (Math.random() < prestigeBonus.critChance) {
-                                thisHitDamage *= (2.0 + prestigeBonus.critMult);
-                                isCrit = true;
-                            }
-                        }
-
-                        // 应用全局伤害Buff (龙骑士龙威)
-                        if (this.data._globalDamageBuff) {
-                            thisHitDamage *= (1 + this.data._globalDamageBuff);
-                        }
-
-                        thisHitDamage = Math.floor(thisHitDamage);
-
-                        // 可能会超过多个间隔（如果卡顿），这里简单重置或减去间隔
-                        while (merc._attackTimer >= interval) {
-                            totalFrameDamage += thisHitDamage;
-                            merc._attackTimer -= interval;
-                            // 注意：如果是多次攻击，理论上每次都要判定暴击，这里简化为判定一次应用到所有积压攻击上，或者只判定第一下
-                        }
-
-                        // 如果触发了暴击，显示伤害数字 (避免普通攻击刷屏，只显示暴击)
-                        if (isCrit) {
-                            this.showDamageNumber(thisHitDamage, null, 'crit');
-                        }
-                    }
-                }
-            });
-
-            // 只有当有佣兵真正挥刀砍出伤害时，才结算
-            if (totalFrameDamage > 0) {
-                this.dealDamage(totalFrameDamage);
-            }
-
-            // 3. 自动化测试检测 (每100ms检测一次金币是否足够升级)
-            if (this.data.autoUpgradeEnabled) {
-                this.handleAutoUpgradeLogic();
-            }
-
-        }, 100);
-
-        // 2. 界面状态循环 (0.5秒) - 此时才刷新按钮状态，避免闪烁
-        this.data.uiTimer = setInterval(() => {
-            this.updateMercenaryList();
-        }, 500);
-    },
-
     // 自动化测试控制器
     onMercChange(e) {
         const index = e.detail.value;
@@ -837,18 +792,6 @@ Page({
 
             // 只有当有升级发生时，才可能需要刷新统计信息显示
             this.updateDisplay();
-        }
-    },
-
-    // 停止自动攻击
-    stopAutoAttack() {
-        if (this.data.autoAttackTimer) {
-            clearInterval(this.data.autoAttackTimer);
-            this.data.autoAttackTimer = null;
-        }
-        if (this.data.uiTimer) {
-            clearInterval(this.data.uiTimer);
-            this.data.uiTimer = null;
         }
     },
 
@@ -976,10 +919,10 @@ Page({
     onToggleMercExpand(e) {
         const mercId = e.currentTarget.dataset.id;
         const expandedMercIds = { ...this.data.expandedMercIds };
-        
+
         // 切换展开状态
         expandedMercIds[mercId] = !expandedMercIds[mercId];
-        
+
         this.setData({ expandedMercIds });
         this.updateMercenaryList();
     },
@@ -1119,7 +1062,7 @@ Page({
             // 一键雇佣所有佣兵（测试用）
             const mercenaries = globalData.mercenaries || [];
             let hiredCount = 0;
-            
+
             mercenaries.forEach(merc => {
                 if (!merc.recruited) {
                     merc.recruited = true;

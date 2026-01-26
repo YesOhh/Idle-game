@@ -71,7 +71,7 @@ function calculateUpgradedDamage(mercenary, prestigeDamageMult = 1) {
 
 /**
  * 计算佣兵的基础伤害 (不含周目/圣物加成)
- * 
+ *
  * 参考《打BOSS》原版规律：
  * - 攻击力是【加法增长】，不是乘法！
  * - 阶段划分：升级1-4次为阶段0，之后每5次升级进入下一阶段
@@ -109,25 +109,25 @@ function calculateMercenaryBaseDamage(mercenary) {
     const baseAtk = mercenary.damage;
     const scale = baseAtk / 4;  // 缩放系数，使得第一级增加值 = floor(baseAtk / 2)
     let damage = baseAtk;
-    
+
     // 计算每次升级增加的攻击力
     for (let upgrade = 1; upgrade <= effectiveLevel; upgrade++) {
         const resultLevel = upgrade + 1;  // 升级后的等级
         const tier = getUpgradeTier(upgrade);
-        
+
         // 查表获取基础增加值，超出范围则按1.5倍增长
-        let baseAdd = tier < ADD_VALUE_TABLE.length 
-            ? ADD_VALUE_TABLE[tier] 
+        let baseAdd = tier < ADD_VALUE_TABLE.length
+            ? ADD_VALUE_TABLE[tier]
             : Math.floor(ADD_VALUE_TABLE[12] * Math.pow(1.5, tier - 12));
-        
+
         // 根据佣兵基础攻击力缩放
         let addValue = Math.floor(baseAdd * scale);
-        
+
         // 51级及以后：增加值翻倍
         if (resultLevel >= 51) addValue *= 2;
         // 101级及以后：增加值再翻倍
         if (resultLevel >= 101) addValue *= 2;
-        
+
         damage += Math.max(1, addValue);
     }
 
@@ -245,7 +245,7 @@ function calculatePrestigeBonus(player) {
  * 计算佣兵升级成本 (统一)
  * @param {Object} mercenary - 佣兵对象
  * @returns {number} - 升级成本
- * 
+ *
  * 参考《打BOSS》原版规律：
  * - 首次升级价格 = 雇佣价格 / 2
  * - 升级价格增长率 = 1.15 (每级是上一级的1.15倍)
@@ -257,7 +257,7 @@ function calculateMercenaryUpgradeCost(mercenary, costReduction = 1) {
 
     // 首次升级价格 = 雇佣价格 / 2，默认雇佣单位特殊处理
     const baseUpgradeCost = mercenary.baseCost > 0 ? mercenary.baseCost / 2 : 15;
-    
+
     // 每级增长1.15倍
     const growthRate = 1.15;
     let cost = Math.floor(baseUpgradeCost * Math.pow(growthRate, totalLevel));
@@ -287,15 +287,15 @@ function dealDamageToBoss(boss, damage, prestigeGoldMult = 1) {
         return { boss, defeated: false, goldEarned: 0 };
     }
 
-    const newHp = Math.max(0, boss.currentHp - damage);
-    const defeated = newHp === 0;
+    // 直接修改原对象的血量，避免竞态条件
+    // (多个伤害来源同时操作时，替换对象会导致伤害丢失)
+    boss.currentHp = Math.max(0, boss.currentHp - damage);
+    const defeated = boss.currentHp === 0;
+
     return {
-        boss: {
-            ...boss,
-            currentHp: newHp
-        },
+        boss: boss,  // 返回同一个对象引用
         defeated,
-        goldEarned: Math.floor(damage * prestigeGoldMult)  // 造成的伤害 * 重生金币加成 = 获得的金币
+        goldEarned: Math.floor(damage * prestigeGoldMult)
     };
 }
 
