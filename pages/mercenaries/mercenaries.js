@@ -4,8 +4,25 @@ const gameEngine = require('../../utils/gameEngine.js');
 
 Page({
     data: {
-        mercenaries: [],
+        // Boss数据
+        boss: {
+            level: 1,
+            currentHp: 100,
+            maxHp: 100
+        },
+        bossHpPercent: 100,
+        bossHpText: '100',
+        prestigeCount: 0,
         goldText: '0',
+        
+        // 佣兵管理相关
+        manageMercenaries: [],
+        manageMercRows: [],
+        selectedMercId: null,
+        selectedMerc: null,
+        selectedRowIndex: -1,
+        
+        // 刷新定时器
         refreshTimer: null
     },
 
@@ -15,7 +32,7 @@ Page({
 
     onShow() {
         this.updateDisplay();
-        // 开启自动刷新定时器，实时同步金币变化
+        // 开启自动刷新定时器
         this.data.refreshTimer = setInterval(() => {
             this.updateDisplay();
         }, 500);
@@ -35,68 +52,104 @@ Page({
         }
     },
 
-    // 更新显示
     updateDisplay() {
         const globalData = app.globalData;
-
-        if (!globalData.mercenaries || globalData.mercenaries.length === 0) {
-            const mercData = require('../../data/mercenaries.js');
-            globalData.mercenaries = mercData.initMercenaries();
+        
+        // 更新Boss数据
+        if (globalData.boss) {
+            const boss = globalData.boss;
+            const bossHpPercent = Math.max(0, (boss.currentHp / boss.maxHp) * 100);
+            this.setData({
+                boss: boss,
+                bossHpPercent: bossHpPercent,
+                bossHpText: gameEngine.formatNumber(boss.currentHp),
+                prestigeCount: globalData.player.prestigeCount || 0,
+                goldText: gameEngine.formatNumber(globalData.player.gold)
+            });
         }
+        
+        this.updateManageMercenaryList();
+    },
 
+    // 更新佣兵管理列表
+    updateManageMercenaryList() {
+        const globalData = app.globalData;
+        if (!globalData.mercenaries) return;
+        
         const prestigeBonus = gameEngine.calculatePrestigeBonus(globalData.player);
-
-        const mercenaries = globalData.mercenaries.map(merc => {
+        
+        let manageMercenaries = globalData.mercenaries.map(merc => {
             const recruitCost = gameEngine.calculateRecruitCost(merc);
-            // 使用统一的升级成本 (应用遗物减费)
-            const upgradeCost = gameEngine.calculateMercenaryUpgradeCost(merc, prestigeBonus.costReduction);
-
             const dmgInfo = gameEngine.getDamageDisplayInfo(merc, prestigeBonus.damage);
             const currentDamage = dmgInfo.final;
             const currentInterval = gameEngine.calculateUpgradedInterval(merc);
-
-            // 获取技能显示信息
-            const skillInfo = gameEngine.getMercenarySkillDisplay(merc);
-
-            // 计算DPS: 只有雇佣了才计算
-            const mercDPS = merc.recruited ? (currentDamage / currentInterval) : 0;
-
-            // 判断是否买得起
-            const canAffordRecruit = !merc.recruited && globalData.player.gold >= recruitCost;
-            // 升级成本相同
-            const canAffordUpgrade = merc.recruited && globalData.player.gold >= upgradeCost;
-
+            
+            let skillInfo = gameEngine.getMercenarySkillDisplay(merc);
+            if (skillInfo && skillInfo.name) {
+                const match = skillInfo.name.match(/【(.+?)】/);
+                skillInfo.shortName = match ? match[1] : skillInfo.name;
+            }
+            
             return {
                 ...merc,
-                currentDamageText: dmgInfo.text, // 统一使用解耦后的显示格式
-                currentInterval,
+                recruitCost,
+                currentDamageText: gameEngine.formatNumber(currentDamage),
+                currentInterval: currentInterval.toFixed(4),
                 recruitCostText: gameEngine.formatNumber(recruitCost),
-                // 两个按钮显示相同的成本
-                damageCostText: gameEngine.formatNumber(upgradeCost),
-                intervalCostText: gameEngine.formatNumber(upgradeCost),
-                dpsText: gameEngine.formatNumber(mercDPS),
-                canAffordRecruit,
-                // 用于样式判断
-                canAffordDamage: canAffordUpgrade,
-                canAffordInterval: canAffordUpgrade,
-                skillInfo // 传递给WXML
+                canAffordRecruit: !merc.recruited && globalData.player.gold >= recruitCost,
+                skillInfo
             };
         });
-
-        const currentJson = JSON.stringify(mercenaries);
-
-        // 只有当数据真正变化时才更新列表，防止闪烁
-        if (currentJson !== this.data._lastJson) {
-            this.setData({
-                mercenaries
+        
+        // 按价格从低到高排序
+        manageMercenaries.sort((a, b) => a.recruitCost - b.recruitCost);
+        
+        // 每行3个，分组
+        const ITEMS_PER_ROW = 3;
+        const manageMercRows = [];
+        for (let i = 0; i < manageMercenaries.length; i += ITEMS_PER_ROW) {
+            manageMercRows.push({
+                rowIndex: Math.floor(i / ITEMS_PER_ROW),
+                items: manageMercenaries.slice(i, i + ITEMS_PER_ROW)
             });
-            this.data._lastJson = currentJson;
         }
-
-        // 金币总是需要更新的
+        
+        // 更新选中的佣兵信息
+        let selectedMerc = null;
+        if (this.data.selectedMercId) {
+            selectedMerc = manageMercenaries.find(m => m.id === this.data.selectedMercId);
+        }
+        
         this.setData({
-            goldText: gameEngine.formatNumber(globalData.player.gold)
+            manageMercenaries,
+            manageMercRows,
+            selectedMerc
         });
+    },
+
+    // 选择佣兵
+    onSelectMerc(e) {
+        const mercId = e.currentTarget.dataset.id;
+        const manageMercenaries = this.data.manageMercenaries;
+        
+        const mercIndex = manageMercenaries.findIndex(m => m.id === mercId);
+        const ITEMS_PER_ROW = 3;
+        const rowIndex = Math.floor(mercIndex / ITEMS_PER_ROW);
+        
+        if (this.data.selectedMercId === mercId) {
+            this.setData({
+                selectedMercId: null,
+                selectedMerc: null,
+                selectedRowIndex: -1
+            });
+        } else {
+            const selectedMerc = manageMercenaries.find(m => m.id === mercId);
+            this.setData({
+                selectedMercId: mercId,
+                selectedMerc,
+                selectedRowIndex: rowIndex
+            });
+        }
     },
 
     // 招募佣兵
@@ -105,7 +158,6 @@ Page({
         const globalData = app.globalData;
 
         const mercenary = globalData.mercenaries.find(m => m.id === mercId);
-        // 如果找不到 或者 已经雇佣了，就不执行
         if (!mercenary || mercenary.recruited) {
             return;
         }
@@ -115,11 +167,6 @@ Page({
         if (globalData.player.gold >= cost) {
             globalData.player.gold -= cost;
             mercenary.recruited = true;
-
-            const prestigeBonus = gameEngine.calculatePrestigeBonus(globalData.player);
-            // 首次招募，伤害和间隔使用当前等级（初始为0）计算的值
-            mercenary.currentDamage = gameEngine.calculateUpgradedDamage(mercenary, prestigeBonus.damage);
-            mercenary.currentInterval = gameEngine.calculateUpgradedInterval(mercenary);
 
             wx.showToast({
                 title: '招募成功!',
@@ -135,67 +182,34 @@ Page({
         }
     },
 
-    // 升级攻击力
-    onUpgradeDamage(e) {
-        const mercId = e.currentTarget.dataset.id;
+    // 点击Boss（在佣兵页面也可以攻击）
+    onTapBoss() {
         const globalData = app.globalData;
-
-        const mercenary = globalData.mercenaries.find(m => m.id === mercId);
-        if (!mercenary || !mercenary.recruited) {
-            return;
-        }
-
         const prestigeBonus = gameEngine.calculatePrestigeBonus(globalData.player);
-        const cost = gameEngine.calculateMercenaryUpgradeCost(mercenary, prestigeBonus.costReduction);
+        let damage = globalData.player.manualDamage * prestigeBonus.damage;
 
-        if (globalData.player.gold >= cost) {
-            globalData.player.gold -= cost;
-            mercenary.damageLevel++;
-            mercenary.currentDamage = gameEngine.calculateUpgradedDamage(mercenary, prestigeBonus.damage);
-
-            wx.showToast({
-                title: '攻击力升级成功!',
-                icon: 'success'
-            });
-
-            this.updateDisplay();
-        } else {
-            wx.showToast({
-                title: '金币不足!',
-                icon: 'none'
-            });
-        }
-    },
-
-    // 升级攻击间隔
-    onUpgradeInterval(e) {
-        const mercId = e.currentTarget.dataset.id;
-        const globalData = app.globalData;
-
-        const mercenary = globalData.mercenaries.find(m => m.id === mercId);
-        if (!mercenary || !mercenary.recruited) {
-            return;
+        // 全局暴击判定
+        if (prestigeBonus.critChance > 0 && Math.random() < prestigeBonus.critChance) {
+            const mult = 2.0 + (prestigeBonus.critMult || 0);
+            damage *= mult;
         }
 
-        const prestigeBonus = gameEngine.calculatePrestigeBonus(globalData.player);
-        const cost = gameEngine.calculateMercenaryUpgradeCost(mercenary, prestigeBonus.costReduction);
+        const result = gameEngine.dealDamageToBoss(globalData.boss, damage, prestigeBonus.gold);
+        globalData.boss = result.boss;
+        globalData.player.gold += result.goldEarned;
 
-        if (globalData.player.gold >= cost) {
-            globalData.player.gold -= cost;
-            mercenary.intervalLevel++;
-            mercenary.currentInterval = gameEngine.calculateUpgradedInterval(mercenary);
-
+        if (result.defeated) {
+            // Boss被击败，生成新Boss
+            const newBoss = gameEngine.nextBoss(globalData.boss.level);
+            globalData.boss = newBoss;
+            
             wx.showToast({
-                title: '攻速升级成功!',
-                icon: 'success'
-            });
-
-            this.updateDisplay();
-        } else {
-            wx.showToast({
-                title: '金币不足!',
-                icon: 'none'
+                title: 'Boss击败!',
+                icon: 'success',
+                duration: 1000
             });
         }
+
+        this.updateDisplay();
     }
 });

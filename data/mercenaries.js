@@ -14,12 +14,12 @@ const MERCENARIES_DATA = [
     // ==================== 基础系 (Basic) ====================
     // 价格倍率 ~30x
     {
-        id: 'rookie',
-        name: '新兵',
+        id: 'player',
+        name: '玩家',
         baseCost: 0,             // 默认雇佣，无需购买
         damage: 1,
         attackInterval: 4.0,
-        description: '刚入伍的新兵，虽然弱小但充满潜力',
+        description: '其实他就是你的缩影',
         icon: '🧑',
         category: 'basic',
         hired: true              // 默认已雇佣
@@ -239,8 +239,8 @@ function initMercenaries() {
     return MERCENARIES_DATA.map(merc => ({
         ...merc,
         recruited: merc.hired || false,  // 如果数据中标记hired=true则默认已雇佣
-        damageLevel: 0,          // 攻击力升级等级
-        intervalLevel: 0,        // 攻击间隔升级等级
+        damageLevel: 0,          // 攻击力升级等级（初始为0，未升级过）
+        intervalLevel: 0,        // 攻击间隔升级等级（初始为0，未升级过）
         currentDamage: merc.damage,           // 当前伤害
         currentInterval: merc.attackInterval, // 当前攻击间隔
         totalDamage: 0          // 总伤害贡献

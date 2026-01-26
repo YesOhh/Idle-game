@@ -1,88 +1,104 @@
 <!-- pages/mercenaries/mercenaries.wxml -->
-<view class="mercenaries-container">
-  <view class="header">
-    <view class="header-title">佣兵管理</view>
-    <view class="header-gold">💰 {{goldText}}</view>
-  </view>
-  
-  <view class="mercenaries-list">
-    <view wx:for="{{mercenaries}}" wx:key="id" class="mercenary-card pixel-card">
-      <view class="merc-header">
-        <view class="merc-icon">{{item.icon}}</view>
-        <view class="merc-info">
-          <view class="merc-name">{{item.name}}</view>
-          <view class="merc-desc">{{item.description}}</view>
-        </view>
+<view class="battle-container">
+  <!-- ========== 固定的Boss区域 ========== -->
+  <view class="boss-section">
+    <view class="boss-level">
+      Boss Lv.{{boss.level}}
+      <text wx:if="{{prestigeCount > 0}}" class="prestige-badge">🎖️ 第{{prestigeCount + 1}}周目</text>
+    </view>
+    
+    <!-- Boss精灵 -->
+    <view class="boss-sprite" bindtap="onTapBoss">
+      <view class="boss-icon">👹</view>
+    </view>
+    
+    <!-- Boss血条 -->
+    <view class="boss-hp-container">
+      <view class="boss-hp-label">
+        <text>{{bossHpText}}</text>
       </view>
-      
-      <view class="pixel-divider"></view>
-      
-      <view class="merc-stats">
-
-        <view class="stat-row">
-          <text class="stat-label">{{item.recruited ? '攻击力:' : '初始攻击:'}}</text>
-          <text class="stat-value">{{item.currentDamageText}} {{item.recruited ? '(Lv.' + item.damageLevel + ')' : ''}}</text>
-        </view>
-
-        <view wx:if="{{item.recruited}}" class="stat-row">
-          <text class="stat-label">攻击间隔:</text>
-          <text class="stat-value">{{item.currentInterval}}秒 (Lv.{{item.intervalLevel}})</text>
-        </view>
-        <view wx:else class="stat-row">
-          <text class="stat-label">攻击间隔:</text>
-          <text class="stat-value">{{item.attackInterval}}秒</text>
-        </view>
-
-        <view class="stat-row">
-          <text class="stat-label">总DPS:</text>
-          <text class="stat-value text-success">{{item.dpsText}}</text>
-        </view>
-
-        <!-- 技能显示区域 -->
-        <view wx:if="{{item.skillInfo}}" class="skill-container" style="margin-top: 10rpx; padding-top: 10rpx; border-top: 2rpx dashed #ccc; display: flex; flex-direction: column; width: 100%;">
-            <view class="{{item.skillInfo.isUnlocked ? 'text-gold' : 'text-muted'}}" style="font-weight: bold; font-size: 24rpx; margin-bottom: 4rpx;">
-                {{item.skillInfo.name}}
-            </view>
-            <view class="stat-value" style="font-size: 22rpx; color: #bdc3c7; line-height: 1.4;">
-                {{item.skillInfo.desc}}
-            </view>
-        </view>
-      </view>
-      
-      <!-- 未雇佣时显示招募按钮 -->
-      <button 
-        wx:if="{{!item.recruited}}"
-        class="pixel-button {{item.canAffordRecruit ? '' : 'disabled'}}" 
-        bindtap="onRecruitMercenary" 
-        data-id="{{item.id}}"
-        disabled="{{!item.canAffordRecruit}}">
-        招募 ({{item.recruitCostText}})
-      </button>
-
-      <!-- 已雇佣时显示升级按钮 -->
-      <view wx:if="{{item.recruited}}" class="upgrade-buttons" style="display: flex; gap: 10rpx; margin-top: 10rpx;">
-        <button 
-          class="pixel-button small {{item.canAffordDamage ? '' : 'disabled'}}" 
-          bindtap="onUpgradeDamage" 
-          data-id="{{item.id}}"
-          disabled="{{!item.canAffordDamage}}"
-          style="flex: 1; font-size: 20rpx; padding: 5rpx;">
-          升级攻击力 ({{item.damageCostText}})
-        </button>
-        
-        <button 
-          class="pixel-button small {{item.canAffordInterval ? '' : 'disabled'}}" 
-          bindtap="onUpgradeInterval" 
-          data-id="{{item.id}}"
-          disabled="{{!item.canAffordInterval}}"
-          style="flex: 1; font-size: 20rpx; padding: 5rpx;">
-          升级攻速 ({{item.intervalCostText}})
-        </button>
+      <view class="pixel-progress">
+        <view class="pixel-progress-fill" style="width: {{bossHpPercent}}%"></view>
       </view>
     </view>
   </view>
   
-  <view wx:if="{{mercenaries.length === 0}}" class="empty-state">
-    <text>暂无佣兵数据</text>
+  <!-- ========== 金币统计栏 ========== -->
+  <view class="stats-compact">
+    <view class="stat-compact">
+      <text class="stat-compact-label">💰</text>
+      <text class="stat-compact-value">{{goldText}}</text>
+    </view>
   </view>
+
+  <!-- ========== 佣兵管理内容 ========== -->
+  <scroll-view scroll-y class="manage-scroll">
+    <view wx:for="{{manageMercRows}}" wx:key="rowIndex" wx:for-item="row" class="merc-row-wrapper">
+      <!-- 该行的佣兵卡片 -->
+      <view class="merc-grid-row">
+        <view wx:for="{{row.items}}" wx:key="id" wx:for-item="merc"
+              class="merc-grid-item {{merc.recruited ? 'recruited' : 'not-recruited'}} {{selectedMercId === merc.id ? 'selected' : ''}}"
+              bindtap="onSelectMerc" data-id="{{merc.id}}">
+          <view class="merc-grid-icon">{{merc.icon}}</view>
+          <view class="merc-grid-name">{{merc.name}}</view>
+        </view>
+      </view>
+      
+      <!-- 如果选中的佣兵在这一行，显示详情 -->
+      <view wx:if="{{selectedRowIndex === row.rowIndex && selectedMerc}}" class="merc-detail-panel">
+        <view class="detail-header">
+          <text class="detail-name">{{selectedMerc.icon}} {{selectedMerc.name}}</text>
+        </view>
+        <view class="detail-desc">{{selectedMerc.description}}</view>
+        <view class="detail-stats">
+          <view class="detail-stat">
+            <text class="detail-label">攻击力：</text>
+            <text class="detail-value">{{selectedMerc.currentDamageText}}</text>
+          </view>
+          <view class="detail-stat">
+            <text class="detail-label">攻击间隔：</text>
+            <text class="detail-value">{{selectedMerc.currentInterval}}</text>
+          </view>
+        </view>
+        
+        <!-- 技能显示 -->
+        <view wx:if="{{selectedMerc.skillInfo}}" class="detail-skill">
+          <view class="skill-detail-header">
+            <text class="skill-name {{selectedMerc.skillInfo.isUnlocked ? 'unlocked' : 'locked'}}">{{selectedMerc.skillInfo.shortName}}</text>
+            <!-- 未雇佣时只显示技能名，不显示解锁条件 -->
+            <text wx:if="{{selectedMerc.recruited && !selectedMerc.skillInfo.isUnlocked}}" class="skill-unlock-condition">{{selectedMerc.skillInfo.unlockCondition}}</text>
+          </view>
+          <!-- 未雇佣时不显示技能描述 -->
+          <view wx:if="{{selectedMerc.recruited}}" class="skill-detail-desc">{{selectedMerc.skillInfo.desc}}</view>
+        </view>
+        
+        <!-- 雇佣费用 -->
+        <view wx:if="{{!selectedMerc.recruited}}" class="detail-cost">
+          <text>雇佣花费：</text>
+          <view class="cost-row">
+            <text>💰 {{selectedMerc.recruitCostText}}</text>
+          </view>
+        </view>
+        
+        <!-- 操作按钮 -->
+        <view class="detail-actions">
+          <button 
+            wx:if="{{!selectedMerc.recruited}}"
+            class="action-btn recruit-btn {{selectedMerc.canAffordRecruit ? '' : 'disabled'}}" 
+            bindtap="onRecruitMercenary" 
+            data-id="{{selectedMerc.id}}"
+            disabled="{{!selectedMerc.canAffordRecruit}}">
+            雇佣
+          </button>
+          <view wx:else class="action-btn hired-btn">
+            已雇佣
+          </view>
+        </view>
+      </view>
+    </view>
+    
+    <view wx:if="{{manageMercenaries.length === 0}}" class="empty-state">
+      <text>暂无佣兵数据</text>
+    </view>
+  </scroll-view>
 </view>

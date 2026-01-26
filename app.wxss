@@ -1,26 +1,37 @@
-/* 全局样式 - 像素风格 */
+/* 全局样式 - 现代深色主题 */
 
 /* CSS变量定义 */
 page {
-  --primary-color: #e74c3c;
-  --secondary-color: #3498db;
-  --success-color: #2ecc71;
-  --warning-color: #f39c12;
-  --danger-color: #e74c3c;
+  /* 主题色 */
+  --primary-color: #ff6b6b;
+  --secondary-color: #00d9ff;
+  --success-color: #00ff88;
+  --warning-color: #feca57;
+  --danger-color: #ff6b6b;
+  --accent-color: #a855f7;
   
-  --bg-dark: #1a1a2e;
-  --bg-medium: #16213e;
-  --bg-light: #2c3e50;
+  /* 背景色 */
+  --bg-darkest: #0a0a12;
+  --bg-dark: #0f0f1a;
+  --bg-medium: #1a1a2e;
+  --bg-light: #252542;
+  --bg-card: #1e1e35;
   
-  --text-primary: #ecf0f1;
-  --text-secondary: #bdc3c7;
-  --text-muted: #7f8c8d;
+  /* 文字色 */
+  --text-primary: #ffffff;
+  --text-secondary: #a0a0b0;
+  --text-muted: #606070;
+  --text-gold: #ffd700;
   
-  --border-color: #34495e;
+  /* 边框和阴影 */
+  --border-color: #3a3a5c;
+  --border-glow: rgba(0, 217, 255, 0.3);
   --shadow-color: rgba(0, 0, 0, 0.5);
+  --glow-primary: rgba(255, 107, 107, 0.4);
+  --glow-secondary: rgba(0, 217, 255, 0.4);
   
-  /* 像素字体 */
-  font-family: 'Courier New', Courier, monospace;
+  /* 字体 */
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   background-color: var(--bg-dark);
   color: var(--text-primary);
   font-size: 28rpx;
@@ -34,54 +45,60 @@ view, text, button, image, scroll-view {
 
 /* 像素风格按钮 */
 .pixel-button {
-  background-color: var(--primary-color);
+  background: linear-gradient(135deg, var(--primary-color), #ff8f8f);
   color: var(--text-primary);
-  border: 4rpx solid #000;
+  border: none;
+  border-radius: 12rpx;
   padding: 20rpx 40rpx;
   font-size: 28rpx;
   font-weight: bold;
   text-align: center;
   cursor: pointer;
   position: relative;
-  box-shadow: 4rpx 4rpx 0 #000;
-  transition: all 0.1s;
+  box-shadow: 0 4rpx 15rpx var(--glow-primary);
+  transition: all 0.2s;
 }
 
 .pixel-button:active {
-  box-shadow: 2rpx 2rpx 0 #000;
-  transform: translate(2rpx, 2rpx);
+  box-shadow: 0 2rpx 8rpx var(--glow-primary);
+  transform: translateY(2rpx);
 }
 
 .pixel-button.disabled {
-  background-color: var(--text-muted);
+  background: var(--bg-light);
   cursor: not-allowed;
   opacity: 0.6;
+  box-shadow: none;
 }
 
-/* 像素风格卡片 */
+/* 现代卡片 */
 .pixel-card {
-  background-color: var(--bg-light);
-  border: 4rpx solid var(--border-color);
+  background: var(--bg-card);
+  border: 1rpx solid var(--border-color);
+  border-radius: 16rpx;
   padding: 30rpx;
   margin: 20rpx 0;
-  box-shadow: 4rpx 4rpx 0 var(--shadow-color);
+  box-shadow: 0 8rpx 32rpx rgba(0, 0, 0, 0.3);
 }
 
 /* 进度条 */
 .pixel-progress {
   width: 100%;
-  height: 40rpx;
-  background-color: var(--bg-medium);
-  border: 4rpx solid #000;
+  height: 24rpx;
+  background-color: var(--bg-light);
+  border: none;
+  border-radius: 12rpx;
   position: relative;
   overflow: hidden;
 }
 
 .pixel-progress-fill {
   height: 100%;
-  background-color: var(--success-color);
+  background: linear-gradient(90deg, #ff6b6b, #ff8f8f);
+  border-radius: 12rpx;
   transition: width 0.3s ease;
   position: relative;
+  box-shadow: 0 0 10rpx var(--glow-primary);
 }
 
 

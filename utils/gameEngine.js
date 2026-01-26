@@ -1,30 +1,16 @@
 // utils/gameEngine.js - 核心游戏引擎
 
 /**
- * 格式化大数字
+ * 格式化大数字（纯数字显示，带千分位分隔符）
  * @param {number} num - 要格式化的数字
  * @returns {string} - 格式化后的字符串
  */
 function formatNumber(num) {
-    if (num < 1000) {
-        // 如果是整数，显示整数；如果是小数，保留1位，并去除末尾的0
-        return parseFloat(num.toFixed(1)).toString();
+    if (num < 1) {
+        return parseFloat(num.toFixed(2)).toString();
     }
-
-    const units = ['', '千', '万', '亿', '兆', '京', '垓', '秭', '穰'];
-    const unitValue = [1, 1e3, 1e4, 1e8, 1e12, 1e16, 1e20, 1e24, 1e28];
-
-    for (let i = unitValue.length - 1; i >= 0; i--) {
-        if (num >= unitValue[i]) {
-            const value = num / unitValue[i];
-            if (value >= 1000) {
-                return value.toFixed(2) + units[i];
-            }
-            return value.toFixed(1) + units[i];
-        }
-    }
-
-    return num.toExponential(2);
+    // 取整并添加千分位分隔符
+    return Math.floor(num).toLocaleString('en-US');
 }
 
 /**
@@ -394,6 +380,16 @@ function calculateOfflineProgress(dps, offlineSeconds, bossLevel) {
 function getMercenarySkill(mercenary) {
     const totalLevel = mercenary.damageLevel + mercenary.intervalLevel;
 
+    // 玩家技能：【长大】(Lv 10解锁)
+    // 升级攻击力时同步升级点击伤害
+    if (mercenary.id === 'player' && totalLevel >= 10) {
+        return {
+            type: 'sync_click_damage',
+            name: '长大',
+            desc: '升级攻击力时，点击伤害也同步提升'
+        };
+    }
+
     // 战士技能：【熟练】(Lv 30解锁)
     // 每次攻击有几率提高1%攻击力
     if (mercenary.id === 'warrior' && totalLevel >= 30) {
@@ -550,15 +546,16 @@ function getMercenarySkill(mercenary) {
     }
 
     // 天使技能：【圣洁之力】(Lv 30解锁)
-    // 攻击时有概率触发圣洁净化，造成Boss最大血量百分比伤害
+    // 概率造成Boss当前血量0.01%的伤害，伤害不受任何加成
     if (mercenary.id === 'angel' && totalLevel >= 30) {
-        const percentDmg = 0.001 + Math.floor((totalLevel - 30) / 20) * 0.0005;
+        const chance = 0.08 + Math.floor((totalLevel - 30) / 20) * 0.02;
         return {
-            type: 'percent_damage',
+            type: 'pure_percent_damage',
             name: '圣洁之力',
-            chance: 0.08,
-            percentVal: percentDmg,
-            desc: `8%几率造成Boss最大血量${(percentDmg * 100).toFixed(2)}%的伤害`
+            chance: chance,
+            percentVal: 0.0001, // 0.01%
+            ignoreBonus: true,
+            desc: `${(chance * 100).toFixed(0)}%几率造成Boss当前血量0.01%伤害(不受加成)`
         };
     }
 
@@ -576,14 +573,14 @@ function getMercenarySkill(mercenary) {
     }
 
     // 虚空领主技能：【虚空侵蚀】(Lv 40解锁)
-    // 每次攻击造成Boss当前血量百分比伤害
+    // 概率造成全部单位攻击力总和的伤害
     if (mercenary.id === 'void_lord' && totalLevel >= 40) {
-        const percentDmg = 0.0005 + Math.floor((totalLevel - 40) / 15) * 0.0002;
+        const chance = 0.10 + Math.floor((totalLevel - 40) / 15) * 0.03;
         return {
-            type: 'current_hp_damage',
+            type: 'total_team_damage',
             name: '虚空侵蚀',
-            percentVal: percentDmg,
-            desc: `每次攻击额外造成Boss当前血量${(percentDmg * 100).toFixed(3)}%的伤害`
+            chance: chance,
+            desc: `${(chance * 100).toFixed(0)}%几率造成全队攻击力总和的伤害`
         };
     }
 
@@ -601,14 +598,18 @@ function getMercenarySkill(mercenary) {
     }
 
     // 混沌帝王技能：【混沌法则】(Lv 45解锁)
-    // 攻击间隔越长，伤害倍率越高
+    // 每次攻击概率增加百分比攻击力，同时增加攻击间隔
     if (mercenary.id === 'chaos_emperor' && totalLevel >= 45) {
-        const baseMult = 1.5 + Math.floor((totalLevel - 45) / 10) * 0.3;
+        const chance = 0.15 + Math.floor((totalLevel - 45) / 10) * 0.03;
+        const atkBonus = 0.05 + Math.floor((totalLevel - 45) / 15) * 0.02;
+        const intervalIncrease = 0.1; // 每次触发增加0.1秒攻击间隔
         return {
-            type: 'slow_power',
+            type: 'chaos_stack',
             name: '混沌法则',
-            baseMultiplier: baseMult,
-            desc: `攻击间隔每1秒，伤害+${(baseMult * 100).toFixed(0)}%`
+            chance: chance,
+            atkBonus: atkBonus,
+            intervalIncrease: intervalIncrease,
+            desc: `${(chance * 100).toFixed(0)}%几率攻击力+${(atkBonus * 100).toFixed(0)}%，但攻击间隔+${intervalIncrease}秒`
         };
     }
 
@@ -638,24 +639,38 @@ function getMercenarySkill(mercenary) {
 function getMercenarySkillDisplay(mercenary) {
     const totalLevel = mercenary.damageLevel + mercenary.intervalLevel;
 
+    // 玩家 - 长大
+    if (mercenary.id === 'player') {
+        const unlockLv = 10;
+        const isUnlocked = totalLevel >= unlockLv;
+        const baseDesc = '升级攻击力时，点击伤害也同步提升';
+        return {
+            name: '【长大】',
+            isUnlocked,
+            desc: baseDesc,
+            baseDesc,
+            unlockCondition: `Lv.${unlockLv}解锁`
+        };
+    }
+
     // 战士 - 熟练
     if (mercenary.id === 'warrior') {
         const unlockLv = 30;
         const isUnlocked = totalLevel >= unlockLv;
-
-        let desc = '每次攻击有几率永久提升攻击力';
+        const baseDesc = '每次攻击有几率永久提升攻击力';
+        let desc = baseDesc;
         if (isUnlocked) {
             const extraChance = Math.floor((totalLevel - 30) / 10) * 0.01;
             const chance = 0.03 + extraChance;
             desc = `有${(chance * 100).toFixed(0)}%几率永久提升1%攻击力`;
-        } else {
-            desc = '（达到 Lv.30 解锁）';
         }
 
         return {
             name: '【熟练】',
             isUnlocked,
-            desc
+            desc,
+            baseDesc,
+            unlockCondition: `Lv.${unlockLv}解锁`
         };
     }
 
@@ -663,20 +678,20 @@ function getMercenarySkillDisplay(mercenary) {
     if (mercenary.id === 'archer') {
         const unlockLv = 20;
         const isUnlocked = totalLevel >= unlockLv;
-
-        let desc = '攻击有几率造成多倍暴击伤害';
+        const baseDesc = '攻击有几率造成多倍暴击伤害';
+        let desc = baseDesc;
         if (isUnlocked) {
             const extraMult = Math.floor((totalLevel - 20) / 10) * 0.5;
             const multiplier = 3.0 + extraMult;
             desc = `20%几率造成${multiplier.toFixed(1)}倍伤害`;
-        } else {
-            desc = '（达到 Lv.20 解锁）';
         }
 
         return {
             name: '【爆裂】',
             isUnlocked,
-            desc
+            desc,
+            baseDesc,
+            unlockCondition: `Lv.${unlockLv}解锁`
         };
     }
 
@@ -684,134 +699,125 @@ function getMercenarySkillDisplay(mercenary) {
     if (mercenary.id === 'royal_guard') {
         const unlockLv = 25;
         const isUnlocked = totalLevel >= unlockLv;
-        let desc = '攻击时有几率增强全队伤害';
+        const baseDesc = '攻击时有几率增强全队伤害';
+        let desc = baseDesc;
         if (isUnlocked) {
             const buffVal = 0.05 + Math.floor((totalLevel - 25) / 15) * 0.02;
             desc = `8%几率使全队伤害+${(buffVal * 100).toFixed(0)}% (5秒)`;
-        } else {
-            desc = `（达到 Lv.${unlockLv} 解锁）`;
         }
-        return { name: '【皇家守护】', isUnlocked, desc };
+        return { name: '【皇家守护】', isUnlocked, desc, baseDesc, unlockCondition: `Lv.${unlockLv}解锁` };
     }
 
     // 钢铁士兵 - 钢铁神拳
     if (mercenary.id === 'iron_soldier') {
         const unlockLv = 20;
         const isUnlocked = totalLevel >= unlockLv;
-        let desc = '攻击时有概率触发钢铁系总攻击力伤害';
+        const baseDesc = '攻击时有概率触发钢铁系总攻击力伤害';
+        let desc = baseDesc;
         if (isUnlocked) {
             const mult = 0.4 + Math.floor((totalLevel - 20) / 10) * 0.15;
             desc = `10%几率造成钢铁系总攻击力${(mult * 100).toFixed(0)}%伤害`;
-        } else {
-            desc = `（达到 Lv.${unlockLv} 解锁）`;
         }
-        return { name: '【钢铁神拳】', isUnlocked, desc };
+        return { name: '【钢铁神拳】', isUnlocked, desc, baseDesc, unlockCondition: `Lv.${unlockLv}解锁` };
     }
 
     // 狂战士 - 狂暴
     if (mercenary.id === 'berserker') {
         const unlockLv = 35;
         const isUnlocked = totalLevel >= unlockLv;
-        let desc = 'Boss血量越低，伤害越高';
+        const baseDesc = 'Boss血量越低，伤害越高';
+        let desc = baseDesc;
         if (isUnlocked) {
             const maxBonus = 1.0 + Math.floor((totalLevel - 35) / 10) * 0.3;
             desc = `Boss血量越低伤害越高，最高+${(maxBonus * 100).toFixed(0)}%`;
-        } else {
-            desc = `（达到 Lv.${unlockLv} 解锁）`;
         }
-        return { name: '【狂暴】', isUnlocked, desc };
+        return { name: '【狂暴】', isUnlocked, desc, baseDesc, unlockCondition: `Lv.${unlockLv}解锁` };
     }
 
     // 法师 - 奥术激涌
     if (mercenary.id === 'mage') {
         const unlockLv = 20;
         const isUnlocked = totalLevel >= unlockLv;
-        let bonusStr = '';
+        const baseDesc = '攻击时有几率使全体攻速提升';
+        let desc = baseDesc;
         if (isUnlocked) {
             const bonusSpeed = 0.05 + Math.floor((totalLevel - unlockLv) / 10) * 0.05;
-            bonusStr = ` (当前: ${(bonusSpeed * 100).toFixed(0)}%)`;
+            desc = `5%几率使全体攻速提升${(bonusSpeed * 100).toFixed(0)}% (持续3秒)`;
         }
-        return {
-            name: '【奥术激涌】',
-            isUnlocked,
-            desc: isUnlocked ? `5%几率使全体攻速提升${bonusStr} (持续3秒)` : `（达到 Lv.${unlockLv} 解锁）`
-        };
+        return { name: '【奥术激涌】', isUnlocked, desc, baseDesc, unlockCondition: `Lv.${unlockLv}解锁` };
     }
 
     // 冰之女儿 - 冰霜冻结
     if (mercenary.id === 'ice_daughter') {
         const unlockLv = 25;
         const isUnlocked = totalLevel >= unlockLv;
-        let desc = '攻击时有概率冻结Boss增加其受到伤害';
+        const baseDesc = '攻击时有概率冻结Boss增加其受到伤害';
+        let desc = baseDesc;
         if (isUnlocked) {
             const debuffVal = 0.15 + Math.floor((totalLevel - 25) / 10) * 0.05;
             desc = `12%几率使Boss受伤+${(debuffVal * 100).toFixed(0)}% (4秒)`;
-        } else {
-            desc = `（达到 Lv.${unlockLv} 解锁）`;
         }
-        return { name: '【冰霜冻结】', isUnlocked, desc };
+        return { name: '【冰霜冻结】', isUnlocked, desc, baseDesc, unlockCondition: `Lv.${unlockLv}解锁` };
     }
 
     // 夜剑客 - 暗影突袭
     if (mercenary.id === 'night_swordsman') {
         const unlockLv = 20;
         const isUnlocked = totalLevel >= unlockLv;
-        let desc = '极高暴击率的暗影攻击';
+        const baseDesc = '极高暴击率的暗影攻击';
+        let desc = baseDesc;
         if (isUnlocked) {
             const critChance = Math.min(0.60, 0.35 + Math.floor((totalLevel - 20) / 10) * 0.05);
             const critMult = 2.0 + Math.floor((totalLevel - 20) / 15) * 0.3;
             desc = `${(critChance * 100).toFixed(0)}%几率造成${critMult.toFixed(1)}倍伤害`;
-        } else {
-            desc = `（达到 Lv.${unlockLv} 解锁）`;
         }
-        return { name: '【暗影突袭】', isUnlocked, desc };
+        return { name: '【暗影突袭】', isUnlocked, desc, baseDesc, unlockCondition: `Lv.${unlockLv}解锁` };
     }
 
     // 亡灵法师 - 亡灵召唤
     if (mercenary.id === 'necromancer') {
         const unlockLv = 30;
         const isUnlocked = totalLevel >= unlockLv;
-        let desc = '召唤骷髅军团协助攻击';
+        const baseDesc = '召唤骷髅军团协助攻击';
+        let desc = baseDesc;
         if (isUnlocked) {
             const count = Math.min(5, 1 + Math.floor((totalLevel - 30) / 20));
             const dmg = 0.10 + Math.floor((totalLevel - 30) / 10) * 0.03;
             desc = `召唤${count}个骷髅，各造成${(dmg * 100).toFixed(0)}%伤害`;
-        } else {
-            desc = `（达到 Lv.${unlockLv} 解锁）`;
         }
-        return { name: '【亡灵召唤】', isUnlocked, desc };
+        return { name: '【亡灵召唤】', isUnlocked, desc, baseDesc, unlockCondition: `Lv.${unlockLv}解锁` };
     }
 
     // 圣职者 - 神圣祝福
     if (mercenary.id === 'priest') {
         const unlockLv = 25;
         const isUnlocked = totalLevel >= unlockLv;
-        let desc = '为全队提供永久伤害加成光环';
+        const baseDesc = '为全队提供永久伤害加成光环';
+        let desc = baseDesc;
         if (isUnlocked) {
             const auraVal = 0.08 + Math.floor((totalLevel - 25) / 10) * 0.03;
             desc = `全队永久伤害+${(auraVal * 100).toFixed(0)}%`;
-        } else {
-            desc = `（达到 Lv.${unlockLv} 解锁）`;
         }
-        return { name: '【神圣祝福】', isUnlocked, desc };
+        return { name: '【神圣祝福】', isUnlocked, desc, baseDesc, unlockCondition: `Lv.${unlockLv}解锁` };
     }
 
     // 龙骑士 - 龙魂觉醒
     if (mercenary.id === 'dragon') {
         const unlockLv = 40;
         const isUnlocked = totalLevel >= unlockLv;
-        let desc = '积累龙魂能量释放毁灭龙息';
+        const baseDesc = '积累龙魂能量释放毁灭龙息';
+        let desc = baseDesc;
         if (isUnlocked) {
             const burstMult = 50 + Math.floor((totalLevel - unlockLv) / 10) * 15;
             const burnDmg = 0.05 + Math.floor((totalLevel - unlockLv) / 15) * 0.02;
             desc = `每10次攻击释放${burstMult}倍龙息+灼烧${(burnDmg * 100).toFixed(0)}%/秒`;
-        } else {
-            desc = `（达到 Lv.${unlockLv} 解锁）`;
         }
         return {
             name: '【龙魂觉醒】',
             isUnlocked,
-            desc
+            desc,
+            baseDesc,
+            unlockCondition: `Lv.${unlockLv}解锁`
         };
     }
 
@@ -819,10 +825,10 @@ function getMercenarySkillDisplay(mercenary) {
     if (mercenary.id === 'angel') {
         const unlockLv = 30;
         const isUnlocked = totalLevel >= unlockLv;
-        let desc = '触发圣洁净化造成百分比伤害';
+        let desc = '概率造成Boss当前血量百分比伤害';
         if (isUnlocked) {
-            const pct = 0.001 + Math.floor((totalLevel - 30) / 20) * 0.0005;
-            desc = `8%几率造成Boss最大血量${(pct * 100).toFixed(2)}%伤害`;
+            const chance = 0.08 + Math.floor((totalLevel - 30) / 20) * 0.02;
+            desc = `${(chance * 100).toFixed(0)}%几率造成Boss当前血量0.01%伤害(不受加成)`;
         } else {
             desc = `（达到 Lv.${unlockLv} 解锁）`;
         }
@@ -847,10 +853,10 @@ function getMercenarySkillDisplay(mercenary) {
     if (mercenary.id === 'void_lord') {
         const unlockLv = 40;
         const isUnlocked = totalLevel >= unlockLv;
-        let desc = '每次攻击造成Boss当前血量百分比伤害';
+        let desc = '概率造成全队攻击力总和的伤害';
         if (isUnlocked) {
-            const pct = 0.0005 + Math.floor((totalLevel - 40) / 15) * 0.0002;
-            desc = `每次额外造成Boss当前血量${(pct * 100).toFixed(3)}%伤害`;
+            const chance = 0.10 + Math.floor((totalLevel - 40) / 15) * 0.03;
+            desc = `${(chance * 100).toFixed(0)}%几率造成全队攻击力总和的伤害`;
         } else {
             desc = `（达到 Lv.${unlockLv} 解锁）`;
         }
@@ -885,10 +891,11 @@ function getMercenarySkillDisplay(mercenary) {
     if (mercenary.id === 'chaos_emperor') {
         const unlockLv = 45;
         const isUnlocked = totalLevel >= unlockLv;
-        let desc = '攻击间隔越长伤害越高';
+        let desc = '每次攻击概率增加攻击力，但也增加攻击间隔';
         if (isUnlocked) {
-            const mult = 1.5 + Math.floor((totalLevel - 45) / 10) * 0.3;
-            desc = `攻击间隔每1秒，伤害+${(mult * 100).toFixed(0)}%`;
+            const chance = 0.15 + Math.floor((totalLevel - 45) / 10) * 0.03;
+            const atkBonus = 0.05 + Math.floor((totalLevel - 45) / 15) * 0.02;
+            desc = `${(chance * 100).toFixed(0)}%几率攻击力+${(atkBonus * 100).toFixed(0)}%，攻击间隔+0.1秒`;
         } else {
             desc = `（达到 Lv.${unlockLv} 解锁）`;
         }

@@ -2,41 +2,52 @@
 
 .battle-container {
   min-height: 100vh;
-  background-color: var(--bg-dark);
+  background: linear-gradient(180deg, var(--bg-darkest) 0%, var(--bg-dark) 100%);
   padding: 20rpx;
   padding-bottom: 120rpx;
 }
 
-/* Boss区域 - 缩小 */
+/* Boss区域 - 现代渐变卡片（紧凑版） */
 .boss-section {
-  margin-bottom: 20rpx;
+  margin-bottom: 12rpx;
+  background: linear-gradient(135deg, #1a1a35 0%, #2d1f3d 50%, #1a2535 100%);
+  border: 1rpx solid rgba(168, 85, 247, 0.3);
+  border-radius: 16rpx;
+  padding: 12rpx 16rpx;
+  box-shadow: 0 6rpx 24rpx rgba(0, 0, 0, 0.4), inset 0 1rpx 0 rgba(255, 255, 255, 0.05);
 }
 
 .boss-level {
   text-align: center;
-  font-size: 28rpx;
+  font-size: 24rpx;
   font-weight: bold;
-  color: var(--primary-color);
-  margin-bottom: 15rpx;
-  text-shadow: 2rpx 2rpx 0 #000;
+  color: #fff;
+  margin-bottom: 6rpx;
+  text-shadow: 0 0 20rpx rgba(168, 85, 247, 0.5);
+}
+
+.prestige-badge {
+  color: #feca57;
+  font-size: 18rpx;
+  margin-left: 10rpx;
 }
 
 .boss-sprite {
   width: 100%;
-  height: 300rpx;
+  height: 120rpx;
   display: flex;
   justify-content: center;
   align-items: center;
   position: relative;
-  margin-bottom: 20rpx;
+  margin-bottom: 8rpx;
 }
 
 .boss-icon {
-  font-size: 150rpx;
+  font-size: 80rpx;
   cursor: pointer;
   user-select: none;
   transition: transform 0.1s;
-  filter: drop-shadow(4rpx 4rpx 0 rgba(0, 0, 0, 0.5));
+  filter: drop-shadow(0 0 12rpx rgba(255, 107, 107, 0.5));
 }
 
 .boss-icon:active {
@@ -102,25 +113,23 @@
 
 /* 全局Buff视觉效果 */
 .battle-container.buff-speed {
-  box-shadow: inset 0 0 100rpx rgba(155, 89, 182, 0.4);
-  background-color: #1e1e3f; /* 稍微带点紫色调 */
+  box-shadow: inset 0 0 100rpx rgba(168, 85, 247, 0.4);
   animation: pulse-purple 1.5s infinite alternate;
 }
 
 .battle-container.buff-damage {
-  box-shadow: inset 0 0 120rpx rgba(231, 76, 60, 0.4);
-  background-color: #2a1a1a; /* 稍微带点红色调 */
+  box-shadow: inset 0 0 120rpx rgba(255, 107, 107, 0.4);
   animation: pulse-red 1s infinite alternate;
 }
 
 @keyframes pulse-purple {
-  from { box-shadow: inset 0 0 60rpx rgba(155, 89, 182, 0.3); }
-  to { box-shadow: inset 0 0 120rpx rgba(155, 89, 182, 0.6); }
+  from { box-shadow: inset 0 0 60rpx rgba(168, 85, 247, 0.3); }
+  to { box-shadow: inset 0 0 120rpx rgba(168, 85, 247, 0.6); }
 }
 
 @keyframes pulse-red {
-  from { box-shadow: inset 0 0 80rpx rgba(231, 76, 60, 0.3); }
-  to { box-shadow: inset 0 0 160rpx rgba(231, 76, 60, 0.7); }
+  from { box-shadow: inset 0 0 80rpx rgba(255, 107, 107, 0.3); }
+  to { box-shadow: inset 0 0 160rpx rgba(255, 107, 107, 0.7); }
 }
 
 @keyframes floatUp {
@@ -139,25 +148,44 @@
 
 /* Boss血条 */
 .boss-hp-container {
-  margin-bottom: 15rpx;
+  margin-bottom: 8rpx;
 }
 
 .boss-hp-label {
   text-align: center;
   font-size: 22rpx;
-  color: var(--text-secondary);
+  color: rgba(255, 255, 255, 0.9);
   margin-bottom: 8rpx;
+  font-weight: bold;
+}
+
+/* 彩色渐变血条 */
+.pixel-progress {
+  height: 16rpx;
+  background: rgba(0, 0, 0, 0.5);
+  border-radius: 8rpx;
+  overflow: hidden;
+  border: 1rpx solid rgba(255, 255, 255, 0.1);
+}
+
+.pixel-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #ef4444 0%, #f97316 30%, #eab308 60%, #22c55e 100%);
+  border-radius: 8rpx;
+  transition: width 0.3s ease;
+  box-shadow: 0 0 8rpx rgba(34, 197, 94, 0.5);
 }
 
 /* 紧凑的统计信息 */
 .stats-compact {
   display: flex;
   justify-content: space-around;
-  background-color: var(--bg-light);
-  border: 3rpx solid var(--border-color);
+  background: var(--bg-card);
+  border: 1rpx solid var(--border-color);
+  border-radius: 12rpx;
   padding: 15rpx;
   margin-bottom: 20rpx;
-  box-shadow: 3rpx 3rpx 0 var(--shadow-color);
+  box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.3);
 }
 
 .stat-compact {
@@ -172,24 +200,22 @@
 }
 
 .stat-compact-value {
-  font-size: 22rpx;
+  font-size: 24rpx;
   font-weight: bold;
-  color: var(--success-color);
+  color: var(--text-gold);
 }
 
 /* 佣兵列表区域 */
 .mercenaries-section {
-  background-color: var(--bg-light);
-  border: 4rpx solid var(--border-color);
-  padding: 20rpx;
+  background-color: transparent;
+  padding: 10rpx;
   margin-bottom: 15rpx;
-  box-shadow: 4rpx 4rpx 0 var(--shadow-color);
 }
 
 .section-title {
   font-size: 28rpx;
   font-weight: bold;
-  color: var(--primary-color);
+  color: var(--secondary-color);
   margin-bottom: 15rpx;
   text-align: center;
 }
@@ -198,91 +224,240 @@
   max-height: 500rpx;
 }
 
-/* 佣兵列表项 */
-.merc-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  background-color: var(--bg-medium);
-  border: 2rpx solid var(--border-color);
-  padding: 15rpx;
-  margin-bottom: 10rpx;
+/* 现代佣兵卡片 */
+.merc-item-card {
+  background: var(--bg-card);
+  border: 1rpx solid var(--border-color);
+  border-radius: 16rpx;
+  margin-bottom: 12rpx;
+  transition: all 0.2s ease;
+  overflow: hidden;
 }
 
-.merc-item:last-child {
+.merc-item-card.expanded {
+  border-color: var(--secondary-color);
+  box-shadow: 0 0 20rpx rgba(0, 217, 255, 0.2);
+}
+
+.merc-item-card:last-child {
   margin-bottom: 0;
 }
 
-.merc-left {
+.merc-card-header {
   display: flex;
+  align-items: flex-start;
+  padding: 20rpx;
+  gap: 20rpx;
+}
+
+.merc-icon-box {
+  width: 90rpx;
+  height: 90rpx;
+  display: flex;
+  justify-content: center;
   align-items: center;
-  gap: 15rpx;
+  flex-shrink: 0;
+  background: linear-gradient(135deg, var(--bg-light) 0%, var(--bg-medium) 100%);
+  border-radius: 12rpx;
+}
+
+.merc-icon-large {
+  font-size: 60rpx;
+}
+
+.merc-info-main {
   flex: 1;
-}
-
-.merc-icon-small {
-  font-size: 50rpx;
-}
-
-.merc-info-compact {
   display: flex;
   flex-direction: column;
-  gap: 3rpx;
+  gap: 6rpx;
 }
 
-.merc-name-small {
-  font-size: 24rpx;
+.merc-title-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.merc-name {
+  font-size: 28rpx;
   font-weight: bold;
   color: var(--text-primary);
 }
 
-.merc-count {
-  font-size: 20rpx;
-  color: var(--text-muted);
+.merc-level {
+  font-size: 22rpx;
+  color: var(--text-secondary);
+  background: var(--bg-light);
+  padding: 4rpx 12rpx;
+  border-radius: 8rpx;
 }
 
-.merc-right {
+.merc-stats-row {
   display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 8rpx;
+  align-items: center;
 }
 
-.merc-dps-info {
-  display: flex;
-  gap: 5rpx;
-  align-items: baseline;
+.merc-stat {
+  font-size: 22rpx;
+  color: var(--text-secondary);
 }
 
-.merc-dps-label {
-  font-size: 18rpx;
-  color: var(--text-muted);
+.merc-skill-tag {
+  margin-top: 6rpx;
 }
 
-.merc-dps-value {
+.skill-tag {
   font-size: 20rpx;
   font-weight: bold;
+  padding: 4rpx 10rpx;
+  border-radius: 6rpx;
+}
+
+.skill-tag.unlocked {
   color: var(--success-color);
+  background: rgba(0, 255, 136, 0.1);
+}
+
+.skill-tag.locked {
+  color: var(--text-muted);
+  background: rgba(96, 96, 112, 0.2);
 }
 
 .merc-recruit-btn {
-  background-color: var(--primary-color);
-  color: var(--text-primary);
-  border: 3rpx solid #000;
-  padding: 8rpx 20rpx;
-  font-size: 20rpx;
+  background: linear-gradient(135deg, var(--warning-color), #ffdb70);
+  color: #1a1a2e;
+  border: none;
+  border-radius: 10rpx;
+  padding: 12rpx 20rpx;
+  font-size: 22rpx;
   font-weight: bold;
-  box-shadow: 2rpx 2rpx 0 #000;
+  box-shadow: 0 4rpx 12rpx rgba(254, 202, 87, 0.3);
+  white-space: nowrap;
+  align-self: center;
 }
 
 .merc-recruit-btn:active {
-  box-shadow: 1rpx 1rpx 0 #000;
-  transform: translate(1rpx, 1rpx);
+  transform: scale(0.98);
 }
 
 .merc-recruit-btn.disabled {
-  background-color: var(--text-muted);
-  opacity: 0.6;
+  background: var(--bg-light);
+  color: var(--text-muted);
+  box-shadow: none;
+}
+
+/* 展开内容区域 - 现代风格 */
+.merc-expand-content {
+  padding: 0 20rpx 20rpx 20rpx;
+  background: linear-gradient(180deg, transparent 0%, rgba(0, 217, 255, 0.03) 100%);
+  border-top: 1rpx solid var(--border-color);
+}
+
+/* 升级框 */
+.upgrade-box {
+  background: var(--bg-light);
+  border: 1rpx solid var(--border-color);
+  border-radius: 12rpx;
+  padding: 15rpx 20rpx;
+  margin-bottom: 12rpx;
+  margin-top: 12rpx;
+  transition: all 0.2s;
+}
+
+.upgrade-box:active {
+  background: var(--bg-medium);
+  border-color: var(--secondary-color);
+}
+
+.upgrade-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8rpx;
+}
+
+.upgrade-title {
+  font-size: 24rpx;
+  color: var(--text-primary);
+  font-weight: bold;
+}
+
+.upgrade-effect {
+  font-size: 22rpx;
+  color: var(--success-color);
+}
+
+.upgrade-cost {
+  font-size: 22rpx;
+  color: var(--text-gold);
+}
+
+.upgrade-cost.disabled {
+  color: var(--text-muted);
+}
+
+/* 佣兵描述 */
+.merc-description {
+  font-size: 22rpx;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  margin-bottom: 10rpx;
+  padding: 12rpx 0;
+  border-top: 1rpx dashed var(--border-color);
+}
+
+/* 技能详情 */
+.skill-detail {
+  padding: 12rpx;
+  background: rgba(168, 85, 247, 0.1);
+  border: 1rpx solid rgba(168, 85, 247, 0.3);
+  border-radius: 10rpx;
+  margin-top: 10rpx;
+}
+
+.skill-detail-header {
+  display: flex;
+  align-items: center;
+  gap: 10rpx;
+  margin-bottom: 8rpx;
+}
+
+.skill-detail-name {
+  font-size: 24rpx;
+  font-weight: bold;
+}
+
+.skill-detail-name.unlocked {
+  color: var(--accent-color);
+}
+
+.skill-detail-name.locked {
+  color: var(--text-muted);
+}
+
+.skill-unlock-condition {
+  font-size: 18rpx;
+  color: var(--warning-color);
+  background: rgba(254, 202, 87, 0.15);
+  padding: 2rpx 8rpx;
+  border-radius: 4rpx;
+}
+
+.skill-detail-desc {
+  font-size: 22rpx;
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+
+.skill-unlock-hint {
+  font-weight: normal;
+  font-size: 20rpx;
+}
+
+.skill-desc {
+  font-size: 20rpx;
+  color: var(--text-secondary);
+  line-height: 1.4;
 }
 
 /* 升级点击按钮 - 缩小 */
@@ -884,4 +1059,205 @@
   color: var(--text-muted);
   padding: 40rpx;
   font-size: 24rpx;
+}
+
+/* ========== Tab内容区域 ========== */
+.tab-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+/* ========== 佣兵管理Tab ========== */
+.manage-scroll {
+  height: calc(100vh - 550rpx);
+}
+
+.merc-row-wrapper {
+  margin-bottom: 20rpx;
+}
+
+.merc-grid-row {
+  display: flex;
+  gap: 16rpx;
+  margin-bottom: 16rpx;
+}
+
+.merc-grid-item {
+  flex: 1;
+  min-width: 0;
+  background: var(--bg-card);
+  border-radius: 16rpx;
+  padding: 20rpx 10rpx;
+  text-align: center;
+  border: 2rpx solid transparent;
+  transition: all 0.3s ease;
+}
+
+.merc-grid-item.recruited {
+  border-color: var(--success-color);
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.1) 0%, var(--bg-card) 100%);
+}
+
+.merc-grid-item.not-recruited {
+  border-color: var(--border-color);
+  opacity: 0.7;
+}
+
+.merc-grid-item.selected {
+  border-color: var(--accent-color);
+  background: linear-gradient(135deg, rgba(168, 85, 247, 0.2) 0%, var(--bg-card) 100%);
+  box-shadow: 0 0 20rpx rgba(168, 85, 247, 0.3);
+}
+
+.merc-grid-icon {
+  font-size: 60rpx;
+  margin-bottom: 10rpx;
+}
+
+.merc-grid-name {
+  font-size: 24rpx;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 佣兵详情面板 */
+.merc-detail-panel {
+  background: var(--bg-card);
+  border-radius: 16rpx;
+  padding: 24rpx;
+  margin-top: 10rpx;
+  border: 2rpx solid var(--accent-color);
+  box-shadow: 0 8rpx 24rpx rgba(0, 0, 0, 0.3);
+}
+
+.detail-header {
+  margin-bottom: 16rpx;
+}
+
+.detail-name {
+  font-size: 32rpx;
+  font-weight: bold;
+  color: var(--text-primary);
+}
+
+.detail-desc {
+  font-size: 24rpx;
+  color: var(--text-muted);
+  margin-bottom: 16rpx;
+  line-height: 1.5;
+}
+
+.detail-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 10rpx;
+  margin-bottom: 16rpx;
+  padding: 16rpx;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 12rpx;
+}
+
+.detail-stat {
+  display: flex;
+  justify-content: space-between;
+  font-size: 26rpx;
+}
+
+.detail-label {
+  color: var(--text-muted);
+}
+
+.detail-value {
+  color: var(--success-color);
+  font-weight: bold;
+}
+
+.detail-skill {
+  padding: 16rpx;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 12rpx;
+  margin-bottom: 16rpx;
+}
+
+.detail-skill .skill-detail-header {
+  display: flex;
+  align-items: center;
+  gap: 10rpx;
+  margin-bottom: 10rpx;
+}
+
+.detail-skill .skill-name {
+  font-size: 26rpx;
+  font-weight: bold;
+}
+
+.detail-skill .skill-name.unlocked {
+  color: var(--accent-color);
+}
+
+.detail-skill .skill-name.locked {
+  color: var(--text-muted);
+}
+
+.detail-skill .skill-unlock-condition {
+  font-size: 22rpx;
+  color: var(--warning-color);
+}
+
+.detail-skill .skill-detail-desc {
+  font-size: 24rpx;
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+
+.detail-cost {
+  font-size: 26rpx;
+  color: var(--text-muted);
+  margin-bottom: 16rpx;
+}
+
+.detail-cost .cost-row {
+  color: var(--warning-color);
+  font-weight: bold;
+  margin-top: 6rpx;
+}
+
+.detail-actions {
+  display: flex;
+  justify-content: center;
+}
+
+.action-btn {
+  padding: 16rpx 60rpx;
+  border-radius: 12rpx;
+  font-size: 28rpx;
+  font-weight: bold;
+  border: none;
+}
+
+.action-btn.recruit-btn {
+  background: linear-gradient(135deg, var(--success-color) 0%, #16a34a 100%);
+  color: #fff;
+}
+
+.action-btn.recruit-btn.disabled {
+  background: var(--text-muted);
+  opacity: 0.5;
+}
+
+.action-btn.hired-btn {
+  background: var(--bg-dark);
+  color: var(--text-muted);
+  border: 2rpx solid var(--border-color);
+}
+
+.empty-state {
+  text-align: center;
+  color: var(--text-muted);
+  padding: 60rpx;
+  font-size: 28rpx;
 }
