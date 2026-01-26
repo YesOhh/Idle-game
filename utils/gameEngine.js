@@ -85,24 +85,64 @@ function calculateUpgradedDamage(mercenary, prestigeDamageMult = 1) {
 
 /**
  * 计算佣兵的基础伤害 (不含周目/圣物加成)
+ * 
+ * 参考《打BOSS》原版规律：
+ * - 攻击力是【加法增长】，不是乘法！
+ * - 阶段划分：升级1-4次为阶段0，之后每5次升级进入下一阶段
+ * - 增加值查表：[2, 3, 4, 6, 9, 13, 19, 28, 42, 63, 95, 142, 212...]
+ * - 超出查表范围后使用 1.5 倍增长
+ * - 第一级增加值 = floor(baseAtk / 2)，通过 scale = baseAtk / 4 实现
+ * - 51级及以后：增加值翻倍
+ * - 101级及以后：增加值再翻倍 (总共4倍)
  */
+
+// 增加值查表 (基于 baseAtk=4 的基准值)
+const ADD_VALUE_TABLE = [2, 3, 4, 6, 9, 13, 19, 28, 42, 63, 95, 142, 212];
+
+/**
+ * 获取升级次数对应的阶段
+ * @param {number} upgradeCount - 升级次数 (从1开始)
+ * @returns {number} - 阶段编号 (从0开始)
+ */
+function getUpgradeTier(upgradeCount) {
+    // 升级1-4次: 阶段0
+    // 升级5-9次: 阶段1
+    // 升级10-14次: 阶段2
+    // ...
+    if (upgradeCount <= 4) return 0;
+    return Math.floor((upgradeCount - 5) / 5) + 1;
+}
+
 function calculateMercenaryBaseDamage(mercenary) {
-    // 动态伤害系数精修 (底数 1.38 + 动态增长)
-    // 确保 100 级时输出能达到 2 小时通关 Boss 12 的水平
-    let effectiveLevel = mercenary.damageLevel;
+    let effectiveLevel = mercenary.damageLevel || 0;
     if (mercenary.id === 'legend') {
         effectiveLevel = (mercenary.damageLevel || 0) + (mercenary.intervalLevel || 0);
     }
 
-    const dynamicDmgExp = 1.38 + (effectiveLevel * 0.0005);
-    let damage = Math.floor(mercenary.damage * Math.pow(dynamicDmgExp, effectiveLevel));
-
-    // 里程碑
-    const totalLevel = (mercenary.damageLevel || 0) + (mercenary.intervalLevel || 0);
-    if (totalLevel >= 100) {
-        damage *= 4;
-    } else if (totalLevel >= 50) {
-        damage *= 2;
+    // 使用加法增长计算伤害 (原版机制)
+    const baseAtk = mercenary.damage;
+    const scale = baseAtk / 4;  // 缩放系数，使得第一级增加值 = floor(baseAtk / 2)
+    let damage = baseAtk;
+    
+    // 计算每次升级增加的攻击力
+    for (let upgrade = 1; upgrade <= effectiveLevel; upgrade++) {
+        const resultLevel = upgrade + 1;  // 升级后的等级
+        const tier = getUpgradeTier(upgrade);
+        
+        // 查表获取基础增加值，超出范围则按1.5倍增长
+        let baseAdd = tier < ADD_VALUE_TABLE.length 
+            ? ADD_VALUE_TABLE[tier] 
+            : Math.floor(ADD_VALUE_TABLE[12] * Math.pow(1.5, tier - 12));
+        
+        // 根据佣兵基础攻击力缩放
+        let addValue = Math.floor(baseAdd * scale);
+        
+        // 51级及以后：增加值翻倍
+        if (resultLevel >= 51) addValue *= 2;
+        // 101级及以后：增加值再翻倍
+        if (resultLevel >= 101) addValue *= 2;
+        
+        damage += Math.max(1, addValue);
     }
 
     // 战士等自带的堆叠Buff (属于该佣兵个体的成长)
@@ -135,26 +175,16 @@ function getDamageDisplayInfo(mercenary, prestigeDamageMult = 1) {
  * @returns {number} - 攻击间隔（秒）
  */
 function calculateUpgradedInterval(mercenary) {
-    // 还原之前的“当前算法” (渐进式衰减)
-    // 玩家反馈攻速升级太快，这里调慢衰减速度
-    // minInterval 是理论极限
-    const minInterval = 0.1;
-
-    // 调整衰减率：从 0.9 提升到 0.94 (越大越慢)
-    // 修正计算：让攻速越慢的英雄，每级提升的幅度相对更大一点，但整体速度放缓
-    let decayRate = 0.94 + (mercenary.attackInterval - 1) * 0.01;
-    decayRate = Math.min(0.995, Math.max(0.92, decayRate));
-
-    // [传说] 核心：如果是传说，攻速算法中的“等级”参数 = (攻速等级 + 攻击等级)
-    let effectiveLevel = mercenary.intervalLevel;
+    // [传说] 核心：如果是传说，攻速算法中的"等级"参数 = (攻速等级 + 攻击等级)
+    let effectiveLevel = mercenary.intervalLevel || 0;
     if (mercenary.id === 'legend') {
         effectiveLevel = (mercenary.intervalLevel || 0) + (mercenary.damageLevel || 0);
     }
 
-    const decayFactor = Math.pow(decayRate, effectiveLevel);
-    let interval = minInterval + (mercenary.attackInterval - minInterval) * decayFactor;
+    // 每级减少1%，即乘以0.99
+    let interval = mercenary.attackInterval * Math.pow(0.99, effectiveLevel);
 
-    // 应用里程碑奖励 (Lv 75, Lv 100) - 这里的直接乘算依然保留
+    // 应用里程碑奖励 (Lv 75, Lv 100)
     const totalLevel = (mercenary.damageLevel || 0) + (mercenary.intervalLevel || 0);
     if (totalLevel >= 75) interval *= 0.8;
     if (totalLevel >= 100) interval *= 0.8;
@@ -164,6 +194,7 @@ function calculateUpgradedInterval(mercenary) {
         interval *= (1 - mercenary._prestigeSpeedBuff);
     }
 
+    // 最低间隔限制为0.1秒
     return Math.max(0.1, Number(interval.toFixed(2)));
 }
 
@@ -228,16 +259,22 @@ function calculatePrestigeBonus(player) {
  * 计算佣兵升级成本 (统一)
  * @param {Object} mercenary - 佣兵对象
  * @returns {number} - 升级成本
+ * 
+ * 参考《打BOSS》原版规律：
+ * - 首次升级价格 = 雇佣价格 / 2
+ * - 升级价格增长率 = 1.15 (每级是上一级的1.15倍)
+ * - 特殊：默认雇佣单位(baseCost=0)，首次升级价格 = 15
  */
 function calculateMercenaryUpgradeCost(mercenary, costReduction = 1) {
     // 统一等级 = 攻击等级 + 间隔等级
     const totalLevel = mercenary.damageLevel + mercenary.intervalLevel;
 
-    // 动态成本系数算法 (底数 1.45 + 动态增长)
-    // 核心设计：成本增长底数(1.45) > 伤害增长底数(1.38)，防止无限升级
-    const dynamicExponent = 1.45 + (totalLevel * 0.001);
-
-    let cost = Math.floor(mercenary.baseCost * Math.pow(dynamicExponent, totalLevel));
+    // 首次升级价格 = 雇佣价格 / 2，默认雇佣单位特殊处理
+    const baseUpgradeCost = mercenary.baseCost > 0 ? mercenary.baseCost / 2 : 15;
+    
+    // 每级增长1.15倍
+    const growthRate = 1.15;
+    let cost = Math.floor(baseUpgradeCost * Math.pow(growthRate, totalLevel));
 
     // 应用遗物成本削减
     return Math.floor(cost * costReduction);
