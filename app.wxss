@@ -82,11 +82,16 @@ view, text, button, image, scroll-view {
 }
 
 /* 进度条 */
+/* ❗注意: 不要在 .pixel-progress 上同时使用 border-radius 和 overflow:hidden
+ * 微信小程序存在渲染bug，这个组合会在点击事件触发重绘时产生白边/白线
+ * 发现日期: 2026-01-26
+ */
 .pixel-progress {
   width: 100%;
   height: 24rpx;
   background-color: var(--bg-light);
   border: none;
+  /* border-radius: 12rpx; -- 移除，会导致白线问题 */
   position: relative;
   overflow: hidden;
 }
