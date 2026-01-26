@@ -34,7 +34,7 @@ function formatNumber(num) {
  */
 function calculateBossMaxHp(level) {
     // 每一级都是135倍的跨度
-    return Math.floor(30000 * Math.pow(135.0, level - 1));
+    return Math.floor(30000 * Math.pow(135, level - 1));
 }
 
 /**
@@ -389,6 +389,45 @@ function getMercenarySkill(mercenary) {
         };
     }
 
+    // 皇家侍卫技能：【皇家守护】(Lv 25解锁)
+    // 攻击时小概率使全队攻击力提升
+    if (mercenary.id === 'royal_guard' && totalLevel >= 25) {
+        const buffVal = 0.05 + Math.floor((totalLevel - 25) / 15) * 0.02;
+        return {
+            type: 'team_damage_buff',
+            name: '皇家守护',
+            chance: 0.08,
+            val: buffVal,
+            duration: 5000,
+            desc: `8%几率使全队伤害提升${(buffVal * 100).toFixed(0)}% (持续5秒)`
+        };
+    }
+
+    // 钢铁士兵技能：【钢铁神拳】(Lv 20解锁)
+    // 攻击时有概率造成钢铁系佣兵攻击力总和的额外伤害
+    if (mercenary.id === 'iron_soldier' && totalLevel >= 20) {
+        const multiplier = 0.4 + Math.floor((totalLevel - 20) / 10) * 0.15;
+        return {
+            type: 'iron_fist',
+            name: '钢铁神拳',
+            chance: 0.10,
+            multiplier: multiplier,
+            desc: `10%几率造成钢铁系总攻击力${(multiplier * 100).toFixed(0)}%的额外伤害`
+        };
+    }
+
+    // 狂战士技能：【狂暴】(Lv 35解锁)
+    // Boss血量越低，伤害越高
+    if (mercenary.id === 'berserker' && totalLevel >= 35) {
+        const maxBonus = 1.0 + Math.floor((totalLevel - 35) / 10) * 0.3;
+        return {
+            type: 'low_hp_bonus',
+            name: '狂暴',
+            maxBonus: maxBonus,
+            desc: `Boss血量越低伤害越高，最高+${(maxBonus * 100).toFixed(0)}%`
+        };
+    }
+
     // Mage Skill: "Arcane Surge" (Unlock Lv 20)
     if (mercenary.id === 'mage' && totalLevel >= 20) {
         const bonusSpeed = 0.05 + Math.floor((totalLevel - 20) / 10) * 0.05;
@@ -402,17 +441,152 @@ function getMercenarySkill(mercenary) {
         };
     }
 
-    // Dragon Rider Skill: "Devastating Breath" (Unlock Lv 40)
-    if (mercenary.id === 'dragon' && totalLevel >= 40) {
-        const leaderBuff = Math.min(0.50, 0.20 + Math.floor((totalLevel - 40) / 10) * 0.10);
+    // 冰之女儿技能：【冰霜冻结】(Lv 25解锁)
+    // 攻击时有概率冻结Boss，使其受到的伤害增加
+    if (mercenary.id === 'ice_daughter' && totalLevel >= 25) {
+        const debuffVal = 0.15 + Math.floor((totalLevel - 25) / 10) * 0.05;
         return {
-            type: 'burst_boost',
-            name: '毁灭龙息',
-            chance: 0.10,
-            multiplier: 30, // 30x damage
-            buffVal: leaderBuff, // Dynamic damage boost
-            duration: 2000, // 2 seconds
-            desc: `10%几率造成30倍伤害，并使全队伤害提升${(leaderBuff * 100).toFixed(0)}% (持续2秒)`
+            type: 'boss_debuff',
+            name: '冰霜冻结',
+            chance: 0.12,
+            val: debuffVal,
+            duration: 4000,
+            desc: `12%几率使Boss受到伤害+${(debuffVal * 100).toFixed(0)}% (持续4秒)`
+        };
+    }
+
+    // 夜剑客技能：【暗影突袭】(Lv 20解锁)
+    // 极高暴击率，但暴击倍率较低
+    if (mercenary.id === 'night_swordsman' && totalLevel >= 20) {
+        const critChance = Math.min(0.60, 0.35 + Math.floor((totalLevel - 20) / 10) * 0.05);
+        const critMult = 2.0 + Math.floor((totalLevel - 20) / 15) * 0.3;
+        return {
+            type: 'crit',
+            name: '暗影突袭',
+            chance: critChance,
+            multiplier: critMult,
+            desc: `${(critChance * 100).toFixed(0)}%几率造成${critMult.toFixed(1)}倍伤害`
+        };
+    }
+
+    // 亡灵法师技能：【亡灵召唤】(Lv 30解锁)
+    // 每次攻击召唤小骷髅造成额外伤害
+    if (mercenary.id === 'necromancer' && totalLevel >= 30) {
+        const skeletonCount = Math.min(5, 1 + Math.floor((totalLevel - 30) / 20));
+        const skeletonDmg = 0.10 + Math.floor((totalLevel - 30) / 10) * 0.03;
+        return {
+            type: 'summon',
+            name: '亡灵召唤',
+            count: skeletonCount,
+            damageRatio: skeletonDmg,
+            desc: `召唤${skeletonCount}个骷髅，各造成${(skeletonDmg * 100).toFixed(0)}%伤害`
+        };
+    }
+
+    // 圣职者技能：【神圣祝福】(Lv 25解锁)
+    // 持续为全队提供伤害加成光环
+    if (mercenary.id === 'priest' && totalLevel >= 25) {
+        const auraVal = 0.08 + Math.floor((totalLevel - 25) / 10) * 0.03;
+        return {
+            type: 'damage_aura',
+            name: '神圣祝福',
+            val: auraVal,
+            desc: `为全队提供${(auraVal * 100).toFixed(0)}%永久伤害加成`
+        };
+    }
+
+    // 龙骑士技能：【龙魂觉醒】(Lv 40解锁)
+    // 每次攻击积累龙魂能量，满层时释放毁灭龙息
+    if (mercenary.id === 'dragon' && totalLevel >= 40) {
+        const maxStacks = 10; // 需要10次攻击积满
+        const burstMultiplier = 50 + Math.floor((totalLevel - 40) / 10) * 15; // 50倍起，每10级+15倍
+        const burnDamage = 0.05 + Math.floor((totalLevel - 40) / 15) * 0.02; // 灼烧：5%攻击力/秒
+        return {
+            type: 'dragon_soul',
+            name: '龙魂觉醒',
+            maxStacks: maxStacks,
+            burstMultiplier: burstMultiplier,
+            burnDamage: burnDamage,
+            burnDuration: 5000, // 灼烧持续5秒
+            desc: `每${maxStacks}次攻击释放龙息，造成${burstMultiplier}倍伤害并灼烧5秒(${(burnDamage * 100).toFixed(0)}%/秒)`
+        };
+    }
+
+    // 天使技能：【圣洁之力】(Lv 30解锁)
+    // 攻击时有概率触发圣洁净化，造成Boss最大血量百分比伤害
+    if (mercenary.id === 'angel' && totalLevel >= 30) {
+        const percentDmg = 0.001 + Math.floor((totalLevel - 30) / 20) * 0.0005;
+        return {
+            type: 'percent_damage',
+            name: '圣洁之力',
+            chance: 0.08,
+            percentVal: percentDmg,
+            desc: `8%几率造成Boss最大血量${(percentDmg * 100).toFixed(2)}%的伤害`
+        };
+    }
+
+    // 时光行者技能：【时间静止】(Lv 35解锁)
+    // 有概率使全队下次攻击伤害翻倍
+    if (mercenary.id === 'time_walker' && totalLevel >= 35) {
+        const multiplier = 2.0 + Math.floor((totalLevel - 35) / 10) * 0.5;
+        return {
+            type: 'next_attack_boost',
+            name: '时间静止',
+            chance: 0.06,
+            multiplier: multiplier,
+            desc: `6%几率使全队下次攻击伤害x${multiplier.toFixed(1)}`
+        };
+    }
+
+    // 虚空领主技能：【虚空侵蚀】(Lv 40解锁)
+    // 每次攻击造成Boss当前血量百分比伤害
+    if (mercenary.id === 'void_lord' && totalLevel >= 40) {
+        const percentDmg = 0.0005 + Math.floor((totalLevel - 40) / 15) * 0.0002;
+        return {
+            type: 'current_hp_damage',
+            name: '虚空侵蚀',
+            percentVal: percentDmg,
+            desc: `每次攻击额外造成Boss当前血量${(percentDmg * 100).toFixed(3)}%的伤害`
+        };
+    }
+
+    // 不死鸟技能：【浴火重生】(Lv 35解锁)
+    // 战斗中每60秒自动触发一次爆发伤害
+    if (mercenary.id === 'phoenix' && totalLevel >= 35) {
+        const burstMult = 50 + Math.floor((totalLevel - 35) / 10) * 20;
+        return {
+            type: 'periodic_burst',
+            name: '浴火重生',
+            interval: 60000, // 60秒
+            multiplier: burstMult,
+            desc: `每60秒自动造成${burstMult}倍伤害`
+        };
+    }
+
+    // 混沌帝王技能：【混沌法则】(Lv 45解锁)
+    // 攻击间隔越长，伤害倍率越高
+    if (mercenary.id === 'chaos_emperor' && totalLevel >= 45) {
+        const baseMult = 1.5 + Math.floor((totalLevel - 45) / 10) * 0.3;
+        return {
+            type: 'slow_power',
+            name: '混沌法则',
+            baseMultiplier: baseMult,
+            desc: `攻击间隔每1秒，伤害+${(baseMult * 100).toFixed(0)}%`
+        };
+    }
+
+    // 神圣巨龙技能：【万物终结】(Lv 50解锁)
+    // 集合所有技能效果的终极技能
+    if (mercenary.id === 'sacred_dragon' && totalLevel >= 50) {
+        const allBonus = 0.15 + Math.floor((totalLevel - 50) / 10) * 0.05;
+        return {
+            type: 'ultimate',
+            name: '万物终结',
+            teamDamageBonus: allBonus,
+            teamSpeedBonus: allBonus * 0.5,
+            critChance: 0.25,
+            critMult: 5.0,
+            desc: `全队伤害+${(allBonus * 100).toFixed(0)}%，攻速+${(allBonus * 50).toFixed(0)}%，25%暴击5倍伤害`
         };
     }
 
@@ -427,6 +601,7 @@ function getMercenarySkill(mercenary) {
 function getMercenarySkillDisplay(mercenary) {
     const totalLevel = mercenary.damageLevel + mercenary.intervalLevel;
 
+    // 战士 - 熟练
     if (mercenary.id === 'warrior') {
         const unlockLv = 30;
         const isUnlocked = totalLevel >= unlockLv;
@@ -447,6 +622,7 @@ function getMercenarySkillDisplay(mercenary) {
         };
     }
 
+    // 弓箭手 - 爆裂
     if (mercenary.id === 'archer') {
         const unlockLv = 20;
         const isUnlocked = totalLevel >= unlockLv;
@@ -467,15 +643,49 @@ function getMercenarySkillDisplay(mercenary) {
         };
     }
 
-    if (mercenary.id === 'legend') {
-        const isUnlocked = mercenary.recruited;
-        return {
-            name: '【全能】',
-            isUnlocked: !!isUnlocked,
-            desc: isUnlocked ? '升级攻击力时攻击速度也会提升，反之亦然' : '（招募后解锁）'
-        };
+    // 皇家侍卫 - 皇家守护
+    if (mercenary.id === 'royal_guard') {
+        const unlockLv = 25;
+        const isUnlocked = totalLevel >= unlockLv;
+        let desc = '攻击时有几率增强全队伤害';
+        if (isUnlocked) {
+            const buffVal = 0.05 + Math.floor((totalLevel - 25) / 15) * 0.02;
+            desc = `8%几率使全队伤害+${(buffVal * 100).toFixed(0)}% (5秒)`;
+        } else {
+            desc = `（达到 Lv.${unlockLv} 解锁）`;
+        }
+        return { name: '【皇家守护】', isUnlocked, desc };
     }
 
+    // 钢铁士兵 - 钢铁神拳
+    if (mercenary.id === 'iron_soldier') {
+        const unlockLv = 20;
+        const isUnlocked = totalLevel >= unlockLv;
+        let desc = '攻击时有概率触发钢铁系总攻击力伤害';
+        if (isUnlocked) {
+            const mult = 0.4 + Math.floor((totalLevel - 20) / 10) * 0.15;
+            desc = `10%几率造成钢铁系总攻击力${(mult * 100).toFixed(0)}%伤害`;
+        } else {
+            desc = `（达到 Lv.${unlockLv} 解锁）`;
+        }
+        return { name: '【钢铁神拳】', isUnlocked, desc };
+    }
+
+    // 狂战士 - 狂暴
+    if (mercenary.id === 'berserker') {
+        const unlockLv = 35;
+        const isUnlocked = totalLevel >= unlockLv;
+        let desc = 'Boss血量越低，伤害越高';
+        if (isUnlocked) {
+            const maxBonus = 1.0 + Math.floor((totalLevel - 35) / 10) * 0.3;
+            desc = `Boss血量越低伤害越高，最高+${(maxBonus * 100).toFixed(0)}%`;
+        } else {
+            desc = `（达到 Lv.${unlockLv} 解锁）`;
+        }
+        return { name: '【狂暴】', isUnlocked, desc };
+    }
+
+    // 法师 - 奥术激涌
     if (mercenary.id === 'mage') {
         const unlockLv = 20;
         const isUnlocked = totalLevel >= unlockLv;
@@ -491,19 +701,175 @@ function getMercenarySkillDisplay(mercenary) {
         };
     }
 
+    // 冰之女儿 - 冰霜冻结
+    if (mercenary.id === 'ice_daughter') {
+        const unlockLv = 25;
+        const isUnlocked = totalLevel >= unlockLv;
+        let desc = '攻击时有概率冻结Boss增加其受到伤害';
+        if (isUnlocked) {
+            const debuffVal = 0.15 + Math.floor((totalLevel - 25) / 10) * 0.05;
+            desc = `12%几率使Boss受伤+${(debuffVal * 100).toFixed(0)}% (4秒)`;
+        } else {
+            desc = `（达到 Lv.${unlockLv} 解锁）`;
+        }
+        return { name: '【冰霜冻结】', isUnlocked, desc };
+    }
+
+    // 夜剑客 - 暗影突袭
+    if (mercenary.id === 'night_swordsman') {
+        const unlockLv = 20;
+        const isUnlocked = totalLevel >= unlockLv;
+        let desc = '极高暴击率的暗影攻击';
+        if (isUnlocked) {
+            const critChance = Math.min(0.60, 0.35 + Math.floor((totalLevel - 20) / 10) * 0.05);
+            const critMult = 2.0 + Math.floor((totalLevel - 20) / 15) * 0.3;
+            desc = `${(critChance * 100).toFixed(0)}%几率造成${critMult.toFixed(1)}倍伤害`;
+        } else {
+            desc = `（达到 Lv.${unlockLv} 解锁）`;
+        }
+        return { name: '【暗影突袭】', isUnlocked, desc };
+    }
+
+    // 亡灵法师 - 亡灵召唤
+    if (mercenary.id === 'necromancer') {
+        const unlockLv = 30;
+        const isUnlocked = totalLevel >= unlockLv;
+        let desc = '召唤骷髅军团协助攻击';
+        if (isUnlocked) {
+            const count = Math.min(5, 1 + Math.floor((totalLevel - 30) / 20));
+            const dmg = 0.10 + Math.floor((totalLevel - 30) / 10) * 0.03;
+            desc = `召唤${count}个骷髅，各造成${(dmg * 100).toFixed(0)}%伤害`;
+        } else {
+            desc = `（达到 Lv.${unlockLv} 解锁）`;
+        }
+        return { name: '【亡灵召唤】', isUnlocked, desc };
+    }
+
+    // 圣职者 - 神圣祝福
+    if (mercenary.id === 'priest') {
+        const unlockLv = 25;
+        const isUnlocked = totalLevel >= unlockLv;
+        let desc = '为全队提供永久伤害加成光环';
+        if (isUnlocked) {
+            const auraVal = 0.08 + Math.floor((totalLevel - 25) / 10) * 0.03;
+            desc = `全队永久伤害+${(auraVal * 100).toFixed(0)}%`;
+        } else {
+            desc = `（达到 Lv.${unlockLv} 解锁）`;
+        }
+        return { name: '【神圣祝福】', isUnlocked, desc };
+    }
+
+    // 龙骑士 - 龙魂觉醒
     if (mercenary.id === 'dragon') {
         const unlockLv = 40;
         const isUnlocked = totalLevel >= unlockLv;
-        let bonusStr = '';
+        let desc = '积累龙魂能量释放毁灭龙息';
         if (isUnlocked) {
-            const leaderBuff = Math.min(0.50, 0.20 + Math.floor((totalLevel - unlockLv) / 10) * 0.10);
-            bonusStr = ` (当前增伤: ${(leaderBuff * 100).toFixed(0)}%)`;
+            const burstMult = 50 + Math.floor((totalLevel - unlockLv) / 10) * 15;
+            const burnDmg = 0.05 + Math.floor((totalLevel - unlockLv) / 15) * 0.02;
+            desc = `每10次攻击释放${burstMult}倍龙息+灼烧${(burnDmg * 100).toFixed(0)}%/秒`;
+        } else {
+            desc = `（达到 Lv.${unlockLv} 解锁）`;
         }
         return {
-            name: '【毁灭龙息】',
+            name: '【龙魂觉醒】',
             isUnlocked,
-            desc: isUnlocked ? `10%几率触发30倍伤害及全队${bonusStr} (持续2秒)` : `（达到 Lv.${unlockLv} 解锁）`
+            desc
         };
+    }
+
+    // 天使 - 圣洁之力
+    if (mercenary.id === 'angel') {
+        const unlockLv = 30;
+        const isUnlocked = totalLevel >= unlockLv;
+        let desc = '触发圣洁净化造成百分比伤害';
+        if (isUnlocked) {
+            const pct = 0.001 + Math.floor((totalLevel - 30) / 20) * 0.0005;
+            desc = `8%几率造成Boss最大血量${(pct * 100).toFixed(2)}%伤害`;
+        } else {
+            desc = `（达到 Lv.${unlockLv} 解锁）`;
+        }
+        return { name: '【圣洁之力】', isUnlocked, desc };
+    }
+
+    // 时光行者 - 时间静止
+    if (mercenary.id === 'time_walker') {
+        const unlockLv = 35;
+        const isUnlocked = totalLevel >= unlockLv;
+        let desc = '使全队下次攻击伤害翻倍';
+        if (isUnlocked) {
+            const mult = 2.0 + Math.floor((totalLevel - 35) / 10) * 0.5;
+            desc = `6%几率使全队下次攻击伤害x${mult.toFixed(1)}`;
+        } else {
+            desc = `（达到 Lv.${unlockLv} 解锁）`;
+        }
+        return { name: '【时间静止】', isUnlocked, desc };
+    }
+
+    // 虚空领主 - 虚空侵蚀
+    if (mercenary.id === 'void_lord') {
+        const unlockLv = 40;
+        const isUnlocked = totalLevel >= unlockLv;
+        let desc = '每次攻击造成Boss当前血量百分比伤害';
+        if (isUnlocked) {
+            const pct = 0.0005 + Math.floor((totalLevel - 40) / 15) * 0.0002;
+            desc = `每次额外造成Boss当前血量${(pct * 100).toFixed(3)}%伤害`;
+        } else {
+            desc = `（达到 Lv.${unlockLv} 解锁）`;
+        }
+        return { name: '【虚空侵蚀】', isUnlocked, desc };
+    }
+
+    // 不死鸟 - 浴火重生
+    if (mercenary.id === 'phoenix') {
+        const unlockLv = 35;
+        const isUnlocked = totalLevel >= unlockLv;
+        let desc = '周期性自动触发大量伤害';
+        if (isUnlocked) {
+            const mult = 50 + Math.floor((totalLevel - 35) / 10) * 20;
+            desc = `每60秒自动造成${mult}倍伤害`;
+        } else {
+            desc = `（达到 Lv.${unlockLv} 解锁）`;
+        }
+        return { name: '【浴火重生】', isUnlocked, desc };
+    }
+
+    // 传说 - 全能
+    if (mercenary.id === 'legend') {
+        const isUnlocked = mercenary.recruited;
+        return {
+            name: '【全能】',
+            isUnlocked: !!isUnlocked,
+            desc: isUnlocked ? '升级攻击力时攻击速度也会提升，反之亦然' : '（招募后解锁）'
+        };
+    }
+
+    // 混沌帝王 - 混沌法则
+    if (mercenary.id === 'chaos_emperor') {
+        const unlockLv = 45;
+        const isUnlocked = totalLevel >= unlockLv;
+        let desc = '攻击间隔越长伤害越高';
+        if (isUnlocked) {
+            const mult = 1.5 + Math.floor((totalLevel - 45) / 10) * 0.3;
+            desc = `攻击间隔每1秒，伤害+${(mult * 100).toFixed(0)}%`;
+        } else {
+            desc = `（达到 Lv.${unlockLv} 解锁）`;
+        }
+        return { name: '【混沌法则】', isUnlocked, desc };
+    }
+
+    // 神圣巨龙 - 万物终结
+    if (mercenary.id === 'sacred_dragon') {
+        const unlockLv = 50;
+        const isUnlocked = totalLevel >= unlockLv;
+        let desc = '终极技能，集合所有效果';
+        if (isUnlocked) {
+            const bonus = 0.15 + Math.floor((totalLevel - 50) / 10) * 0.05;
+            desc = `全队伤害+${(bonus * 100).toFixed(0)}%，攻速+${(bonus * 50).toFixed(0)}%，25%暴击5倍`;
+        } else {
+            desc = `（达到 Lv.${unlockLv} 解锁）`;
+        }
+        return { name: '【万物终结】', isUnlocked, desc };
     }
 
     return null;
