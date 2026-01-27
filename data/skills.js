@@ -429,9 +429,9 @@ const SKILL_LIBRARY = {
         baseDescription: '每次攻击额外获得攻击力数值的金币',
         getParams: (level) => {
             // 基础倍率1.0，每10级增加0.1
-            const multiplier = 1.0 + Math.floor((level - 5) / 10) * 0.1;
+            const multiplier = 1.0 + Math.floor(level / 10) * 0.1;
             return {
-                multiplier: Math.max(1.0, multiplier)
+                multiplier: multiplier
             };
         },
         getDescription: (level) => {
