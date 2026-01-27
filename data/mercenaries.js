@@ -27,7 +27,7 @@ const MERCENARIES_DATA = [
     {
         id: 'warrior',
         name: '战士',
-        baseCost: 150,           // 5 x 30
+        baseCost: 40,            // 5 x 8
         damage: 5,
         attackInterval: 4.3,
         description: '基础近战单位，攻击稳定',
@@ -37,7 +37,7 @@ const MERCENARIES_DATA = [
     {
         id: 'archer',
         name: '弓箭手',
-        baseCost: 350,           // 10 x 35
+        baseCost: 100,           // 10 x 10
         damage: 10,
         attackInterval: 3.5,
         description: '远程攻击，伤害较高',
@@ -47,7 +47,7 @@ const MERCENARIES_DATA = [
     {
         id: 'royal_guard',
         name: '皇家侍卫',
-        baseCost: 4200,          // 100 x 42
+        baseCost: 1200,          // 100 x 12
         damage: 100,
         attackInterval: 3.6,
         description: '忠诚的皇家护卫，攻击稳定',
@@ -60,7 +60,7 @@ const MERCENARIES_DATA = [
     {
         id: 'iron_soldier',
         name: '钢铁士兵',
-        baseCost: 170000,        // 1900 x 90
+        baseCost: 57000,         // 1900 x 30
         damage: 1900,
         attackInterval: 3.5,
         description: '铁甲战士，攻击有概率触发钢铁拳',
@@ -70,7 +70,7 @@ const MERCENARIES_DATA = [
     {
         id: 'knight',
         name: '骑士',
-        baseCost: 8500000,       // 29000 x 290
+        baseCost: 1160000,       // 29000 x 40
         damage: 29000,
         attackInterval: 3.5,
         description: '重装骑兵，攻守兼备',
@@ -80,7 +80,7 @@ const MERCENARIES_DATA = [
     {
         id: 'berserker',
         name: '狂战士',
-        baseCost: 87000000,      // 290000 x 300
+        baseCost: 14500000,      // 290000 x 50
         damage: 290000,
         attackInterval: 2.7,
         description: 'Boss血量越低攻击越高，疯狂的战争机器',
@@ -93,7 +93,7 @@ const MERCENARIES_DATA = [
     {
         id: 'mage',
         name: '法师',
-        baseCost: 7700,          // 160 x 48
+        baseCost: 9600,          // 160 x 60
         damage: 160,
         attackInterval: 3.4,
         description: '魔法攻击，有几率提升全队攻速',
@@ -103,7 +103,7 @@ const MERCENARIES_DATA = [
     {
         id: 'night_swordsman',
         name: '夜剑客',
-        baseCost: 310000,        // 2300 x 135
+        baseCost: 184000,        // 2300 x 80
         damage: 2300,
         attackInterval: 3.2,
         description: '暗夜中的刺客，暴击率极高',
@@ -112,8 +112,8 @@ const MERCENARIES_DATA = [
     },
     {
         id: 'ice_daughter',
-        name: '冰之女儿',
-        baseCost: 8500000,       // 33000 x 255
+        name: '冰女',
+        baseCost: 3300000,       // 33000 x 100
         damage: 33000,
         attackInterval: 3.0,
         description: '冰霜女王的后裔，使Boss受到更多伤害',
@@ -123,7 +123,7 @@ const MERCENARIES_DATA = [
     {
         id: 'necromancer',
         name: '亡灵法师',
-        baseCost: 300000000,     // 480000 x 625
+        baseCost: 72000000,      // 480000 x 150
         damage: 480000,
         attackInterval: 3.1,
         description: '召唤亡灵军团协助攻击',
@@ -136,7 +136,7 @@ const MERCENARIES_DATA = [
     {
         id: 'priest',
         name: '圣职者',
-        baseCost: 16000000000,   // 5000000 x 3200
+        baseCost: 1500000000,    // 5000000 x 300
         damage: 5000000,
         attackInterval: 4.0,
         description: '神圣之力，为全队提供永久伤害光环',
@@ -146,7 +146,7 @@ const MERCENARIES_DATA = [
     {
         id: 'dragon',
         name: '龙骑士',
-        baseCost: 475000000000,  // 74000000 x 6400
+        baseCost: 37000000000,   // 74000000 x 500
         damage: 74000000,
         attackInterval: 4.1,
         description: '传说中的龙骑士，积蓄龙魂释放毁灭龙息',
@@ -156,7 +156,7 @@ const MERCENARIES_DATA = [
     {
         id: 'angel',
         name: '天使',
-        baseCost: 970000000000,  // 134000000 x 7250
+        baseCost: 93800000000,   // 134000000 x 700
         damage: 134000000,
         attackInterval: 3.5,
         description: '光明使者，造成Boss最大血量百分比伤害',
@@ -168,8 +168,8 @@ const MERCENARIES_DATA = [
     // 价格倍率 ~8000-14000x
     {
         id: 'time_walker',
-        name: '时光行者',
-        baseCost: 1000000000000, // 123000000 x 8130
+        name: '时光',
+        baseCost: 123000000000,  // 123000000 x 1000
         damage: 123000000,
         attackInterval: 4.0,
         description: '穿越时空的旅者，使全队下次攻击翻倍',
@@ -178,8 +178,8 @@ const MERCENARIES_DATA = [
     },
     {
         id: 'void_lord',
-        name: '虚空领主',
-        baseCost: 25000000000000, // 1800000000 x 13900
+        name: '虚空',
+        baseCost: 2160000000000, // 1800000000 x 1200
         damage: 1800000000,
         attackInterval: 3.5,
         description: '来自虚空的存在，造成Boss当前血量百分比伤害',
@@ -188,8 +188,8 @@ const MERCENARIES_DATA = [
     },
     {
         id: 'phoenix',
-        name: '不死鸟',
-        baseCost: 95000000000000, // 1900000000 x 50000
+        name: '凤凰',
+        baseCost: 2850000000000, // 1900000000 x 1500
         damage: 1900000000,
         attackInterval: 5.0,
         description: '浴火重生，周期性释放超高倍伤害',
@@ -202,7 +202,7 @@ const MERCENARIES_DATA = [
     {
         id: 'legend',
         name: '传说',
-        baseCost: 200000000000000,
+        baseCost: 10000000000000, // 5000000000 x 2000
         damage: 5000000000,
         attackInterval: 4.5,
         description: '全能的传说，升级攻击力同时提升攻速',
@@ -211,8 +211,8 @@ const MERCENARIES_DATA = [
     },
     {
         id: 'chaos_emperor',
-        name: '混沌帝王',
-        baseCost: 800000000000000,
+        name: '混沌',
+        baseCost: 33000000000000, // 15000000000 x 2200
         damage: 15000000000,
         attackInterval: 5.5,
         description: '混沌的化身，攻击间隔越长伤害越高',
@@ -221,8 +221,8 @@ const MERCENARIES_DATA = [
     },
     {
         id: 'sacred_dragon',
-        name: '神圣巨龙',
-        baseCost: 3000000000000000,
+        name: '无极',
+        baseCost: 125000000000000, // 50000000000 x 2500
         damage: 50000000000,
         attackInterval: 6.0,
         description: '最终的守护者，拥有全队增伤+暴击的终极技能',
