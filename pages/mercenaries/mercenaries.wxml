@@ -17,7 +17,11 @@
         <view wx:for="{{row.items}}" wx:key="id" wx:for-item="merc"
               class="merc-grid-item {{merc.recruited ? 'recruited' : 'not-recruited'}} {{selectedMercId === merc.id ? 'selected' : ''}}"
               bindtap="onSelectMerc" data-id="{{merc.id}}">
-          <view class="merc-grid-icon">{{merc.icon}}</view>
+          <view class="merc-grid-icon-wrapper">
+            <view class="merc-grid-icon">{{merc.icon}}</view>
+            <!-- 未雇佣且金币足够时显示红点 -->
+            <view wx:if="{{!merc.recruited && merc.canAffordRecruit}}" class="recruit-dot"></view>
+          </view>
           <view class="merc-grid-name">{{merc.name}}</view>
         </view>
       </view>

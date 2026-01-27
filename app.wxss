@@ -56,7 +56,7 @@ view, text, button, image, scroll-view {
   cursor: pointer;
   position: relative;
   box-shadow: 0 4rpx 15rpx var(--glow-primary);
-  transition: all 0.2s;
+  transition: box-shadow 0.2s, transform 0.2s;
 }
 
 .pixel-button:active {
@@ -93,7 +93,7 @@ view, text, button, image, scroll-view {
   border: none;
   /* border-radius: 12rpx; -- 移除，会导致白线问题 */
   position: relative;
-  overflow: hidden;
+  /* overflow: hidden; -- 移除，会导致白线问题 */
 }
 
 .pixel-progress-fill {

@@ -71,7 +71,10 @@ Page({
         manageMercRows: [],
         selectedMercId: null,
         selectedMerc: null,
-        selectedRowIndex: -1
+        selectedRowIndex: -1,
+
+        // Boss动画
+        bossAnimation: null
     },
 
     onLoad() {
@@ -381,10 +384,9 @@ Page({
             const nextDmgInfo = gameEngine.getDamageDisplayInfo(tempMercDamage, prestigeBonus.damage);
             const damageUpgradeEffect = nextDmgInfo.final - dmgInfo.final;
 
-            // 攻击间隔：每级减少约1%
-            const tempMercInterval = { ...merc, intervalLevel: (merc.intervalLevel || 0) + 1 };
-            const nextInterval = gameEngine.calculateUpgradedInterval(tempMercInterval);
-            const intervalUpgradeEffect = (currentInterval - nextInterval).toFixed(4);
+            // 攻击间隔：每级减少当前攻速的1%
+            // 计算方式：下一级攻速 = 当前攻速 * 0.99，所以减少量 = 当前攻速 * 0.01
+            const intervalUpgradeEffect = (currentInterval * 0.01).toFixed(4);
 
             // 总等级 = 攻击等级 + 攻速等级 + 1（雇佣时初始等级为1）
             const totalLevel = (merc.damageLevel || 0) + (merc.intervalLevel || 0) + 1;
@@ -558,11 +560,27 @@ Page({
         this.dealDamage(damage);
         this.showDamageNumber(damage, e, isCrit ? 'crit' : '');
 
-        // 触发攻击动画
-        this.setData({ attacking: true });
-        setTimeout(() => {
-            this.setData({ attacking: false });
-        }, 300);
+        // 使用微信animation API实现Boss动画
+        this.playBossHitAnimation();
+    },
+
+    // Boss受击动画
+    playBossHitAnimation() {
+        const animation = wx.createAnimation({
+            duration: 50,
+            timingFunction: 'ease-out'
+        });
+        
+        // 缩小并左移
+        animation.scale(0.9).translateX(-8).step();
+        // 右移
+        animation.scale(0.95).translateX(8).step({ duration: 50 });
+        // 回到原位
+        animation.scale(1).translateX(0).step({ duration: 50 });
+        
+        this.setData({
+            bossAnimation: animation.export()
+        });
     },
 
     // 造成伤害

@@ -46,17 +46,24 @@
   font-size: 80rpx;
   cursor: pointer;
   user-select: none;
-  transition: transform 0.1s;
   filter: drop-shadow(0 0 12rpx rgba(255, 107, 107, 0.5));
   -webkit-tap-highlight-color: transparent;
 }
 
-.boss-icon:active {
-  transform: scale(0.95);
+/* 纯 CSS 点击动画 - 不需要 JS 控制 */
+@keyframes boss-tap {
+  0% { transform: translateZ(0) scale(1); }
+  15% { transform: translateZ(0) scale(0.9); }
+  30% { transform: translateZ(0) scale(1.05) translateX(-8rpx); }
+  45% { transform: translateZ(0) scale(1.05) translateX(8rpx); }
+  60% { transform: translateZ(0) scale(1.02) translateX(-4rpx); }
+  75% { transform: translateZ(0) scale(1.02) translateX(4rpx); }
+  100% { transform: translateZ(0) scale(1) translateX(0); }
 }
 
+/* 保留原来的 shake 类以备其他用途，但不再由 JS 触发 */
 .boss-icon.shake {
-  animation: shake 0.3s;
+  /* animation: shake 0.3s; */
 }
 
 @keyframes shake {
@@ -158,6 +165,8 @@
   color: rgba(255, 255, 255, 0.9);
   margin-bottom: 8rpx;
   font-weight: bold;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
 }
 
 /* 彩色渐变血条 */
@@ -169,7 +178,7 @@
   height: 16rpx;
   background: rgba(0, 0, 0, 0.5);
   /* border-radius: 8rpx; -- 移除，会导致白线问题 */
-  overflow: hidden;
+  /* overflow: hidden; -- 移除，会导致白线问题 */
   border: 1rpx solid rgba(255, 255, 255, 0.1);
 }
 
@@ -208,6 +217,8 @@
   font-size: 24rpx;
   font-weight: bold;
   color: var(--text-gold);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
 }
 
 /* 佣兵列表区域 */
@@ -230,13 +241,17 @@
 }
 
 /* 现代佣兵卡片 */
+/* ❗注意: 微信小程序存在渲染bug，border-radius + overflow:hidden 组合
+ * 会在点击事件触发重绘时产生白边/白线，因此移除 overflow:hidden
+ */
 .merc-item-card {
   background: var(--bg-card);
   border: 1rpx solid var(--border-color);
   border-radius: 16rpx;
   margin-bottom: 12rpx;
-  transition: all 0.2s ease;
-  overflow: hidden;
+  /* ❗修复: 只对特定属性应用transition，避免重渲染时全属性过渡导致的抖动 */
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  /* overflow: hidden; -- 移除，会导致白线问题 */
 }
 
 .merc-item-card.expanded {
@@ -250,7 +265,7 @@
 
 .merc-card-header {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   padding: 20rpx;
   gap: 20rpx;
 }
@@ -264,6 +279,26 @@
   flex-shrink: 0;
   background: linear-gradient(135deg, var(--bg-light) 0%, var(--bg-medium) 100%);
   border-radius: 12rpx;
+  position: relative;
+}
+
+/* 可招募红点提示 */
+.recruit-dot {
+  position: absolute;
+  top: -6rpx;
+  right: -6rpx;
+  width: 20rpx;
+  height: 20rpx;
+  background: #ff4757;
+  border-radius: 50%;
+  border: 3rpx solid var(--bg-card);
+  box-shadow: 0 0 8rpx rgba(255, 71, 87, 0.6);
+  animation: dot-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes dot-pulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.2); opacity: 0.8; }
 }
 
 .merc-icon-large {
@@ -281,12 +316,14 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+  min-height: 40rpx;
 }
 
 .merc-name {
   font-size: 28rpx;
   font-weight: bold;
   color: var(--text-primary);
+  line-height: 40rpx;
 }
 
 .merc-level {
@@ -295,16 +332,24 @@
   background: var(--bg-light);
   padding: 4rpx 12rpx;
   border-radius: 8rpx;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+  line-height: 28rpx;
 }
 
 .merc-stats-row {
   display: flex;
   align-items: center;
+  min-height: 32rpx;
+  line-height: 32rpx;
 }
 
 .merc-stat {
   font-size: 22rpx;
   color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+  line-height: 32rpx;
 }
 
 .merc-skill-tag {
@@ -339,6 +384,8 @@
   box-shadow: 0 4rpx 12rpx rgba(254, 202, 87, 0.3);
   white-space: nowrap;
   align-self: center;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
 }
 
 .merc-recruit-btn:active {
@@ -366,7 +413,7 @@
   padding: 15rpx 20rpx;
   margin-bottom: 12rpx;
   margin-top: 12rpx;
-  transition: all 0.2s;
+  transition: background 0.2s, border-color 0.2s;
 }
 
 .upgrade-box:active {
@@ -395,6 +442,8 @@
 .upgrade-cost {
   font-size: 22rpx;
   color: var(--text-gold);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
 }
 
 .upgrade-cost.disabled {
@@ -551,6 +600,8 @@
   align-items: center;
   position: relative;
   margin-bottom: 30rpx;
+  /* 创建独立堆叠上下文 */
+  isolation: isolate;
 }
 
 .boss-icon {
@@ -559,10 +610,13 @@
   user-select: none;
   transition: transform 0.1s;
   filter: drop-shadow(4rpx 4rpx 0 rgba(0, 0, 0, 0.5));
+  /* 创建独立合成层，防止动画影响其他元素 */
+  will-change: transform;
+  transform: translateZ(0);
 }
 
 .boss-icon:active {
-  transform: scale(0.95);
+  transform: translateZ(0) scale(0.95);
 }
 
 .boss-icon.shake {
@@ -570,9 +624,9 @@
 }
 
 @keyframes shake {
-  0%, 100% { transform: translateX(0); }
-  25% { transform: translateX(-10rpx); }
-  75% { transform: translateX(10rpx); }
+  0%, 100% { transform: translateZ(0) translateX(0); }
+  25% { transform: translateZ(0) translateX(-10rpx); }
+  75% { transform: translateZ(0) translateX(10rpx); }
 }
 
 /* 伤害数字动画 */
@@ -814,7 +868,7 @@
   padding: 20rpx;
   display: flex;
   align-items: center;
-  transition: all 0.1s;
+  transition: transform 0.1s, box-shadow 0.1s, border-color 0.1s;
   box-shadow: 4rpx 4rpx 0 rgba(0,0,0,0.5);
 }
 
@@ -1097,7 +1151,7 @@
   padding: 20rpx 10rpx;
   text-align: center;
   border: 2rpx solid transparent;
-  transition: all 0.3s ease;
+  transition: border-color 0.3s ease, background 0.3s ease, opacity 0.3s ease;
 }
 
 .merc-grid-item.recruited {
@@ -1116,9 +1170,28 @@
   box-shadow: 0 0 20rpx rgba(168, 85, 247, 0.3);
 }
 
+.merc-grid-icon-wrapper {
+  position: relative;
+  display: inline-block;
+}
+
 .merc-grid-icon {
   font-size: 60rpx;
   margin-bottom: 10rpx;
+}
+
+/* 佣兵界面可招募红点 */
+.merc-grid-icon-wrapper .recruit-dot {
+  position: absolute;
+  top: -4rpx;
+  right: -4rpx;
+  width: 18rpx;
+  height: 18rpx;
+  background: #ff4757;
+  border-radius: 50%;
+  border: 2rpx solid var(--bg-card);
+  box-shadow: 0 0 8rpx rgba(255, 71, 87, 0.6);
+  animation: dot-pulse 1.5s ease-in-out infinite;
 }
 
 .merc-grid-name {

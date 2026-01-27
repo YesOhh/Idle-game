@@ -9,7 +9,7 @@
 
     <!-- Boss精灵 -->
     <view class="boss-sprite" bindtap="onTapBoss">
-      <view class="boss-icon {{attacking ? 'shake' : ''}}">👹</view>
+      <view class="boss-icon" animation="{{bossAnimation}}">👹</view>
 
       <!-- 伤害数字动画 -->
       <view wx:for="{{damageNumbers}}" wx:key="id" class="damage-number {{item.type}}"
