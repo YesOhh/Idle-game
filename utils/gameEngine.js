@@ -450,14 +450,22 @@ function getMercenarySkill(mercenary) {
     }
 
     // 狂战士技能：【狂暴】(Lv 35解锁)
-    // Boss血量越低，伤害越高
+    // Boss血量越低，伤害越高（阶梯式加成）
     if (mercenary.id === 'berserker' && totalLevel >= 35) {
-        const maxBonus = 1.0 + Math.floor((totalLevel - 35) / 10) * 0.3;
+        // 基础加成随等级提升：35级100%，每10级+30%
+        const baseBonus = 1.0 + Math.floor((totalLevel - 35) / 10) * 0.3;
+        // 阶梯：血量<75%/50%/25%/5%时，获得25%/50%/75%/100%的最大加成
         return {
             type: 'low_hp_bonus',
             name: '狂暴',
-            maxBonus: maxBonus,
-            desc: `Boss血量越低伤害越高，最高+${(maxBonus * 100).toFixed(0)}%`
+            maxBonus: baseBonus,
+            thresholds: [
+                { hpPercent: 0.75, bonusPercent: 0.25 },
+                { hpPercent: 0.50, bonusPercent: 0.50 },
+                { hpPercent: 0.25, bonusPercent: 0.75 },
+                { hpPercent: 0.05, bonusPercent: 1.00 }
+            ],
+            desc: `Boss血量越低伤害越高，最高+${(baseBonus * 100).toFixed(0)}%`
         };
     }
 
@@ -729,7 +737,11 @@ function getMercenarySkillDisplay(mercenary) {
         let desc = baseDesc;
         if (isUnlocked) {
             const maxBonus = 1.0 + Math.floor((totalLevel - 35) / 10) * 0.3;
-            desc = `Boss血量越低伤害越高，最高+${(maxBonus * 100).toFixed(0)}%`;
+            const b1 = (maxBonus * 0.25 * 100).toFixed(0);
+            const b2 = (maxBonus * 0.50 * 100).toFixed(0);
+            const b3 = (maxBonus * 0.75 * 100).toFixed(0);
+            const b4 = (maxBonus * 1.00 * 100).toFixed(0);
+            desc = `血量<75%/50%/25%/5%时，伤害+${b1}%/${b2}%/${b3}%/${b4}%`;
         }
         return { name: '【狂暴】', isUnlocked, desc, baseDesc, unlockCondition: `Lv.${unlockLv}解锁` };
     }

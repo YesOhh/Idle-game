@@ -1132,14 +1132,14 @@ Page({
                 icon: 'success'
             });
         } else if (code === '3') {
-            // 获得10亿金币（测试用）
-            globalData.player.gold = (globalData.player.gold || 0) + 1000000000;
+            // 获得1000亿金币（测试用）
+            globalData.player.gold = (globalData.player.gold || 0) + 100000000000;
 
             this.updateDisplay();
             this.setData({ redemptionCode: '' });
 
             wx.showToast({
-                title: '获得 10亿 金币！',
+                title: '获得 1000亿 金币！',
                 icon: 'success'
             });
         } else if (code !== '') {

@@ -211,6 +211,21 @@ App({
 
                 skillTriggered = { type: 'damage_buff', text: '毁灭龙息!' };
               }
+            } else if (skill.type === 'low_hp_bonus') {
+              // 狂战士技能：狂暴 - Boss血量越低伤害越高
+              const boss = this.globalData.boss;
+              const hpPercent = boss.currentHp / boss.maxHp;
+              let bonusPercent = 0;
+              // 从高阈值到低阈值检查，找到符合条件的最高加成
+              for (const threshold of skill.thresholds) {
+                if (hpPercent < threshold.hpPercent) {
+                  bonusPercent = threshold.bonusPercent;
+                }
+              }
+              if (bonusPercent > 0) {
+                const actualBonus = skill.maxBonus * bonusPercent;
+                thisHitDamage *= (1 + actualBonus);
+              }
             }
           }
 
