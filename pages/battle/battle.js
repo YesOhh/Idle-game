@@ -202,7 +202,8 @@ Page({
             'stacking_buff': 'skill',
             'crit': 'skill-crit',
             'speed_buff': 'skill-mage',
-            'damage_buff': 'skill-dragon'
+            'damage_buff': 'skill-dragon',
+            'combo': 'skill-combo'
         };
         return classMap[skillType] || 'skill';
     },

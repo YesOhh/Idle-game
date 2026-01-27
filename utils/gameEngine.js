@@ -378,7 +378,8 @@ function calculateOfflineProgress(dps, offlineSeconds, bossLevel) {
  * @returns {Object|null} - 技能配置或null
  */
 function getMercenarySkill(mercenary) {
-    const totalLevel = mercenary.damageLevel + mercenary.intervalLevel;
+    // 总等级 = 攻击等级 + 攻速等级 + 1（雇佣时初始等级为1）
+    const totalLevel = mercenary.damageLevel + mercenary.intervalLevel + 1;
 
     // 玩家技能：【长大】(雇佣即解锁)
     // 升级攻击力时同步升级点击伤害
