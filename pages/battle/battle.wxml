@@ -74,6 +74,7 @@
               <!-- 技能标签 -->
               <view wx:if="{{item.skillInfo}}" class="merc-skill-tag">
                 <text class="skill-tag {{item.skillInfo.isUnlocked ? 'unlocked' : 'locked'}}">[{{item.skillInfo.shortName}}]</text>
+                <text wx:if="{{item.skillInfo.skill2}}" class="skill-tag {{item.skillInfo.skill2.isUnlocked ? 'unlocked' : 'locked'}}">[{{item.skillInfo.skill2.shortName}}]</text>
               </view>
             </view>
 
@@ -124,6 +125,14 @@
                 <text wx:if="{{!item.skillInfo.isUnlocked}}" class="skill-unlock-condition">{{item.skillInfo.unlockCondition}}</text>
               </view>
               <view class="skill-detail-desc">{{item.skillInfo.desc}}</view>
+            </view>
+            <!-- 第二个技能（如果有） -->
+            <view wx:if="{{item.skillInfo.skill2}}" class="skill-detail">
+              <view class="skill-detail-header">
+                <text class="skill-detail-name {{item.skillInfo.skill2.isUnlocked ? 'unlocked' : 'locked'}}">{{item.skillInfo.skill2.shortName}}</text>
+                <text wx:if="{{!item.skillInfo.skill2.isUnlocked}}" class="skill-unlock-condition">{{item.skillInfo.skill2.unlockCondition}}</text>
+              </view>
+              <view class="skill-detail-desc">{{item.skillInfo.skill2.desc}}</view>
             </view>
           </view>
         </view>

@@ -211,20 +211,44 @@ App({
 
                 skillTriggered = { type: 'damage_buff', text: '毁灭龙息!' };
               }
-            } else if (skill.type === 'low_hp_bonus') {
-              // 狂战士技能：狂暴 - Boss血量越低伤害越高
+            } else if (skill.type === 'berserker_combo') {
+              // 狂战士技能：狂暴 + 连击
               const boss = this.globalData.boss;
               const hpPercent = boss.currentHp / boss.maxHp;
               let bonusPercent = 0;
-              // 从高阈值到低阈值检查，找到符合条件的最高加成
+              let comboChance = 0;
+              // 从高阈值到低阈值检查，找到符合条件的加成和连击几率
               for (const threshold of skill.thresholds) {
                 if (hpPercent < threshold.hpPercent) {
                   bonusPercent = threshold.bonusPercent;
+                  comboChance = threshold.comboChance;
                 }
               }
+              // 应用狂暴伤害加成
               if (bonusPercent > 0) {
                 const actualBonus = skill.maxBonus * bonusPercent;
                 thisHitDamage *= (1 + actualBonus);
+              }
+              // 连击判定（50级解锁）
+              if (skill.comboUnlocked && comboChance > 0) {
+                let comboCount = 0;
+                let comboDamage = 0;
+                // 循环判定连击，每次连击都可以触发下一次连击
+                while (Math.random() < comboChance) {
+                  comboCount++;
+                  // 连击伤害也享受狂暴加成
+                  let extraDamage = damage;
+                  if (bonusPercent > 0) {
+                    extraDamage *= (1 + skill.maxBonus * bonusPercent);
+                  }
+                  comboDamage += extraDamage;
+                  // 防止无限连击（最多10次）
+                  if (comboCount >= 10) break;
+                }
+                if (comboCount > 0) {
+                  thisHitDamage += comboDamage;
+                  skillTriggered = { type: 'combo', text: `连击x${comboCount}!` };
+                }
               }
             }
           }

@@ -390,9 +390,14 @@ Page({
             let skillInfo = gameEngine.getMercenarySkillDisplay(merc);
             // 添加技能简称用于标签显示
             if (skillInfo && skillInfo.name) {
-                // 从【xxx】格式提取简称
+                // 从【xxx】+【xxx】格式提取第一个简称
                 const match = skillInfo.name.match(/【(.+?)】/);
                 skillInfo.shortName = match ? match[1] : skillInfo.name;
+                // 处理第二个技能
+                if (skillInfo.skill2 && skillInfo.skill2.name) {
+                    const match2 = skillInfo.skill2.name.match(/【(.+?)】/);
+                    skillInfo.skill2.shortName = match2 ? match2[1] : skillInfo.skill2.name;
+                }
             }
 
             // 计算升级效果预览 - 模拟升级后的数值
@@ -464,6 +469,11 @@ Page({
             if (skillInfo && skillInfo.name) {
                 const match = skillInfo.name.match(/【(.+?)】/);
                 skillInfo.shortName = match ? match[1] : skillInfo.name;
+                // 处理第二个技能
+                if (skillInfo.skill2 && skillInfo.skill2.name) {
+                    const match2 = skillInfo.skill2.name.match(/【(.+?)】/);
+                    skillInfo.skill2.shortName = match2 ? match2[1] : skillInfo.skill2.name;
+                }
             }
 
             return {

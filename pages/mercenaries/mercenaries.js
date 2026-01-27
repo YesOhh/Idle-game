@@ -77,6 +77,11 @@ Page({
             if (skillInfo && skillInfo.name) {
                 const match = skillInfo.name.match(/【(.+?)】/);
                 skillInfo.shortName = match ? match[1] : skillInfo.name;
+                // 处理第二个技能
+                if (skillInfo.skill2 && skillInfo.skill2.name) {
+                    const match2 = skillInfo.skill2.name.match(/【(.+?)】/);
+                    skillInfo.skill2.shortName = match2 ? match2[1] : skillInfo.skill2.name;
+                }
             }
 
             return {

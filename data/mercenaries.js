@@ -80,7 +80,7 @@ const MERCENARIES_DATA = [
     {
         id: 'berserker',
         name: '狂战士',
-        baseCost: 190000000,     // 290000 x 650
+        baseCost: 87000000,      // 290000 x 300
         damage: 290000,
         attackInterval: 2.7,
         description: 'Boss血量越低攻击越高，疯狂的战争机器',

@@ -51,6 +51,14 @@
           </view>
           <view wx:if="{{selectedMerc.recruited}}" class="skill-detail-desc">{{selectedMerc.skillInfo.desc}}</view>
         </view>
+        <!-- 第二个技能（如果有） -->
+        <view wx:if="{{selectedMerc.skillInfo.skill2}}" class="detail-skill">
+          <view class="skill-detail-header">
+            <text class="skill-name {{selectedMerc.skillInfo.skill2.isUnlocked ? 'unlocked' : 'locked'}}">{{selectedMerc.skillInfo.skill2.shortName}}</text>
+            <text wx:if="{{selectedMerc.recruited && !selectedMerc.skillInfo.skill2.isUnlocked}}" class="skill-unlock-condition">{{selectedMerc.skillInfo.skill2.unlockCondition}}</text>
+          </view>
+          <view wx:if="{{selectedMerc.recruited}}" class="skill-detail-desc">{{selectedMerc.skillInfo.skill2.desc}}</view>
+        </view>
 
         <!-- 雇佣费用 -->
         <view wx:if="{{!selectedMerc.recruited}}" class="detail-cost">

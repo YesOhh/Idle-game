@@ -449,24 +449,30 @@ function getMercenarySkill(mercenary) {
         };
     }
 
-    // 狂战士技能：【狂暴】(Lv 35解锁)
+    // 狂战士技能：【狂暴】(Lv 35解锁) + 【连击】(Lv 50解锁)
     // Boss血量越低，伤害越高（阶梯式加成）
+    // 连击：血量越低，越有几率再次攻击
     if (mercenary.id === 'berserker' && totalLevel >= 35) {
         // 基础加成随等级提升：35级100%，每10级+30%
         const baseBonus = 1.0 + Math.floor((totalLevel - 35) / 10) * 0.3;
-        // 阶梯：血量<75%/50%/25%/5%时，获得25%/50%/75%/100%的最大加成
-        return {
-            type: 'low_hp_bonus',
+        // 阶梯：血量<85%/60%/35%/10%时，获得25%/50%/75%/100%的最大加成
+        const skill = {
+            type: 'berserker_combo',
             name: '狂暴',
             maxBonus: baseBonus,
             thresholds: [
-                { hpPercent: 0.75, bonusPercent: 0.25 },
-                { hpPercent: 0.50, bonusPercent: 0.50 },
-                { hpPercent: 0.25, bonusPercent: 0.75 },
-                { hpPercent: 0.05, bonusPercent: 1.00 }
+                { hpPercent: 0.85, bonusPercent: 0.25, comboChance: 0.15 },
+                { hpPercent: 0.60, bonusPercent: 0.50, comboChance: 0.25 },
+                { hpPercent: 0.35, bonusPercent: 0.75, comboChance: 0.35 },
+                { hpPercent: 0.10, bonusPercent: 1.00, comboChance: 0.45 }
             ],
             desc: `Boss血量越低伤害越高，最高+${(baseBonus * 100).toFixed(0)}%`
         };
+        // 50级解锁连击
+        if (totalLevel >= 50) {
+            skill.comboUnlocked = true;
+        }
+        return skill;
     }
 
     // Mage Skill: "Arcane Surge" (Unlock Lv 20)
@@ -729,21 +735,45 @@ function getMercenarySkillDisplay(mercenary) {
         return { name: '【钢铁神拳】', isUnlocked, desc, baseDesc, unlockCondition: `Lv.${unlockLv}解锁` };
     }
 
-    // 狂战士 - 狂暴
+    // 狂战士 - 狂暴 + 连击
     if (mercenary.id === 'berserker') {
-        const unlockLv = 35;
-        const isUnlocked = totalLevel >= unlockLv;
-        const baseDesc = 'Boss血量越低，伤害越高';
-        let desc = baseDesc;
-        if (isUnlocked) {
+        const unlockLv1 = 35;
+        const unlockLv2 = 50;
+        const isUnlocked1 = totalLevel >= unlockLv1;
+        const isUnlocked2 = totalLevel >= unlockLv2;
+        
+        // 狂暴技能描述
+        let skill1Desc = 'Boss血量越低，伤害越高';
+        if (isUnlocked1) {
             const maxBonus = 1.0 + Math.floor((totalLevel - 35) / 10) * 0.3;
             const b1 = (maxBonus * 0.25 * 100).toFixed(0);
             const b2 = (maxBonus * 0.50 * 100).toFixed(0);
             const b3 = (maxBonus * 0.75 * 100).toFixed(0);
             const b4 = (maxBonus * 1.00 * 100).toFixed(0);
-            desc = `血量<75%/50%/25%/5%时，伤害+${b1}%/${b2}%/${b3}%/${b4}%`;
+            skill1Desc = `血量<85%/60%/35%/10%时，伤害+${b1}%/${b2}%/${b3}%/${b4}%`;
         }
-        return { name: '【狂暴】', isUnlocked, desc, baseDesc, unlockCondition: `Lv.${unlockLv}解锁` };
+        
+        // 连击技能描述
+        let skill2Desc = '血量越低，越有几率再次攻击';
+        if (isUnlocked2) {
+            skill2Desc = `血量<85%/60%/35%/10%时，15%/25%/35%/45%几率连击`;
+        }
+        
+        return {
+            name: '【狂暴】+【连击】',
+            isUnlocked: isUnlocked1,
+            desc: isUnlocked1 ? skill1Desc : skill1Desc,
+            baseDesc: 'Boss血量越低，伤害越高',
+            unlockCondition: `Lv.${unlockLv1}解锁`,
+            // 第二个技能信息
+            skill2: {
+                name: '【连击】',
+                isUnlocked: isUnlocked2,
+                desc: skill2Desc,
+                baseDesc: '血量越低，越有几率再次攻击',
+                unlockCondition: `Lv.${unlockLv2}解锁`
+            }
+        };
     }
 
     // 法师 - 奥术激涌
