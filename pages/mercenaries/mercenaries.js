@@ -49,6 +49,19 @@ Page({
         }
     },
 
+    // 获取系别信息
+    getCategoryInfo(category) {
+        const categoryMap = {
+            'basic': { name: '基础系', icon: '⭐', color: '#95a5a6' },
+            'iron': { name: '钢铁系', icon: '⚙️', color: '#7f8c8d' },
+            'magic': { name: '魔法系', icon: '✨', color: '#9b59b6' },
+            'holy': { name: '圣洁系', icon: '☀️', color: '#f1c40f' },
+            'ancient': { name: '远古系', icon: '🌀', color: '#1abc9c' },
+            'legend': { name: '传说系', icon: '👑', color: '#e74c3c' }
+        };
+        return categoryMap[category] || { name: '未知', icon: '❓', color: '#bdc3c7' };
+    },
+
     updateDisplay() {
         const globalData = app.globalData;
 
@@ -84,6 +97,9 @@ Page({
                 }
             }
 
+            // 获取系别信息
+            const categoryInfo = this.getCategoryInfo(merc.category);
+
             return {
                 ...merc,
                 recruitCost,
@@ -91,7 +107,8 @@ Page({
                 currentInterval: currentInterval.toFixed(4),
                 recruitCostText: gameEngine.formatNumber(recruitCost),
                 canAffordRecruit: !merc.recruited && globalData.player.gold >= recruitCost,
-                skillInfo
+                skillInfo,
+                categoryInfo
             };
         });
 

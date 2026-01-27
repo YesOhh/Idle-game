@@ -49,10 +49,11 @@
             </view>
 
             <view class="merc-info-main">
-              <!-- 第一行：名称 + 等级 -->
+              <!-- 第一行：名称 + 系别 + 等级 -->
               <view class="merc-title-row">
                 <text class="merc-name">{{item.name}}</text>
-                <text class="merc-level">等级：{{item.totalLevel}}</text>
+                <text class="merc-category" style="color: {{item.categoryInfo.color}}">{{item.categoryInfo.icon}}{{item.categoryInfo.name}}</text>
+                <text class="merc-level">Lv.{{item.totalLevel}}</text>
               </view>
 
               <!-- 已雇佣显示属性 -->

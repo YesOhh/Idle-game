@@ -352,6 +352,15 @@
   line-height: 28rpx;
 }
 
+.merc-category {
+  font-size: 20rpx;
+  padding: 2rpx 8rpx;
+  border-radius: 6rpx;
+  background: rgba(0, 0, 0, 0.05);
+  margin-left: 8rpx;
+  line-height: 26rpx;
+}
+
 .merc-stats-row {
   display: flex;
   align-items: center;

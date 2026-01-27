@@ -463,9 +463,9 @@ function getMercenarySkill(mercenary) {
             maxBonus: baseBonus,
             thresholds: [
                 { hpPercent: 0.85, bonusPercent: 0.25, comboChance: 0.15 },
-                { hpPercent: 0.60, bonusPercent: 0.50, comboChance: 0.25 },
-                { hpPercent: 0.35, bonusPercent: 0.75, comboChance: 0.35 },
-                { hpPercent: 0.10, bonusPercent: 1.00, comboChance: 0.45 }
+                { hpPercent: 0.60, bonusPercent: 0.50, comboChance: 0.30 },
+                { hpPercent: 0.35, bonusPercent: 0.75, comboChance: 0.45 },
+                { hpPercent: 0.10, bonusPercent: 1.00, comboChance: 0.60 }
             ],
             desc: `Boss血量越低伤害越高，最高+${(baseBonus * 100).toFixed(0)}%`
         };
@@ -757,7 +757,7 @@ function getMercenarySkillDisplay(mercenary) {
         // 连击技能描述
         let skill2Desc = '血量越低，越有几率再次攻击';
         if (isUnlocked2) {
-            skill2Desc = `血量<85%/60%/35%/10%时，15%/25%/35%/45%几率连击`;
+            skill2Desc = `血量<85%/60%/35%/10%时，15%/30%/45%/60%几率连击`;
         }
         
         return {

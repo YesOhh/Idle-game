@@ -208,6 +208,19 @@ Page({
         return classMap[skillType] || 'skill';
     },
 
+    // 获取系别信息
+    getCategoryInfo(category) {
+        const categoryMap = {
+            'basic': { name: '基础系', icon: '⭐', color: '#95a5a6' },
+            'iron': { name: '钢铁系', icon: '⚙️', color: '#7f8c8d' },
+            'magic': { name: '魔法系', icon: '✨', color: '#9b59b6' },
+            'holy': { name: '圣洁系', icon: '☀️', color: '#f1c40f' },
+            'ancient': { name: '远古系', icon: '🌀', color: '#1abc9c' },
+            'legend': { name: '传说系', icon: '👑', color: '#e74c3c' }
+        };
+        return categoryMap[category] || { name: '未知', icon: '❓', color: '#bdc3c7' };
+    },
+
     // 启动UI更新定时器
     startUITimer() {
         this.stopUITimer();
@@ -414,6 +427,9 @@ Page({
             // 总等级 = 攻击等级 + 攻速等级 + 1（雇佣时初始等级为1）
             const totalLevel = (merc.damageLevel || 0) + (merc.intervalLevel || 0) + 1;
 
+            // 获取系别信息
+            const categoryInfo = this.getCategoryInfo(merc.category);
+
             return {
                 ...merc,
                 costText: merc.recruited ? '已雇佣' : gameEngine.formatNumber(recruitCost),
@@ -429,6 +445,7 @@ Page({
                 upgradeCostText: gameEngine.formatNumber(upgradeCost),
                 canAffordUpgrade,
                 skillInfo,
+                categoryInfo,
                 damageUpgradeEffect: gameEngine.formatNumber(damageUpgradeEffect),
                 intervalUpgradeEffect
             };

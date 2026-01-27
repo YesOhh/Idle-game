@@ -47,3 +47,11 @@
   height: calc(100vh - 200rpx);
   background: transparent;
 }
+
+.detail-category {
+  font-size: 22rpx;
+  padding: 4rpx 12rpx;
+  border-radius: 8rpx;
+  background: rgba(0, 0, 0, 0.05);
+  margin-left: 12rpx;
+}

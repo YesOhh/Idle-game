@@ -30,6 +30,7 @@
       <view wx:if="{{selectedRowIndex === row.rowIndex && selectedMerc}}" class="merc-detail-panel">
         <view class="detail-header">
           <text class="detail-name">{{selectedMerc.icon}} {{selectedMerc.name}}</text>
+          <text class="detail-category" style="color: {{selectedMerc.categoryInfo.color}}">{{selectedMerc.categoryInfo.icon}}{{selectedMerc.categoryInfo.name}}</text>
         </view>
         <view class="detail-desc">{{selectedMerc.description}}</view>
         <view class="detail-stats">

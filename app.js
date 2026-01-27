@@ -242,8 +242,6 @@ App({
                     extraDamage *= (1 + skill.maxBonus * bonusPercent);
                   }
                   comboDamage += extraDamage;
-                  // 防止无限连击（最多10次）
-                  if (comboCount >= 10) break;
                 }
                 if (comboCount > 0) {
                   thisHitDamage += comboDamage;
