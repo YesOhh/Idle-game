@@ -134,6 +134,101 @@
   z-index: 125;
 }
 
+.damage-number.skill-burn {
+  color: #ff7043; /* 灼烧橙红色 */
+  font-size: 38rpx;
+  text-shadow: 2rpx 2rpx 0 #bf360c, 0 0 8rpx #ff5722;
+  z-index: 108;
+}
+
+.damage-number.skill-chaos {
+  color: #7c4dff; /* 混沌紫色 */
+  font-size: 42rpx;
+  font-weight: bold;
+  text-shadow: 2rpx 2rpx 0 #311b92, 0 0 12rpx #b388ff;
+  z-index: 118;
+}
+
+.damage-number.skill-time {
+  color: #00bcd4; /* 时空青色 */
+  font-size: 52rpx;
+  font-weight: bold;
+  text-shadow: 2rpx 2rpx 0 #006064, 0 0 15rpx #4dd0e1;
+  z-index: 122;
+}
+
+.damage-number.skill-gold {
+  color: #ffc107; /* 金币黄色 */
+  font-size: 36rpx;
+  font-weight: bold;
+  text-shadow: 2rpx 2rpx 0 #ff8f00, 0 0 10rpx #ffeb3b;
+  z-index: 106;
+}
+
+.damage-number.skill-royal {
+  color: #ffd700; /* 皇家金色 */
+  font-size: 44rpx;
+  font-weight: bold;
+  text-shadow: 2rpx 2rpx 0 #b8860b, 0 0 12rpx #fff8dc;
+  z-index: 112;
+}
+
+.damage-number.skill-iron {
+  color: #78909c; /* 钢铁灰色 */
+  font-size: 48rpx;
+  font-weight: bold;
+  text-shadow: 2rpx 2rpx 0 #37474f, 0 0 12rpx #b0bec5;
+  z-index: 116;
+}
+
+.damage-number.skill-freeze {
+  color: #00bfff; /* 冰霜蓝色 */
+  font-size: 44rpx;
+  font-weight: bold;
+  text-shadow: 2rpx 2rpx 0 #104e8b, 0 0 15rpx #b0e0e6;
+  z-index: 114;
+}
+
+.damage-number.skill-summon {
+  color: #9370db; /* 亡灵紫色 */
+  font-size: 40rpx;
+  font-weight: bold;
+  text-shadow: 2rpx 2rpx 0 #4b0082, 0 0 10rpx #dda0dd;
+  z-index: 110;
+}
+
+.damage-number.skill-holy {
+  color: #fffacd; /* 圣洁淡黄 */
+  font-size: 46rpx;
+  font-weight: bold;
+  text-shadow: 2rpx 2rpx 0 #ffd700, 0 0 15rpx #fff;
+  z-index: 118;
+}
+
+.damage-number.skill-void {
+  color: #8a2be2; /* 虚空紫色 */
+  font-size: 52rpx;
+  font-weight: bold;
+  text-shadow: 2rpx 2rpx 0 #4b0082, 0 0 20rpx #9400d3;
+  z-index: 124;
+}
+
+.damage-number.skill-phoenix {
+  color: #ff4500; /* 凤凰橙红 */
+  font-size: 56rpx;
+  font-weight: bold;
+  text-shadow: 2rpx 2rpx 0 #8b0000, 0 0 20rpx #ff6347;
+  z-index: 126;
+}
+
+.damage-number.skill-ultimate {
+  color: #fff; /* 终极白金 */
+  font-size: 60rpx;
+  font-weight: bold;
+  text-shadow: 0 0 10rpx #ffd700, 0 0 20rpx #ff69b4, 0 0 30rpx #00ffff;
+  z-index: 130;
+}
+
 /* 全局Buff视觉效果 */
 .battle-container.buff-speed {
   box-shadow: inset 0 0 100rpx rgba(168, 85, 247, 0.4);

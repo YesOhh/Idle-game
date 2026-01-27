@@ -86,7 +86,7 @@ Page({
         if (savedShowDamageNumbers !== '') {
             this.setData({ showDamageNumbers: savedShowDamageNumbers });
         }
-        
+
         this.initGame();
         // 订阅全局战斗更新
         this.subscribeToBattleUpdates();
@@ -203,7 +203,19 @@ Page({
             'crit': 'skill-crit',
             'speed_buff': 'skill-mage',
             'damage_buff': 'skill-dragon',
-            'combo': 'skill-combo'
+            'combo': 'skill-combo',
+            'burn': 'skill-burn',
+            'chaos': 'skill-chaos',
+            'time_burst': 'skill-time',
+            'gold': 'skill-gold',
+            'team_buff': 'skill-royal',
+            'iron_fist': 'skill-iron',
+            'freeze': 'skill-freeze',
+            'summon': 'skill-summon',
+            'holy': 'skill-holy',
+            'void': 'skill-void',
+            'phoenix': 'skill-phoenix',
+            'ultimate': 'skill-ultimate'
         };
         return classMap[skillType] || 'skill';
     },
@@ -615,14 +627,14 @@ Page({
             duration: 50,
             timingFunction: 'ease-out'
         });
-        
+
         // 缩小并左移
         animation.scale(0.9).translateX(-8).step();
         // 右移
         animation.scale(0.95).translateX(8).step({ duration: 50 });
         // 回到原位
         animation.scale(1).translateX(0).step({ duration: 50 });
-        
+
         this.setData({
             bossAnimation: animation.export()
         });
@@ -756,7 +768,7 @@ Page({
     // 显示伤害数字
     showDamageNumber(damage, e, type = '') {
         if (!this.data.showDamageNumbers) return;
-        
+
         const id = (this.data.damageNumberId || 0) + 1;
         // 只保留最新的5个，避免太多飘字
         let damageNumbers = this.data.damageNumbers.slice(-5);
@@ -783,12 +795,6 @@ Page({
         if (globalData.player.gold >= cost) {
             globalData.player.gold -= cost;
             globalData.player.manualDamage++;
-
-            wx.showToast({
-                title: '升级成功!',
-                icon: 'success'
-            });
-
             this.updateDisplay();
         } else {
             wx.showToast({
@@ -1027,11 +1033,6 @@ Page({
                 }
             }
 
-            wx.showToast({
-                title: '攻击力升级成功!',
-                icon: 'success'
-            });
-
             this.updateDisplay();
         } else {
             wx.showToast({
@@ -1058,12 +1059,6 @@ Page({
             globalData.player.gold -= cost;
             mercenary.intervalLevel++;
             mercenary.currentInterval = gameEngine.calculateUpgradedInterval(mercenary);
-
-            wx.showToast({
-                title: '攻速升级成功!',
-                icon: 'success'
-            });
-
             this.updateDisplay();
         } else {
             wx.showToast({
