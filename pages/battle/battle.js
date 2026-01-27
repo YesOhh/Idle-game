@@ -74,10 +74,19 @@ Page({
         selectedRowIndex: -1,
 
         // Boss动画
-        bossAnimation: null
+        bossAnimation: null,
+
+        // 伤害飘字开关
+        showDamageNumbers: true
     },
 
     onLoad() {
+        // 加载飘字开关设置
+        const savedShowDamageNumbers = wx.getStorageSync('showDamageNumbers');
+        if (savedShowDamageNumbers !== '') {
+            this.setData({ showDamageNumbers: savedShowDamageNumbers });
+        }
+        
         this.initGame();
         // 订阅全局战斗更新
         this.subscribeToBattleUpdates();
@@ -122,11 +131,14 @@ Page({
 
     // 处理战斗更新事件
     handleBattleUpdate(data) {
-        if (data.skill) {
-            this.showDamageNumber(data.skill.text, null, this.getSkillClass(data.skill.type));
+        // 佣兵普通攻击伤害飘字
+        if (data.mercDamage && this.data.showDamageNumbers) {
+            const type = data.mercDamage.isCrit ? 'crit' : 'normal';
+            this.showDamageNumber(data.mercDamage.damage, null, type);
         }
-        if (data.crit && data.damage) {
-            this.showDamageNumber(data.damage, null, 'crit');
+        // 技能飘字
+        if (data.skill && this.data.showDamageNumbers) {
+            this.showDamageNumber(data.skill.text, null, this.getSkillClass(data.skill.type));
         }
         if (data.buffChanged) {
             const buffState = app.getBuffState();
@@ -260,6 +272,11 @@ Page({
 
                 merc.currentDamage = gameEngine.calculateUpgradedDamage(merc, prestigeBonus.damage);
                 merc.currentInterval = gameEngine.calculateUpgradedInterval(merc);
+
+                // 同步玩家单位的点击伤害（长大技能）
+                if (merc.id === 'player' && merc.recruited) {
+                    globalData.player.manualDamage = merc.currentDamage;
+                }
             });
         }
 
@@ -708,16 +725,18 @@ Page({
         this.onPrestige(selectedRelic);
     },
 
-    // 显示伤害数字（简化版，避免频繁重渲染）
+    // 显示伤害数字
     showDamageNumber(damage, e, type = '') {
+        if (!this.data.showDamageNumbers) return;
+        
         const id = (this.data.damageNumberId || 0) + 1;
-        // 只保留最新的2个，加上新的共3个
-        let damageNumbers = this.data.damageNumbers.slice(-2);
+        // 只保留最新的5个，避免太多飘字
+        let damageNumbers = this.data.damageNumbers.slice(-5);
         damageNumbers.push({
             id,
-            damage: gameEngine.formatNumber(damage),
+            damage: typeof damage === 'number' ? gameEngine.formatNumber(damage) : damage,
             x: Math.random() * 200 + 150,
-            y: Math.random() * 60 + 120,
+            y: Math.random() * 60 + 30,
             type
         });
 
@@ -811,6 +830,14 @@ Page({
             // 只有当有升级发生时，才可能需要刷新统计信息显示
             this.updateDisplay();
         }
+    },
+
+    // 切换伤害飘字开关
+    onToggleDamageNumbers(e) {
+        const showDamageNumbers = e.detail.value;
+        this.setData({ showDamageNumbers });
+        // 保存设置
+        wx.setStorageSync('showDamageNumbers', showDamageNumbers);
     },
 
     // 重置游戏
@@ -963,6 +990,15 @@ Page({
             mercenary.damageLevel++;
             mercenary.currentDamage = gameEngine.calculateUpgradedDamage(mercenary, prestigeBonus.damage);
 
+            // 玩家单位的【长大】技能：升级攻击力时同步提升点击伤害
+            if (mercenary.id === 'player') {
+                const skill = gameEngine.getMercenarySkill(mercenary);
+                if (skill && skill.type === 'sync_click_damage') {
+                    // 点击伤害 = 玩家单位的当前攻击力
+                    globalData.player.manualDamage = mercenary.currentDamage;
+                }
+            }
+
             wx.showToast({
                 title: '攻击力升级成功!',
                 icon: 'success'
@@ -1093,6 +1129,17 @@ Page({
 
             wx.showToast({
                 title: `已雇佣 ${hiredCount} 名佣兵！`,
+                icon: 'success'
+            });
+        } else if (code === '3') {
+            // 获得10亿金币（测试用）
+            globalData.player.gold = (globalData.player.gold || 0) + 1000000000;
+
+            this.updateDisplay();
+            this.setData({ redemptionCode: '' });
+
+            wx.showToast({
+                title: '获得 10亿 金币！',
                 icon: 'success'
             });
         } else if (code !== '') {

@@ -91,6 +91,13 @@
   z-index: 110;
 }
 
+.damage-number.normal {
+  color: #ffffff; /* 普通白色 */
+  font-size: 32rpx; /* 稍小 */
+  text-shadow: 2rpx 2rpx 0 #000;
+  z-index: 100;
+}
+
 .damage-number.skill {
   color: #3498db; /* 技能蓝色 */
   font-size: 40rpx;
@@ -817,6 +824,27 @@
   border-radius: 4rpx;
   white-space: nowrap; /* 禁止等级换行 */
   flex-shrink: 0;
+}
+
+/* 设置区域 */
+.settings-section {
+  padding: 20rpx;
+  margin-bottom: 10rpx;
+  background: var(--bg-card);
+  border-radius: 12rpx;
+  border: 1rpx solid var(--border-color);
+}
+
+.setting-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10rpx 0;
+}
+
+.setting-label {
+  font-size: 26rpx;
+  color: var(--text-primary);
 }
 
 /* 重置按钮 */

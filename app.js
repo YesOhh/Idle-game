@@ -235,12 +235,19 @@ App({
             merc._attackTimer -= interval;
           }
 
+          // 通知战斗页面显示伤害飘字
+          this._notifyBattleUpdate({
+            mercDamage: {
+              damage: thisHitDamage,
+              mercName: merc.name,
+              isCrit: isCrit
+            }
+          });
+
           // 通知战斗页面显示技能效果
-          if (skillTriggered || isCrit) {
+          if (skillTriggered) {
             this._notifyBattleUpdate({
-              skill: skillTriggered,
-              crit: isCrit,
-              damage: thisHitDamage
+              skill: skillTriggered
             });
           }
         }

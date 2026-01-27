@@ -130,6 +130,14 @@
       </view>
     </scroll-view>
 
+    <!-- 设置区域 -->
+    <view class="settings-section">
+      <view class="setting-item">
+        <text class="setting-label">显示伤害飘字</text>
+        <switch checked="{{showDamageNumbers}}" bindchange="onToggleDamageNumbers" color="#a855f7" />
+      </view>
+    </view>
+
     <!-- 重置游戏按钮 -->
     <view class="reset-section">
       <button class="stats-btn" bindtap="onShowStats">📊 战况统计</button>

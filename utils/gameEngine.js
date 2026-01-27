@@ -380,9 +380,9 @@ function calculateOfflineProgress(dps, offlineSeconds, bossLevel) {
 function getMercenarySkill(mercenary) {
     const totalLevel = mercenary.damageLevel + mercenary.intervalLevel;
 
-    // 玩家技能：【长大】(Lv 10解锁)
+    // 玩家技能：【长大】(雇佣即解锁)
     // 升级攻击力时同步升级点击伤害
-    if (mercenary.id === 'player' && totalLevel >= 10) {
+    if (mercenary.id === 'player' && mercenary.recruited) {
         return {
             type: 'sync_click_damage',
             name: '长大',
@@ -637,19 +637,19 @@ function getMercenarySkill(mercenary) {
  * @returns {Object|null} - UI显示用的技能信息
  */
 function getMercenarySkillDisplay(mercenary) {
-    const totalLevel = mercenary.damageLevel + mercenary.intervalLevel;
+    // 总等级 = 攻击等级 + 攻速等级 + 1（雇佣时初始等级为1）
+    const totalLevel = mercenary.damageLevel + mercenary.intervalLevel + 1;
 
-    // 玩家 - 长大
+    // 玩家 - 长大 (雇佣即解锁)
     if (mercenary.id === 'player') {
-        const unlockLv = 10;
-        const isUnlocked = totalLevel >= unlockLv;
+        const isUnlocked = mercenary.recruited;
         const baseDesc = '升级攻击力时，点击伤害也同步提升';
         return {
             name: '【长大】',
             isUnlocked,
             desc: baseDesc,
             baseDesc,
-            unlockCondition: `Lv.${unlockLv}解锁`
+            unlockCondition: '雇佣即解锁'
         };
     }
 
