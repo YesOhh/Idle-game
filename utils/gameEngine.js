@@ -63,7 +63,12 @@ function calculateUpgradedDamage(mercenary, prestigeDamageMult = 1) {
     // 1. 计算基础伤害 (包含等级加成、里程碑、佣兵个体技能)
     let baseDamage = calculateMercenaryBaseDamage(mercenary);
 
-    // 2. 应用周目/圣物全局加成
+    // 2. 应用传授技能的永久加成
+    if (mercenary._teachingBonus) {
+        baseDamage += mercenary._teachingBonus;
+    }
+
+    // 3. 应用周目/圣物全局加成
     let finalDamage = baseDamage * prestigeDamageMult;
 
     return Math.floor(finalDamage);
@@ -333,14 +338,14 @@ function nextBoss(currentLevel) {
  * @param {number} dps - 每秒伤害
  * @param {number} offlineSeconds - 离线秒数
  * @param {number} bossLevel - 当前Boss等级
+ * @param {number} currentBossHp - 当前Boss剩余血量
  * @returns {Object} - 离线收益信息
  */
-function calculateOfflineProgress(dps, offlineSeconds, bossLevel) {
+function calculateOfflineProgress(dps, offlineSeconds, bossLevel, currentBossHp) {
     // 限制离线时间最多8小时
     const maxOfflineTime = 8 * 60 * 60;
     const actualOfflineTime = Math.min(offlineSeconds, maxOfflineTime);
 
-    // 离线效率为70%
     // 离线效率为70%
     const offlineEfficiency = 0.7;
     const effectiveDPS = dps * offlineEfficiency;
@@ -356,12 +361,15 @@ function calculateOfflineProgress(dps, offlineSeconds, bossLevel) {
     // 模拟击败Boss (用于计算等级提升)
     let tempDamage = remainingDamage;
 
+    // 第一个Boss使用当前剩余血量（而不是满血）
+    let firstBossHp = currentBossHp;
+
     while (tempDamage > 0 && bossesDefeated < 100) {
-        const bossHp = calculateBossMaxHp(currentLevel);
+        // 第一个Boss使用传入的剩余血量，后续Boss使用满血量
+        const bossHp = (bossesDefeated === 0) ? firstBossHp : calculateBossMaxHp(currentLevel);
 
         if (tempDamage >= bossHp) {
             tempDamage -= bossHp;
-            // totalGold += calculateBossReward(currentLevel); // 不再给予击杀奖励
             bossesDefeated++;
             currentLevel++;
         } else {
@@ -369,10 +377,12 @@ function calculateOfflineProgress(dps, offlineSeconds, bossLevel) {
         }
     }
 
+    // tempDamage 是剩余的伤害，用于扣除当前 Boss 的血量
     return {
         gold: totalGold,
         bossesDefeated,
         newLevel: currentLevel,
+        remainingDamage: tempDamage,  // 剩余伤害，用于扣除当前 Boss 血量
         timeProcessed: actualOfflineTime
     };
 }

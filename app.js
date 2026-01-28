@@ -99,7 +99,65 @@ App({
       this._processBattleTick();
     }, 100);
 
+    // 启动传授技能定时器 (60秒)
+    this._startTeachingSkillTimer();
+
     console.log('全局战斗系统已启动');
+  },
+
+  // 启动传授技能定时器
+  _startTeachingSkillTimer() {
+    if (this._teachingTimer) {
+      clearInterval(this._teachingTimer);
+    }
+
+    // 每60秒触发一次传授技能
+    this._teachingTimer = setInterval(() => {
+      this._processTeachingSkill();
+    }, 60000);
+  },
+
+  // 处理传授技能逻辑
+  _processTeachingSkill() {
+    const globalData = this.globalData;
+    if (!globalData || !globalData.mercenaries) return;
+
+    const prestigeBonus = gameEngine.calculatePrestigeBonus(globalData.player);
+
+    // 找到士兵（royal_guard）并检查技能是否解锁
+    const soldier = globalData.mercenaries.find(m => m.id === 'royal_guard' && m.recruited);
+    if (!soldier) return;
+
+    const skill = gameEngine.getMercenarySkill(soldier);
+    if (!skill || skill.type !== 'team_damage_buff') return;
+
+    // 计算士兵当前攻击力的1%
+    const soldierDamage = gameEngine.calculateUpgradedDamage(soldier, prestigeBonus.damage);
+    const bonusDamage = Math.floor(soldierDamage * skill.bonusRatio);
+
+    if (bonusDamage <= 0) return;
+
+    // 给其他基础系单位增加永久攻击力加成
+    let teachCount = 0;
+    globalData.mercenaries.forEach(merc => {
+      if (merc.recruited && merc.category === 'basic' && merc.id !== 'royal_guard') {
+        // 使用 _teachingBonus 存储传授获得的永久加成
+        merc._teachingBonus = (merc._teachingBonus || 0) + bonusDamage;
+        teachCount++;
+      }
+    });
+
+    if (teachCount > 0) {
+      // 通知战斗界面更新
+      this._notifyBattleUpdate({
+        skillTriggered: {
+          mercId: 'royal_guard',
+          type: 'teaching',
+          text: `传授 +${gameEngine.formatNumber(bonusDamage)}!`
+        }
+      });
+      console.log(`传授技能触发：${teachCount}个基础系单位各获得 +${bonusDamage} 攻击力`);
+    }
   },
 
   // 停止全局战斗
@@ -107,6 +165,10 @@ App({
     if (this._battleTimer) {
       clearInterval(this._battleTimer);
       this._battleTimer = null;
+    }
+    if (this._teachingTimer) {
+      clearInterval(this._teachingTimer);
+      this._teachingTimer = null;
     }
   },
 
@@ -315,20 +377,8 @@ App({
                 skillTriggered = { type: 'time_burst', text: `时空涟漪 x${attackCount}!` };
               }
             } else if (skill.type === 'team_damage_buff') {
-              // 皇家守护：概率使全队伤害提升
-              if (Math.random() < skill.chance) {
-                this._globalDamageBuff = skill.val;
-                this._damageBuffActive = true;
-
-                if (this._globalDamageTimer) clearTimeout(this._globalDamageTimer);
-                this._globalDamageTimer = setTimeout(() => {
-                  this._globalDamageBuff = 0;
-                  this._damageBuffActive = false;
-                  this._notifyBattleUpdate({ buffChanged: true });
-                }, skill.duration);
-
-                skillTriggered = { type: 'team_buff', text: `皇家守护 +${(skill.val * 100).toFixed(0)}%!` };
-              }
+              // 传授：定时使其他基础系单位获得永久攻击力加成
+              // 传授技能不在攻击时触发，而是通过定时器触发，所以这里不做任何处理
             } else if (skill.type === 'iron_fist') {
               // 钢铁神拳：概率造成钢铁系总攻击力伤害
               if (Math.random() < skill.chance) {

@@ -90,10 +90,10 @@
             </button>
           </view>
 
-          <!-- 展开内容 - 仅已雇佣且展开时显示 -->
-          <view wx:if="{{item.recruited && item.expanded}}" class="merc-expand-content">
-            <!-- 升级攻击力 -->
-            <view class="upgrade-box" catchtap="onUpgradeDamage" data-id="{{item.id}}">
+          <!-- 展开内容 - 展开时显示 -->
+          <view wx:if="{{item.expanded}}" class="merc-expand-content">
+            <!-- 升级攻击力 - 仅已雇佣时显示 -->
+            <view wx:if="{{item.recruited}}" class="upgrade-box" catchtap="onUpgradeDamage" data-id="{{item.id}}">
               <view class="upgrade-info">
                 <text class="upgrade-title">升级攻击力 等级 {{item.damageLevel + 1}}</text>
                 <text class="upgrade-effect">攻击力 +{{item.damageUpgradeEffect}}</text>
@@ -103,8 +103,8 @@
               </view>
             </view>
 
-            <!-- 升级攻击速度 -->
-            <view class="upgrade-box" catchtap="onUpgradeInterval" data-id="{{item.id}}">
+            <!-- 升级攻击速度 - 仅已雇佣时显示 -->
+            <view wx:if="{{item.recruited}}" class="upgrade-box" catchtap="onUpgradeInterval" data-id="{{item.id}}">
               <view class="upgrade-info">
                 <text class="upgrade-title">升级攻击速度 等级 {{item.intervalLevel + 1}}</text>
                 <text class="upgrade-effect">攻击间隔 -{{item.intervalUpgradeEffect}}秒</text>
@@ -119,7 +119,7 @@
               <text>{{item.description}}</text>
             </view>
 
-            <!-- 技能详情 - 始终显示效果 -->
+            <!-- 技能详情 - 始终显示效果，未解锁时显示解锁条件 -->
             <view wx:if="{{item.skillInfo}}" class="skill-detail">
               <view class="skill-detail-header">
                 <text class="skill-detail-name {{item.skillInfo.isUnlocked ? 'unlocked' : 'locked'}}">{{item.skillInfo.shortName}}</text>

@@ -209,6 +209,7 @@ Page({
             'time_burst': 'skill-time',
             'gold': 'skill-gold',
             'team_buff': 'skill-royal',
+            'teaching': 'skill-royal',
             'iron_fist': 'skill-iron',
             'freeze': 'skill-freeze',
             'summon': 'skill-summon',
@@ -318,15 +319,23 @@ Page({
             const offlineResult = gameEngine.calculateOfflineProgress(
                 dps,
                 offlineSeconds,
-                globalData.boss.level
+                globalData.boss.level,
+                globalData.boss.currentHp  // 传入当前Boss的剩余血量
             );
 
             // 应用离线收益
             globalData.player.gold += offlineResult.gold;
-            globalData.boss.level = offlineResult.newLevel;
 
-            const newBoss = gameEngine.nextBoss(offlineResult.newLevel - 1);
-            globalData.boss = newBoss;
+            // 如果击败了Boss，创建新的Boss
+            if (offlineResult.bossesDefeated > 0) {
+                const newBoss = gameEngine.nextBoss(offlineResult.newLevel - 1);
+                globalData.boss = newBoss;
+            }
+
+            // 扣除当前Boss的剩余伤害
+            if (offlineResult.remainingDamage > 0) {
+                globalData.boss.currentHp = Math.max(0, globalData.boss.currentHp - offlineResult.remainingDamage);
+            }
 
             // 显示离线收益弹窗
             const hours = Math.floor(offlineSeconds / 3600);

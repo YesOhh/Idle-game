@@ -57,7 +57,7 @@ const SKILL_LIBRARY = {
         name: '爆裂',
         type: 'crit',
         icon: '💥',
-        baseUnlockLevel: 20,
+        baseUnlockLevel: 10,
         baseDescription: '攻击有几率造成多倍暴击伤害',
         getParams: (level) => {
             const extraMult = Math.floor((level - 20) / 10) * 0.5;
@@ -94,25 +94,23 @@ const SKILL_LIBRARY = {
         }
     },
 
-    // 【皇家守护】- 皇家侍卫默认
+    // 【传授】- 士兵默认
     team_damage_buff: {
         id: 'team_damage_buff',
-        name: '皇家守护',
+        name: '传授',
         type: 'team_damage_buff',
-        icon: '👑',
-        baseUnlockLevel: 25,
-        baseDescription: '攻击时有几率增强全队伤害',
+        icon: '📚',
+        baseUnlockLevel: 15,
+        baseDescription: '每隔60秒，使其他基础系单位永久增加本单位攻击力的1%',
         getParams: (level) => {
-            const buffVal = 0.05 + Math.floor((level - 25) / 15) * 0.02;
+            // 效果固定，不随等级提升
             return {
-                chance: 0.08,
-                val: Math.max(0.05, buffVal),
-                duration: 5000
+                interval: 60000,  // 60秒
+                bonusRatio: 0.01  // 1%
             };
         },
         getDescription: (level) => {
-            const params = SKILL_LIBRARY.team_damage_buff.getParams(level);
-            return `8%几率使全队伤害+${(params.val * 100).toFixed(0)}% (5秒)`;
+            return `每60秒，使其他基础系单位永久增加本单位攻击力的1%`;
         }
     },
 
@@ -599,7 +597,7 @@ function getUnitSkillDisplay(mercenary) {
     return {
         name: `【${skillDef.name}】`,
         isUnlocked,
-        desc: isUnlocked ? skillDef.getDescription(totalLevel) : `（达到 Lv.${skillDef.baseUnlockLevel} 解锁）`,
+        desc: isUnlocked ? skillDef.getDescription(totalLevel) : skillDef.baseDescription,  // 未解锁时显示基础描述
         baseDesc: skillDef.baseDescription,
         unlockCondition: skillDef.baseUnlockLevel === 0 ? '雇佣即解锁' : `Lv.${skillDef.baseUnlockLevel}解锁`,
         icon: skillDef.icon

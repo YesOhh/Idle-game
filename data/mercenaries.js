@@ -26,12 +26,12 @@ const MERCENARIES_DATA = [
     },
     {
         id: 'kongkong',
-        name: '空空',
+        name: '泼猴',
         baseCost: 18,            // 3 x 6
         damage: 3,
         attackInterval: 3.2,
-        description: '身手敏捷的小偷，攻击时顺手牵羊',
-        icon: '🥷',
+        description: '身手敏捷的小猴，攻击时顺手牵羊',
+        icon: '🐵',
         category: 'basic'
     },
     {
@@ -56,12 +56,12 @@ const MERCENARIES_DATA = [
     },
     {
         id: 'royal_guard',
-        name: '皇家侍卫',
+        name: '士兵',
         baseCost: 1200,          // 100 x 12
         damage: 100,
         attackInterval: 3.6,
-        description: '忠诚的皇家护卫，攻击稳定',
-        icon: '💂',
+        description: '经验丰富的老兵，会将战斗经验传授给其他基础系单位',
+        icon: '🎖️',
         category: 'basic'
     },
 
