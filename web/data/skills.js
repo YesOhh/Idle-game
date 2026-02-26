@@ -46,9 +46,19 @@ export const SKILL_LIBRARY = {
     },
     team_damage_buff: {
         id: 'team_damage_buff', name: '传授', type: 'team_damage_buff', icon: '📚',
-        baseUnlockLevel: 15, baseDescription: '每隔60秒，使其他基础系单位永久增加本单位攻击力的1%',
+        baseUnlockLevel: 15, baseDescription: '每隆60秒，使其他所有单位永久增加本单位攻击力的1%',
         getParams: (level) => ({ interval: 60000, bonusRatio: 0.01 }),
-        getDescription: (level) => '每60秒，使其他基础系单位永久增加本单位攻击力的1%'
+        getDescription: (level) => '每60秒，使其他所有单位永久增加本单位攻击力的1%'
+    },
+    experience_growth: {
+        id: 'experience_growth', name: '经验', type: 'experience_growth', icon: '🌟',
+        baseUnlockLevel: 0, baseDescription: '每隆10秒，攻击力永久增加',
+        getParams: (level) => ({ interval: 10000 }),
+        getDescription: (level) => {
+            const damageLevel = 0;
+            const bonus = 1 + Math.floor(level * damageLevel / 30);
+            return `每10秒，攻击力 +（1 + 等级×攻击力等级/30）`;
+        }
     },
     iron_fist: {
         id: 'iron_fist', name: '钢铁神拳', type: 'iron_fist', icon: '🤜',
@@ -225,6 +235,18 @@ export const SKILL_LIBRARY = {
         getParams: (level) => ({}),
         getDescription: (level) => '升级攻击力时攻击速度也会提升，反之亦然'
     },
+    knight_heavy_armor: {
+        id: 'knight_heavy_armor', name: '重装', type: 'knight_heavy_armor', icon: '🛡️',
+        baseUnlockLevel: 0, baseDescription: '升级攻击力时额外增加攻击力',
+        getParams: (level) => ({}),
+        getDescription: (level) => '升级攻击力时额外增加（攻击力等级²×等级）点攻击力'
+    },
+    knight_fortify: {
+        id: 'knight_fortify', name: '稳固', type: 'knight_fortify', icon: '🏰',
+        baseUnlockLevel: 0, baseDescription: '每隔8秒，造成等同攻击力的伤害',
+        getParams: (level) => ({ interval: 8000 }),
+        getDescription: (level) => '每隔8秒，造成等同攻击力的额外伤害'
+    },
     gold_on_attack: {
         id: 'gold_on_attack', name: '妙手', type: 'gold_on_attack', icon: '💰',
         baseUnlockLevel: 5, baseDescription: '每次攻击额外获得攻击力数值的金币',
@@ -245,9 +267,9 @@ export const DEFAULT_UNIT_SKILLS = {
     'kongkong': 'gold_on_attack',
     'warrior': 'stacking_buff',
     'archer': 'crit_burst',
-    'royal_guard': 'team_damage_buff',
+    'royal_guard': 'experience_growth',
     'iron_soldier': 'iron_fist',
-    'knight': null,
+    'knight': 'knight_heavy_armor',
     'berserker': 'berserker_combo',
     'mage': 'global_speed_buff',
     'night_swordsman': 'shadow_crit',
@@ -294,6 +316,22 @@ export function getUnitSkillDisplay(mercenary) {
     if (skillDef.type === 'sync_click_damage') {
         return { name: `【${skillDef.name}】`, isUnlocked: mercenary.recruited, desc: skillDef.baseDescription, baseDesc: skillDef.baseDescription, unlockCondition: '雇佣即解锁', icon: skillDef.icon };
     }
+    if (skillDef.id === 'experience_growth') {
+        const teachSkillDef = SKILL_LIBRARY['team_damage_buff'];
+        const teachUnlocked = totalLevel >= teachSkillDef.baseUnlockLevel;
+        return {
+            name: '【经验】', isUnlocked: true, desc: '每10秒，攻击力 +（1 + 等级×攻击力等级/30）',
+            baseDesc: skillDef.baseDescription, unlockCondition: '雇佣即解锁', icon: skillDef.icon,
+            skill2: { name: '【传授】', isUnlocked: teachUnlocked, desc: teachUnlocked ? teachSkillDef.getDescription(totalLevel) : teachSkillDef.baseDescription, baseDesc: teachSkillDef.baseDescription, unlockCondition: `Lv.${teachSkillDef.baseUnlockLevel}解锁` }
+        };
+    }
+    if (skillDef.id === 'knight_heavy_armor') {
+        return {
+            name: '【重装】', isUnlocked: true, desc: '升级攻击力时额外增加（攻击力等级²×等级）点攻击力',
+            baseDesc: skillDef.baseDescription, unlockCondition: '雇佣即解锁', icon: skillDef.icon,
+            skill2: { name: '【稳固】', isUnlocked: true, desc: '每隔8秒，造成等同攻击力的额外伤害', baseDesc: '每隔8秒，造成等同攻击力的伤害', unlockCondition: '雇佣即解锁' }
+        };
+    }
     if (skillDef.id === 'berserker_combo') {
         const params = skillDef.getParams(totalLevel);
         const isComboUnlocked = totalLevel >= 50;
@@ -310,7 +348,7 @@ export function getUnitSkillDisplay(mercenary) {
             skill2Desc = `血量<85%/60%/35%/10%时，15%/30%/45%/60%几率连击`;
         }
         return {
-            name: '【狂暴】+【连击】', isUnlocked, desc: skill1Desc, baseDesc: skillDef.baseDescription, unlockCondition: `Lv.${skillDef.baseUnlockLevel}解锁`, icon: skillDef.icon,
+            name: '【狂暴】', isUnlocked, desc: skill1Desc, baseDesc: skillDef.baseDescription, unlockCondition: `Lv.${skillDef.baseUnlockLevel}解锁`, icon: skillDef.icon,
             skill2: { name: '【连击】', isUnlocked: isComboUnlocked, desc: skill2Desc, baseDesc: '血量越低，越有几率再次攻击', unlockCondition: 'Lv.50解锁' }
         };
     }
@@ -318,7 +356,7 @@ export function getUnitSkillDisplay(mercenary) {
 }
 
 export function getEvolvableSkills() {
-    const excludeIds = ['sync_click_damage', 'legend_dual_growth'];
+    const excludeIds = ['sync_click_damage', 'legend_dual_growth', 'knight_heavy_armor', 'knight_fortify', 'experience_growth'];
     return Object.values(SKILL_LIBRARY)
         .filter(skill => !excludeIds.includes(skill.id))
         .map(skill => ({ id: skill.id, name: skill.name, icon: skill.icon, baseDescription: skill.baseDescription, baseUnlockLevel: skill.baseUnlockLevel }));

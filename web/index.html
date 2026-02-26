@@ -10,69 +10,74 @@
     <div id="app">
         <!-- ========== 战斗Tab ========== -->
         <div id="tab-battle" class="tab-page active">
-            <!-- Boss区域 -->
-            <div class="boss-section">
-                <div class="boss-level">
-                    Boss Lv.<span id="boss-level">1</span>
-                    <span id="prestige-badge" class="prestige-badge" style="display:none">🎖️ 第<span id="prestige-count">2</span>周目</span>
-                </div>
-                <div class="boss-sprite" id="boss-sprite">
-                    <div class="boss-icon" id="boss-icon">👹</div>
-                    <div id="damage-container"></div>
-                </div>
-                <div class="boss-hp-container">
-                    <div class="boss-hp-label"><span id="boss-hp-text">100 / 100</span></div>
-                    <div class="pixel-progress">
-                        <div class="pixel-progress-fill" id="boss-hp-bar" style="width: 100%"></div>
+            <div class="battle-layout">
+                <!-- 左栏: Boss + 金币 + 设置 -->
+                <div class="battle-left">
+                    <!-- Boss区域 -->
+                    <div class="boss-section">
+                        <div class="boss-level">
+                            Boss Lv.<span id="boss-level">1</span>
+                            <span id="prestige-badge" class="prestige-badge" style="display:none">🎖️ 第<span id="prestige-count">2</span>周目</span>
+                        </div>
+                        <div class="boss-sprite" id="boss-sprite">
+                            <div class="boss-icon" id="boss-icon">👹</div>
+                            <div id="damage-container"></div>
+                        </div>
+                        <div class="boss-hp-container">
+                            <div class="boss-hp-label"><span id="boss-hp-text">100 / 100</span></div>
+                            <div class="pixel-progress">
+                                <div class="pixel-progress-fill" id="boss-hp-bar" style="width: 100%"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 金币统计栏 -->
+                    <div class="stats-compact">
+                        <div class="stat-compact">
+                            <span class="stat-compact-label">💰</span>
+                            <span class="stat-compact-value" id="gold-text">0</span>
+                        </div>
+                    </div>
+
+                    <!-- 设置 -->
+                    <div class="settings-section">
+                        <div class="setting-item">
+                            <span class="setting-label">显示伤害飘字</span>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="toggle-damage-numbers" checked>
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                        <div class="setting-item">
+                            <span class="setting-label">显示技能飘字</span>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="toggle-skill-numbers" checked>
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- 重置 / 统计 -->
+                    <div class="reset-section">
+                        <button class="stats-btn" id="btn-stats">📊 战况统计</button>
+                        <button class="reset-btn" id="btn-reset">🔄 重新开始游戏</button>
+                    </div>
+
+                    <!-- 兑换码 -->
+                    <div class="redeem-section">
+                        <div class="redeem-title">兑换码</div>
+                        <div class="redeem-input-group">
+                            <input class="redeem-input" id="redeem-input" placeholder="输入兑换码">
+                            <button class="redeem-btn" id="btn-redeem">兑换</button>
+                        </div>
                     </div>
                 </div>
-            </div>
 
-            <!-- 金币统计栏 -->
-            <div class="stats-compact">
-                <div class="stat-compact">
-                    <span class="stat-compact-label">💰</span>
-                    <span class="stat-compact-value" id="gold-text">0</span>
-                </div>
-            </div>
-
-            <!-- 佣兵列表 -->
-            <div class="tab-content">
-                <div class="merc-list-wrapper">
-                    <div class="mercenaries-scroll" id="battle-merc-list"></div>
-                    <div class="merc-skill-overlay" id="merc-skill-overlay"></div>
-                </div>
-
-                <!-- 设置 -->
-                <div class="settings-section">
-                    <div class="setting-item">
-                        <span class="setting-label">显示伤害飘字</span>
-                        <label class="toggle-switch">
-                            <input type="checkbox" id="toggle-damage-numbers" checked>
-                            <span class="toggle-slider"></span>
-                        </label>
-                    </div>
-                    <div class="setting-item">
-                        <span class="setting-label">显示技能飘字</span>
-                        <label class="toggle-switch">
-                            <input type="checkbox" id="toggle-skill-numbers" checked>
-                            <span class="toggle-slider"></span>
-                        </label>
-                    </div>
-                </div>
-
-                <!-- 重置 / 统计 -->
-                <div class="reset-section">
-                    <button class="stats-btn" id="btn-stats">📊 战况统计</button>
-                    <button class="reset-btn" id="btn-reset">🔄 重新开始游戏</button>
-                </div>
-
-                <!-- 兑换码 -->
-                <div class="redeem-section">
-                    <div class="redeem-title">兑换码</div>
-                    <div class="redeem-input-group">
-                        <input class="redeem-input" id="redeem-input" placeholder="输入兑换码">
-                        <button class="redeem-btn" id="btn-redeem">兑换</button>
+                <!-- 右栏: 佣兵列表 -->
+                <div class="battle-right">
+                    <div class="merc-list-wrapper">
+                        <div class="mercenaries-scroll" id="battle-merc-list"></div>
+                        <div class="merc-skill-overlay" id="merc-skill-overlay"></div>
                     </div>
                 </div>
             </div>

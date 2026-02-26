@@ -214,8 +214,25 @@ body {
 .stat-compact-label { font-size: 16px; }
 .stat-compact-value { font-size: 14px; font-weight: bold; color: var(--text-gold); font-variant-numeric: tabular-nums; }
 
+/* ========== Battle Layout ========== */
+.battle-layout {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+}
+.battle-left {
+    flex-shrink: 0;
+}
+.battle-right {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
 /* ========== Mercenary Cards (Battle) ========== */
-.tab-content { flex: 1; display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
 .mercenaries-scroll { flex: 1; overflow-y: auto; margin-bottom: 6px; min-height: 0; }
 
 .merc-item-card {
@@ -595,6 +612,279 @@ input:checked + .toggle-slider:before { transform: translateX(18px); }
 .empty-stats { text-align: center; color: var(--text-muted); padding: 20px; font-size: 12px; }
 
 .text-muted { color: var(--text-muted); }
+
+/* ========== Desktop Responsive ========== */
+@media (min-width: 768px) {
+    body {
+        overflow: hidden;
+    }
+
+    #app {
+        max-width: 100%;
+        flex-direction: row;
+        height: 100vh;
+    }
+
+    /* --- Sidebar Navigation (LEFT side) --- */
+    .tab-bar {
+        position: relative;
+        bottom: auto;
+        left: auto;
+        transform: none;
+        order: -1;
+        width: 80px;
+        max-width: none;
+        flex-direction: column;
+        border-top: none;
+        border-right: 1px solid var(--border-color);
+        flex-shrink: 0;
+        padding-top: 24px;
+        gap: 0;
+        height: 100vh;
+        background: var(--bg-darkest);
+    }
+    .tab-bar-item {
+        padding: 18px 0;
+        font-size: 12px;
+        border-left: 3px solid transparent;
+        text-align: center;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        transition: color 0.2s, border-color 0.2s, background 0.2s;
+    }
+    .tab-bar-item.active {
+        color: var(--primary-color);
+        border-left-color: var(--primary-color);
+        background: rgba(255, 107, 107, 0.08);
+    }
+    .tab-bar-item:hover {
+        background: rgba(255, 255, 255, 0.05);
+    }
+
+    /* --- Tab Pages --- */
+    .tab-page {
+        flex: 1;
+        padding: 24px 32px;
+        padding-bottom: 24px;
+        overflow-y: auto;
+    }
+
+    /* --- Battle Tab: Two-column layout --- */
+    .battle-layout {
+        flex-direction: row;
+        gap: 28px;
+        height: 100%;
+    }
+    .battle-left {
+        width: 400px;
+        flex-shrink: 0;
+        overflow-y: auto;
+        padding-right: 8px;
+    }
+    .battle-right {
+        flex: 1;
+        min-width: 0;
+    }
+
+    /* Boss Section Desktop */
+    .boss-section {
+        padding: 20px 24px;
+    }
+    .boss-level {
+        font-size: 22px;
+    }
+    .boss-sprite {
+        height: 160px;
+    }
+    .boss-icon {
+        font-size: 90px;
+    }
+    .boss-hp-label {
+        font-size: 15px;
+    }
+    .pixel-progress {
+        height: 16px;
+        border-radius: 3px;
+    }
+
+    /* Stats Desktop */
+    .stats-compact {
+        padding: 14px;
+    }
+    .stat-compact-label {
+        font-size: 22px;
+    }
+    .stat-compact-value {
+        font-size: 20px;
+    }
+
+    /* Settings Desktop */
+    .settings-section {
+        padding: 14px 16px;
+    }
+    .setting-label {
+        font-size: 15px;
+    }
+
+    /* Reset Desktop */
+    .stats-btn, .reset-btn {
+        height: 46px;
+        font-size: 14px;
+    }
+
+    /* Merc battle cards Desktop */
+    .merc-card-header {
+        padding: 14px 16px;
+    }
+    .merc-icon-box {
+        width: 52px;
+        height: 52px;
+    }
+    .merc-icon-large {
+        font-size: 36px;
+    }
+    .merc-name {
+        font-size: 16px;
+    }
+    .merc-stat {
+        font-size: 13px;
+    }
+    .merc-level {
+        font-size: 12px;
+        padding: 3px 8px;
+    }
+
+    /* --- Mercenary Manage Page: CSS Grid auto-flow --- */
+    .manage-container {
+        max-width: 100%;
+        margin: 0;
+        padding-bottom: 24px;
+    }
+    .page-header {
+        padding: 16px 20px;
+        margin-bottom: 16px;
+    }
+    .page-title {
+        font-size: 24px;
+    }
+    .gold-value {
+        font-size: 18px;
+    }
+    .manage-scroll-full {
+        max-height: calc(100vh - 140px);
+    }
+
+    /* Flatten rows into a CSS grid for flexible columns */
+    #manage-merc-list {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+        gap: 10px;
+    }
+    .merc-grid-row {
+        display: contents;
+    }
+    .merc-grid-item {
+        padding: 16px 10px;
+        border-radius: 10px;
+    }
+    .merc-grid-icon {
+        font-size: 40px;
+        margin-bottom: 8px;
+    }
+    .merc-grid-name {
+        font-size: 14px;
+    }
+    /* Detail panel spans full grid width */
+    .merc-detail-panel {
+        grid-column: 1 / -1;
+        padding: 20px;
+    }
+    .detail-name {
+        font-size: 20px;
+    }
+    .detail-stat {
+        font-size: 14px;
+    }
+    .detail-desc {
+        font-size: 13px;
+    }
+    .action-btn {
+        font-size: 15px;
+        padding: 10px 40px;
+    }
+
+    /* --- Relics Page --- */
+    .relic-container {
+        max-width: 100%;
+        margin: 0;
+    }
+    .title {
+        font-size: 28px;
+    }
+    .bonus-card {
+        max-width: 700px;
+        margin-left: auto;
+        margin-right: auto;
+    }
+    .bonus-grid {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 16px;
+    }
+    .bonus-item {
+        padding: 14px;
+    }
+    .label {
+        font-size: 12px;
+    }
+    .value {
+        font-size: 17px;
+    }
+    .relic-list-scroll {
+        max-height: calc(100vh - 320px);
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+        gap: 12px;
+    }
+    .relic-card {
+        padding: 16px 18px;
+        margin-bottom: 0;
+    }
+    .relic-name {
+        font-size: 17px;
+    }
+    .relic-desc {
+        font-size: 12px;
+    }
+
+    /* --- Modals Desktop --- */
+    .modal-content {
+        max-width: 520px;
+        width: 50%;
+        padding: 28px;
+    }
+    .modal-title {
+        font-size: 20px;
+    }
+    .modal-body p {
+        font-size: 15px;
+    }
+}
+
+/* Extra wide screens */
+@media (min-width: 1200px) {
+    .battle-left {
+        width: 440px;
+    }
+    #manage-merc-list {
+        grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+        gap: 12px;
+    }
+    .relic-list-scroll {
+        grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+    }
+}
 
 /* ========== Toast ========== */
 .toast {

@@ -51,6 +51,8 @@ export function calculateMercenaryBaseDamage(mercenary) {
         damage += Math.max(1, addValue);
     }
     if (mercenary._stackingBuff) damage *= (1 + mercenary._stackingBuff);
+    if (mercenary._knightHeavyBonus) damage += mercenary._knightHeavyBonus;
+    if (mercenary._experienceBonus) damage += mercenary._experienceBonus;
     return Math.floor(damage);
 }
 

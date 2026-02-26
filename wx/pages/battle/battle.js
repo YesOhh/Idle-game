@@ -216,7 +216,8 @@ Page({
             'holy': 'skill-holy',
             'void': 'skill-void',
             'phoenix': 'skill-phoenix',
-            'ultimate': 'skill-ultimate'
+            'ultimate': 'skill-ultimate',
+            'knight_fortify': 'skill-iron'
         };
         return classMap[skillType] || 'skill';
     },
@@ -861,6 +862,15 @@ Page({
 
             if (this.data.autoUpgradeType === 'damage') {
                 merc.damageLevel++;
+                // 骑士「重装」技能：升级攻击力时额外增加攻击力
+                const knightSkill = gameEngine.getMercenarySkill(merc);
+                if (knightSkill && knightSkill.type === 'knight_heavy_armor') {
+                    const dmgLv = merc.damageLevel || 0;
+                    const totalLv = (merc.damageLevel || 0) + (merc.intervalLevel || 0) + 1;
+                    const heavyBonus = dmgLv * dmgLv * totalLv;
+                    merc._knightHeavyBonus = (merc._knightHeavyBonus || 0) + heavyBonus;
+                    if (this.data.showDamageNumbers) this.showDamageNumber(`🛡️重装 +${gameEngine.formatNumber(heavyBonus)}`, null, 'skill-iron');
+                }
                 merc.currentDamage = gameEngine.calculateUpgradedDamage(merc, prestigeBonus.damage);
             } else {
                 merc.intervalLevel++;
@@ -1031,6 +1041,17 @@ Page({
         if (globalData.player.gold >= cost) {
             globalData.player.gold -= cost;
             mercenary.damageLevel++;
+
+            // 骑士「重装」技能：升级攻击力时额外增加攻击力
+            const knightSkill = gameEngine.getMercenarySkill(mercenary);
+            if (knightSkill && knightSkill.type === 'knight_heavy_armor') {
+                const dmgLv = mercenary.damageLevel || 0;
+                const totalLv = (mercenary.damageLevel || 0) + (mercenary.intervalLevel || 0) + 1;
+                const heavyBonus = dmgLv * dmgLv * totalLv;
+                mercenary._knightHeavyBonus = (mercenary._knightHeavyBonus || 0) + heavyBonus;
+                if (this.data.showDamageNumbers) this.showDamageNumber(`🛡️重装 +${gameEngine.formatNumber(heavyBonus)}`, null, 'skill-iron');
+            }
+
             mercenary.currentDamage = gameEngine.calculateUpgradedDamage(mercenary, prestigeBonus.damage);
 
             // 玩家单位的【长大】技能：升级攻击力时同步提升点击伤害

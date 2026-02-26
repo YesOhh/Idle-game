@@ -101,16 +101,29 @@ const SKILL_LIBRARY = {
         type: 'team_damage_buff',
         icon: '📚',
         baseUnlockLevel: 15,
-        baseDescription: '每隔60秒，使其他基础系单位永久增加本单位攻击力的1%',
+        baseDescription: '每隆60秒，使其他所有单位永久增加本单位攻击力的1%',
         getParams: (level) => {
-            // 效果固定，不随等级提升
             return {
-                interval: 60000,  // 60秒
-                bonusRatio: 0.01  // 1%
+                interval: 60000,
+                bonusRatio: 0.01
             };
         },
         getDescription: (level) => {
-            return `每60秒，使其他基础系单位永久增加本单位攻击力的1%`;
+            return `每60秒，使其他所有单位永久增加本单位攻击力的1%`;
+        }
+    },
+
+    // 【经验】- 士兵副技能
+    experience_growth: {
+        id: 'experience_growth',
+        name: '经验',
+        type: 'experience_growth',
+        icon: '🌟',
+        baseUnlockLevel: 0,
+        baseDescription: '每隆10秒，攻击力永久增加',
+        getParams: (level) => ({ interval: 10000 }),
+        getDescription: (level) => {
+            return `每10秒，攻击力 +（1 + 等级×攻击力等级/30）`;
         }
     },
 
@@ -418,6 +431,30 @@ const SKILL_LIBRARY = {
     },
 
     // 【妙手】- 空空默认
+    knight_heavy_armor: {
+        id: 'knight_heavy_armor',
+        name: '重装',
+        type: 'knight_heavy_armor',
+        icon: '🛡️',
+        baseUnlockLevel: 0,
+        baseDescription: '升级攻击力时额外增加攻击力',
+        getParams: (level) => ({}),
+        getDescription: (level) => '升级攻击力时额外增加（攻击力等级²×等级）点攻击力'
+    },
+
+    // 【稳固】- 骑士副技能
+    knight_fortify: {
+        id: 'knight_fortify',
+        name: '稳固',
+        type: 'knight_fortify',
+        icon: '🏰',
+        baseUnlockLevel: 0,
+        baseDescription: '每隔8秒，造成等同攻击力的伤害',
+        getParams: (level) => ({ interval: 8000 }),
+        getDescription: (level) => '每隔8秒，造成等同攻击力的额外伤害'
+    },
+
+    // 【妙手】- 空空默认
     gold_on_attack: {
         id: 'gold_on_attack',
         name: '妙手',
@@ -452,9 +489,9 @@ const DEFAULT_UNIT_SKILLS = {
     'kongkong': 'gold_on_attack',
     'warrior': 'stacking_buff',
     'archer': 'crit_burst',
-    'royal_guard': 'team_damage_buff',
+    'royal_guard': 'experience_growth',
     'iron_soldier': 'iron_fist',
-    'knight': null, // 骑士暂无技能
+    'knight': 'knight_heavy_armor',
     'berserker': 'berserker_combo',
     'mage': 'global_speed_buff',
     'night_swordsman': 'shadow_crit',
@@ -558,6 +595,46 @@ function getUnitSkillDisplay(mercenary) {
         };
     }
 
+    // 特殊处理：士兵的双技能
+    if (skillDef.id === 'experience_growth') {
+        const teachSkillDef = SKILL_LIBRARY['team_damage_buff'];
+        const teachUnlocked = totalLevel >= teachSkillDef.baseUnlockLevel;
+        return {
+            name: '【经验】',
+            isUnlocked: true,
+            desc: '每10秒，攻击力 +（1 + 等级×攻击力等级/30）',
+            baseDesc: skillDef.baseDescription,
+            unlockCondition: '雇佣即解锁',
+            icon: skillDef.icon,
+            skill2: {
+                name: '【传授】',
+                isUnlocked: teachUnlocked,
+                desc: teachUnlocked ? teachSkillDef.getDescription(totalLevel) : teachSkillDef.baseDescription,
+                baseDesc: teachSkillDef.baseDescription,
+                unlockCondition: `Lv.${teachSkillDef.baseUnlockLevel}解锁`
+            }
+        };
+    }
+
+    // 特殊处理：骑士的双技能
+    if (skillDef.id === 'knight_heavy_armor') {
+        return {
+            name: '【重装】',
+            isUnlocked: true,
+            desc: '升级攻击力时额外增加（攻击力等级²×等级）点攻击力',
+            baseDesc: skillDef.baseDescription,
+            unlockCondition: '雇佣即解锁',
+            icon: skillDef.icon,
+            skill2: {
+                name: '【稳固】',
+                isUnlocked: true,
+                desc: '每隔8秒，造成等同攻击力的额外伤害',
+                baseDesc: '每隔8秒，造成等同攻击力的伤害',
+                unlockCondition: '雇佣即解锁'
+            }
+        };
+    }
+
     // 特殊处理：狂战士的双技能
     if (skillDef.id === 'berserker_combo') {
         const params = skillDef.getParams(totalLevel);
@@ -578,7 +655,7 @@ function getUnitSkillDisplay(mercenary) {
         }
 
         return {
-            name: '【狂暴】+【连击】',
+            name: '【狂暴】',
             isUnlocked,
             desc: skill1Desc,
             baseDesc: skillDef.baseDescription,
@@ -610,7 +687,7 @@ function getUnitSkillDisplay(mercenary) {
  */
 function getEvolvableSkills() {
     // 排除一些特殊技能（玩家专属、传说专属等）
-    const excludeIds = ['sync_click_damage', 'legend_dual_growth'];
+    const excludeIds = ['sync_click_damage', 'legend_dual_growth', 'knight_heavy_armor', 'knight_fortify', 'experience_growth'];
 
     return Object.values(SKILL_LIBRARY)
         .filter(skill => !excludeIds.includes(skill.id))

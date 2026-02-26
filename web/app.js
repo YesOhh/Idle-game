@@ -3,6 +3,7 @@ import * as saveManager from './utils/saveManager.js';
 import * as gameEngine from './utils/gameEngine.js';
 import { initMercenaries } from './data/mercenaries.js';
 import { BOSS_DATA } from './data/bosses.js';
+import { SKILL_LIBRARY } from './data/skills.js';
 
 // ========== 全局游戏状态 ==========
 const G = {
@@ -16,6 +17,7 @@ const G = {
 // 运行时状态（不保存）
 let _battleTimer = null;
 let _teachingTimer = null;
+let _experienceTimer = null;
 let _lastFrameTime = Date.now();
 let _battlePaused = false;
 let _globalSpeedBuff = 0;
@@ -131,11 +133,13 @@ function startGlobalBattle() {
     _lastFrameTime = Date.now();
     _battleTimer = setInterval(() => processBattleTick(), 100);
     _startTeachingSkillTimer();
+    _startExperienceSkillTimer();
 }
 
 function stopGlobalBattle() {
     if (_battleTimer) { clearInterval(_battleTimer); _battleTimer = null; }
     if (_teachingTimer) { clearInterval(_teachingTimer); _teachingTimer = null; }
+    if (_experienceTimer) { clearInterval(_experienceTimer); _experienceTimer = null; }
 }
 
 function _startTeachingSkillTimer() {
@@ -148,14 +152,17 @@ function _processTeachingSkill() {
     const prestigeBonus = gameEngine.calculatePrestigeBonus(G.player);
     const soldier = G.mercenaries.find(m => m.id === 'royal_guard' && m.recruited);
     if (!soldier) return;
-    const skill = gameEngine.getMercenarySkill(soldier);
-    if (!skill || skill.type !== 'team_damage_buff') return;
+    const skill = SKILL_LIBRARY['team_damage_buff'];
+    if (!skill) return;
+    const totalLevel = (soldier.damageLevel || 0) + (soldier.intervalLevel || 0) + 1;
+    if (totalLevel < skill.baseUnlockLevel) return;
     const soldierDamage = gameEngine.calculateUpgradedDamage(soldier, prestigeBonus.damage);
-    const bonusDamage = Math.floor(soldierDamage * skill.bonusRatio);
+    const params = skill.getParams(totalLevel);
+    const bonusDamage = Math.floor(soldierDamage * params.bonusRatio);
     if (bonusDamage <= 0) return;
     let buffedCount = 0;
     G.mercenaries.forEach(merc => {
-        if (merc.recruited && merc.category === 'basic' && merc.id !== 'royal_guard') {
+        if (merc.recruited && merc.id !== 'royal_guard') {
             merc._teachingBonus = (merc._teachingBonus || 0) + bonusDamage;
             buffedCount++;
         }
@@ -164,6 +171,22 @@ function _processTeachingSkill() {
         if (_showSkillNumbers) showMercSkillText('royal_guard', `📚传授 +${gameEngine.formatNumber(bonusDamage)}`, 'skill-royal');
         updateBattleMercList();
     }
+}
+
+function _startExperienceSkillTimer() {
+    if (_experienceTimer) clearInterval(_experienceTimer);
+    _experienceTimer = setInterval(() => _processExperienceSkill(), 10000);
+}
+
+function _processExperienceSkill() {
+    if (!G.mercenaries) return;
+    const soldier = G.mercenaries.find(m => m.id === 'royal_guard' && m.recruited);
+    if (!soldier) return;
+    const totalLevel = (soldier.damageLevel || 0) + (soldier.intervalLevel || 0) + 1;
+    const dmgLv = soldier.damageLevel || 0;
+    const bonus = 1 + Math.floor(totalLevel * dmgLv / 30);
+    soldier._experienceBonus = (soldier._experienceBonus || 0) + bonus;
+    if (_showSkillNumbers) showMercSkillText('royal_guard', `🌟经验 +${bonus}`, 'skill-royal');
 }
 
 function processBattleTick() {
@@ -294,6 +317,16 @@ function processBattleTick() {
                 } else if (skill.type === 'ultimate') {
                     if (!_ultimateAura) _ultimateAura = { damage: skill.teamDamageBonus, speed: skill.teamSpeedBonus };
                     if (Math.random() < skill.critChance) { thisHitDamage *= skill.critMult; isCrit = true; skillTriggered = { type: 'ultimate', text: `万物终结 x${skill.critMult}!` }; }
+                } else if (skill.type === 'knight_heavy_armor') {
+                    // 「稳固」技能：每隔8秒造成等同攻击力的额外伤害
+                    if (typeof merc._fortifyTimer === 'undefined') merc._fortifyTimer = 0;
+                    merc._fortifyTimer += interval * 1000;
+                    if (merc._fortifyTimer >= 8000) {
+                        merc._fortifyTimer = 0;
+                        const fortifyDmg = gameEngine.calculateUpgradedDamage(merc, prestigeBonus.damage);
+                        thisHitDamage += fortifyDmg;
+                        skillTriggered = { type: 'knight_fortify', text: `稳固 +${gameEngine.formatNumber(fortifyDmg)}!` };
+                    }
                 }
             }
 
@@ -374,6 +407,8 @@ function getSkillLevelLabel(sk, merc, boss) {
         case 'periodic_burst': return '';
         case 'chaos_stack': return '';
         case 'ultimate': return '';
+        case 'knight_heavy_armor': return '';
+        case 'knight_fortify': return '';
         default: return '';
     }
 }
@@ -462,12 +497,21 @@ function getSkillScalingInfo(sk, merc) {
             lines.push({ label: '全队攻速', value: `+${(sk.teamSpeedBonus * 100).toFixed(0)}%`, growth: '随增伤同步' });
             lines.push({ label: '暴击', value: '25%几率5.0x', growth: '固定' });
             break;
+        case 'knight_heavy_armor':
+            lines.push({ label: '效果', value: '升级攻击力时额外+攻击力等级²×等级', growth: '随等级增长' });
+            break;
+        case 'experience_growth':
+            lines.push({ label: '效果', value: '每10秒攻击力+(1+等级×攻击力等级/30)', growth: '随等级增长' });
+            break;
+        case 'team_damage_buff':
+            lines.push({ label: '效果', value: '每60秒全体+本单位攻击力1%', growth: '固定' });
+            break;
     }
     return lines;
 }
 
 function getSkillClass(skillType) {
-    const map = { stacking_buff: 'skill', crit: 'skill-crit', speed_buff: 'skill-mage', damage_buff: 'skill-dragon', combo: 'skill-combo', burn: 'skill-burn', chaos: 'skill-chaos', time_burst: 'skill-time', gold: 'skill-gold', team_buff: 'skill-royal', teaching: 'skill-royal', iron_fist: 'skill-iron', freeze: 'skill-freeze', summon: 'skill-summon', holy: 'skill-holy', void: 'skill-void', phoenix: 'skill-phoenix', ultimate: 'skill-ultimate' };
+    const map = { stacking_buff: 'skill', crit: 'skill-crit', speed_buff: 'skill-mage', damage_buff: 'skill-dragon', combo: 'skill-combo', burn: 'skill-burn', chaos: 'skill-chaos', time_burst: 'skill-time', gold: 'skill-gold', team_buff: 'skill-royal', teaching: 'skill-royal', iron_fist: 'skill-iron', freeze: 'skill-freeze', summon: 'skill-summon', holy: 'skill-holy', void: 'skill-void', phoenix: 'skill-phoenix', ultimate: 'skill-ultimate', knight_fortify: 'skill-iron' };
     return map[skillType] || 'skill';
 }
 
@@ -649,18 +693,6 @@ function updateBattleMercList() {
                         ${!skillInfo.skill2.isUnlocked ? `<span class="skill-unlock-condition">${skillInfo.skill2.unlockCondition}</span>` : ''}
                     </div>
                     <div class="skill-detail-desc">${skillInfo.skill2.desc}</div>
-                    ${skillInfo.skill2.isUnlocked ? `<div class="skill-scaling-table">
-                        <div class="skill-scaling-row">
-                            <span class="scaling-label">连击几率</span>
-                            <span class="scaling-value">15%/30%/45%/60%</span>
-                            <span class="scaling-growth">按Boss血量阶段递增</span>
-                        </div>
-                        <div class="skill-scaling-row">
-                            <span class="scaling-label">解锁条件</span>
-                            <span class="scaling-value">Lv.50</span>
-                            <span class="scaling-growth">固定</span>
-                        </div>
-                    </div>` : ''}
                 </div>` : ''}
             </div>
         </div>`;
@@ -1077,6 +1109,15 @@ function upgradeMerc(mercId, type) {
     const oldDisplayLevel = (merc.damageLevel || 0) + (merc.intervalLevel || 0) + 1;
     if (type === 'damage') {
         merc.damageLevel++;
+        // 骑士「重装」技能：升级攻击力时额外增加（攻击力等级²×等级）点攻击力
+        const knightSkill = gameEngine.getMercenarySkill(merc);
+        if (knightSkill && knightSkill.type === 'knight_heavy_armor') {
+            const dmgLv = merc.damageLevel || 0;
+            const totalLv = (merc.damageLevel || 0) + (merc.intervalLevel || 0) + 1;
+            const heavyBonus = dmgLv * dmgLv * totalLv;
+            merc._knightHeavyBonus = (merc._knightHeavyBonus || 0) + heavyBonus;
+            if (_showSkillNumbers) showMercSkillText(merc.id, `🛡️重装 +${gameEngine.formatNumber(heavyBonus)}`, 'skill-iron');
+        }
         merc.currentDamage = gameEngine.calculateUpgradedDamage(merc, prestigeBonus.damage);
         if (merc.id === 'player') {
             const skill = gameEngine.getMercenarySkill(merc);

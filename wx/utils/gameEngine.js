@@ -141,6 +141,16 @@ function calculateMercenaryBaseDamage(mercenary) {
         damage *= (1 + mercenary._stackingBuff);
     }
 
+    // 骑士「重装」技能的额外攻击力加成
+    if (mercenary._knightHeavyBonus) {
+        damage += mercenary._knightHeavyBonus;
+    }
+
+    // 士兵「经验」技能的攻击力加成
+    if (mercenary._experienceBonus) {
+        damage += mercenary._experienceBonus;
+    }
+
     return Math.floor(damage);
 }
 

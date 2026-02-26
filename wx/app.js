@@ -1,6 +1,7 @@
 // app.js
 const saveManager = require('./utils/saveManager.js');
 const gameEngine = require('./utils/gameEngine.js');
+const { SKILL_LIBRARY } = require('./data/skills.js');
 
 App({
   onLaunch() {
@@ -102,6 +103,9 @@ App({
     // 启动传授技能定时器 (60秒)
     this._startTeachingSkillTimer();
 
+    // 启动经验技能定时器 (10秒)
+    this._startExperienceSkillTimer();
+
     console.log('全局战斗系统已启动');
   },
 
@@ -128,19 +132,22 @@ App({
     const soldier = globalData.mercenaries.find(m => m.id === 'royal_guard' && m.recruited);
     if (!soldier) return;
 
-    const skill = gameEngine.getMercenarySkill(soldier);
-    if (!skill || skill.type !== 'team_damage_buff') return;
+    const skill = SKILL_LIBRARY['team_damage_buff'];
+    if (!skill) return;
+    const totalLevel = (soldier.damageLevel || 0) + (soldier.intervalLevel || 0) + 1;
+    if (totalLevel < skill.baseUnlockLevel) return;
 
     // 计算士兵当前攻击力的1%
     const soldierDamage = gameEngine.calculateUpgradedDamage(soldier, prestigeBonus.damage);
-    const bonusDamage = Math.floor(soldierDamage * skill.bonusRatio);
+    const params = skill.getParams(totalLevel);
+    const bonusDamage = Math.floor(soldierDamage * params.bonusRatio);
 
     if (bonusDamage <= 0) return;
 
     // 给其他基础系单位增加永久攻击力加成
     let teachCount = 0;
     globalData.mercenaries.forEach(merc => {
-      if (merc.recruited && merc.category === 'basic' && merc.id !== 'royal_guard') {
+      if (merc.recruited && merc.id !== 'royal_guard') {
         // 使用 _teachingBonus 存储传授获得的永久加成
         merc._teachingBonus = (merc._teachingBonus || 0) + bonusDamage;
         teachCount++;
@@ -156,8 +163,45 @@ App({
           text: `传授 +${gameEngine.formatNumber(bonusDamage)}!`
         }
       });
-      console.log(`传授技能触发：${teachCount}个基础系单位各获得 +${bonusDamage} 攻击力`);
+      console.log(`传授技能触发：${teachCount}个所有单位各获得 +${bonusDamage} 攻击力`);
     }
+  },
+
+  // 启动经验技能定时器
+  _startExperienceSkillTimer() {
+    if (this._experienceTimer) {
+      clearInterval(this._experienceTimer);
+    }
+
+    // 每10秒触发一次经验技能
+    this._experienceTimer = setInterval(() => {
+      this._processExperienceSkill();
+    }, 10000);
+  },
+
+  // 处理经验技能逻辑
+  _processExperienceSkill() {
+    const globalData = this.globalData;
+    if (!globalData || !globalData.mercenaries) return;
+
+    const soldier = globalData.mercenaries.find(m => m.id === 'royal_guard' && m.recruited);
+    if (!soldier) return;
+
+    const totalLevel = (soldier.damageLevel || 0) + (soldier.intervalLevel || 0) + 1;
+    const dmgLv = soldier.damageLevel || 0;
+    const bonus = 1 + Math.floor(totalLevel * dmgLv / 30);
+
+    soldier._experienceBonus = (soldier._experienceBonus || 0) + bonus;
+
+    // 通知战斗界面更新
+    this._notifyBattleUpdate({
+      skillTriggered: {
+        mercId: 'royal_guard',
+        type: 'experience',
+        text: `经验 +${bonus}`
+      }
+    });
+    console.log(`经验技能触发：士兵攻击力 +${bonus}`);
   },
 
   // 停止全局战斗
@@ -169,6 +213,10 @@ App({
     if (this._teachingTimer) {
       clearInterval(this._teachingTimer);
       this._teachingTimer = null;
+    }
+    if (this._experienceTimer) {
+      clearInterval(this._experienceTimer);
+      this._experienceTimer = null;
     }
   },
 
@@ -376,9 +424,8 @@ App({
 
                 skillTriggered = { type: 'time_burst', text: `时空涟漪 x${attackCount}!` };
               }
-            } else if (skill.type === 'team_damage_buff') {
-              // 传授：定时使其他基础系单位获得永久攻击力加成
-              // 传授技能不在攻击时触发，而是通过定时器触发，所以这里不做任何处理
+            } else if (skill.type === 'experience_growth' || skill.type === 'team_damage_buff') {
+              // 经验/传授：通过定时器触发，攻击时不做处理
             } else if (skill.type === 'iron_fist') {
               // 钢铁神拳：概率造成钢铁系总攻击力伤害
               if (Math.random() < skill.chance) {
@@ -471,6 +518,16 @@ App({
                 thisHitDamage *= skill.critMult;
                 isCrit = true;
                 skillTriggered = { type: 'ultimate', text: `万物终结 x${skill.critMult}!` };
+              }
+            } else if (skill.type === 'knight_heavy_armor') {
+              // 「稳固」技能：每隔8秒造成等同攻击力的额外伤害
+              if (typeof merc._fortifyTimer === 'undefined') merc._fortifyTimer = 0;
+              merc._fortifyTimer += interval * 1000;
+              if (merc._fortifyTimer >= 8000) {
+                merc._fortifyTimer = 0;
+                const fortifyDmg = gameEngine.calculateUpgradedDamage(merc, prestigeBonus.damage);
+                thisHitDamage += fortifyDmg;
+                skillTriggered = { type: 'knight_fortify', text: `稳固 +${gameEngine.formatNumber(fortifyDmg)}!` };
               }
             }
           }
