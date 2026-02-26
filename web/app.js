@@ -356,32 +356,114 @@ function recordBossStat(level) {
 
 // ========== UI ==========
 function getSkillLevelLabel(sk, merc, boss) {
+    // Just show a minimal current-effect summary on the tag
     switch (sk.type) {
-        case 'stacking_buff': return `${(sk.chance * 100).toFixed(0)}%触发`;
-        case 'crit': return `${(sk.chance * 100).toFixed(0)}%/${sk.multiplier.toFixed(1)}x`;
-        case 'gold_on_attack': return sk.multiplier > 1 ? `${(sk.multiplier * 100).toFixed(0)}%` : '';
-        case 'iron_fist': return `${(sk.multiplier * 100).toFixed(0)}%`;
-        case 'berserker_combo': {
-            if (!boss) return `最高+${(sk.maxBonus * 100).toFixed(0)}%`;
-            const hpPct = boss.currentHp / boss.maxHp;
-            let bp = 0;
-            for (const t of sk.thresholds) { if (hpPct < t.hpPercent) bp = t.bonusPercent; }
-            const cur = sk.maxBonus * bp;
-            return cur > 0 ? `当前+${(cur * 100).toFixed(0)}%` : `+0%`;
-        }
-        case 'global_speed_buff': return `+${(sk.val * 100).toFixed(0)}%攻速`;
-        case 'boss_debuff': return `+${(sk.val * 100).toFixed(0)}%受伤`;
-        case 'summon': return `${sk.count}个/${(sk.damageRatio * 100).toFixed(0)}%`;
-        case 'damage_aura': return `+${(sk.val * 100).toFixed(0)}%全队`;
-        case 'dragon_soul': return `${sk.burstMultiplier}x龙息`;
-        case 'pure_percent_damage': return `${(sk.chance * 100).toFixed(0)}%触发`;
-        case 'time_burst': return `${sk.attackCount}次/${sk.damageMultiplier.toFixed(1)}x`;
-        case 'total_team_damage': return `${(sk.chance * 100).toFixed(0)}%触发`;
-        case 'periodic_burst': return `${sk.multiplier}x`;
-        case 'chaos_stack': return `${(sk.chance * 100).toFixed(0)}%/+${(sk.atkBonus * 100).toFixed(0)}%`;
-        case 'ultimate': return `+${(sk.teamDamageBonus * 100).toFixed(0)}%伤害`;
+        case 'stacking_buff': return '';
+        case 'crit': return '';
+        case 'gold_on_attack': return '';
+        case 'iron_fist': return '';
+        case 'berserker_combo': return '';
+        case 'global_speed_buff': return '';
+        case 'boss_debuff': return '';
+        case 'summon': return '';
+        case 'damage_aura': return '';
+        case 'dragon_soul': return '';
+        case 'pure_percent_damage': return '';
+        case 'time_burst': return '';
+        case 'total_team_damage': return '';
+        case 'periodic_burst': return '';
+        case 'chaos_stack': return '';
+        case 'ultimate': return '';
         default: return '';
     }
+}
+
+function getSkillScalingInfo(sk, merc) {
+    const totalLevel = (merc.damageLevel || 0) + (merc.intervalLevel || 0) + 1;
+    const lines = [];
+    switch (sk.type) {
+        case 'sync_click_damage':
+            lines.push({ label: '效果', value: '升级攻击力时点击伤害同步提升', growth: '被动效果，无需升级' });
+            break;
+        case 'legend_dual_growth':
+            lines.push({ label: '效果', value: '升级攻击力/攻速时另一项也提升', growth: '被动效果，无需升级' });
+            break;
+        case 'stacking_buff':
+            lines.push({ label: '触发概率', value: `${(sk.chance * 100).toFixed(0)}%`, growth: '每+10级 → 概率+1%' });
+            lines.push({ label: '效果', value: '每次触发永久+1%攻击力', growth: '固定值' });
+            break;
+        case 'crit':
+            if (sk.id === 'shadow_crit') {
+                lines.push({ label: '暴击率', value: `${(sk.chance * 100).toFixed(0)}%`, growth: '每+10级 → +5% (上限60%)' });
+                lines.push({ label: '暴击倍率', value: `${sk.multiplier.toFixed(1)}x`, growth: '每+15级 → +0.3x' });
+            } else {
+                lines.push({ label: '暴击率', value: `${(sk.chance * 100).toFixed(0)}%`, growth: '固定20%' });
+                lines.push({ label: '暴击倍率', value: `${sk.multiplier.toFixed(1)}x`, growth: '每+10级 → +0.5x' });
+            }
+            break;
+        case 'gold_on_attack':
+            lines.push({ label: '金币倍率', value: `${(sk.multiplier * 100).toFixed(0)}%`, growth: '每+10级 → +10%' });
+            break;
+        case 'iron_fist':
+            lines.push({ label: '触发概率', value: '10%', growth: '固定10%' });
+            lines.push({ label: '伤害倍率', value: `钢铁系总攻${(sk.multiplier * 100).toFixed(0)}%`, growth: '每+10级 → +15%' });
+            break;
+        case 'berserker_combo': {
+            lines.push({ label: '最高加成', value: `+${(sk.maxBonus * 100).toFixed(0)}%`, growth: '每+10级 → +30%' });
+            lines.push({ label: '阶段触发', value: 'Boss血量<85%/60%/35%/10%', growth: '按阶段递增' });
+            break;
+        }
+        case 'global_speed_buff':
+            lines.push({ label: '触发概率', value: '10%', growth: '固定10%' });
+            lines.push({ label: '攻速提升', value: `+${(sk.val * 100).toFixed(0)}%`, growth: '每+10级 → +5%' });
+            lines.push({ label: '持续时间', value: '5秒', growth: '固定' });
+            break;
+        case 'boss_debuff':
+            lines.push({ label: '触发概率', value: '12%', growth: '固定12%' });
+            lines.push({ label: '增伤效果', value: `+${(sk.val * 100).toFixed(0)}%受伤`, growth: '每+10级 → +5%' });
+            lines.push({ label: '持续时间', value: '4秒', growth: '固定' });
+            break;
+        case 'summon':
+            lines.push({ label: '召唤数量', value: `${sk.count}个`, growth: '每+20级 → +1个 (上限5)' });
+            lines.push({ label: '单体伤害', value: `${(sk.damageRatio * 100).toFixed(0)}%攻击力`, growth: '每+10级 → +3%' });
+            break;
+        case 'damage_aura':
+            lines.push({ label: '全队增伤', value: `+${(sk.val * 100).toFixed(0)}%`, growth: '每+10级 → +3%' });
+            break;
+        case 'dragon_soul':
+            lines.push({ label: '龙息倍率', value: `${sk.burstMultiplier}x`, growth: '每+10级 → +15x' });
+            lines.push({ label: '灼烧伤害', value: `${(sk.burnDamage * 100).toFixed(0)}%/秒`, growth: '每+15级 → +2%' });
+            lines.push({ label: '触发条件', value: '每10次攻击', growth: '固定' });
+            break;
+        case 'pure_percent_damage':
+            lines.push({ label: '触发概率', value: `${(sk.chance * 100).toFixed(0)}%`, growth: '每+20级 → +2%' });
+            lines.push({ label: '效果', value: 'Boss当前血量0.01%', growth: '固定 (不受加成)' });
+            break;
+        case 'time_burst':
+            lines.push({ label: '攻击次数', value: `${sk.attackCount}次`, growth: '每+20级 → +1次 (上限12)' });
+            lines.push({ label: '伤害倍率', value: `${sk.damageMultiplier.toFixed(1)}x`, growth: '每+10级 → +0.2x' });
+            lines.push({ label: '冷却', value: '60秒', growth: '固定' });
+            break;
+        case 'total_team_damage':
+            lines.push({ label: '触发概率', value: `${(sk.chance * 100).toFixed(0)}%`, growth: '每+15级 → +3%' });
+            lines.push({ label: '效果', value: '全队攻击力总和伤害', growth: '固定' });
+            break;
+        case 'periodic_burst':
+            lines.push({ label: '伤害倍率', value: `${sk.multiplier}x`, growth: '每+10级 → +20x' });
+            lines.push({ label: '冷却', value: '60秒', growth: '固定' });
+            break;
+        case 'chaos_stack':
+            lines.push({ label: '触发概率', value: `${(sk.chance * 100).toFixed(0)}%`, growth: '每+10级 → +3%' });
+            lines.push({ label: '攻击力加成', value: `+${(sk.atkBonus * 100).toFixed(0)}%`, growth: '每+15级 → +2%' });
+            lines.push({ label: '副作用', value: '攻击间隔+0.1秒', growth: '固定' });
+            break;
+        case 'ultimate':
+            lines.push({ label: '全队增伤', value: `+${(sk.teamDamageBonus * 100).toFixed(0)}%`, growth: '每+10级 → +5%' });
+            lines.push({ label: '全队攻速', value: `+${(sk.teamSpeedBonus * 100).toFixed(0)}%`, growth: '随增伤同步' });
+            lines.push({ label: '暴击', value: '25%几率5.0x', growth: '固定' });
+            break;
+    }
+    return lines;
 }
 
 function getSkillClass(skillType) {
@@ -547,6 +629,19 @@ function updateBattleMercList() {
                         ${!skillInfo.isUnlocked ? `<span class="skill-unlock-condition">${skillInfo.unlockCondition}</span>` : ''}
                     </div>
                     <div class="skill-detail-desc">${skillInfo.desc}</div>
+                    ${skillInfo.isUnlocked ? (() => {
+                        const sk = gameEngine.getMercenarySkill(merc);
+                        if (!sk) return '';
+                        const scalingLines = getSkillScalingInfo(sk, merc);
+                        if (scalingLines.length === 0) return '';
+                        return `<div class="skill-scaling-table">
+                            ${scalingLines.map(l => `<div class="skill-scaling-row">
+                                <span class="scaling-label">${l.label}</span>
+                                <span class="scaling-value">${l.value}</span>
+                                <span class="scaling-growth">${l.growth}</span>
+                            </div>`).join('')}
+                        </div>`;
+                    })() : ''}
                 </div>` : ''}
                 ${skillInfo && skillInfo.skill2 ? `<div class="skill-detail">
                     <div class="skill-detail-header">
@@ -554,6 +649,18 @@ function updateBattleMercList() {
                         ${!skillInfo.skill2.isUnlocked ? `<span class="skill-unlock-condition">${skillInfo.skill2.unlockCondition}</span>` : ''}
                     </div>
                     <div class="skill-detail-desc">${skillInfo.skill2.desc}</div>
+                    ${skillInfo.skill2.isUnlocked ? `<div class="skill-scaling-table">
+                        <div class="skill-scaling-row">
+                            <span class="scaling-label">连击几率</span>
+                            <span class="scaling-value">15%/30%/45%/60%</span>
+                            <span class="scaling-growth">按Boss血量阶段递增</span>
+                        </div>
+                        <div class="skill-scaling-row">
+                            <span class="scaling-label">解锁条件</span>
+                            <span class="scaling-value">Lv.50</span>
+                            <span class="scaling-growth">固定</span>
+                        </div>
+                    </div>` : ''}
                 </div>` : ''}
             </div>
         </div>`;
@@ -620,6 +727,19 @@ function updateManageMercList() {
                         ${m.recruited && !m.skillInfo.isUnlocked ? `<span class="skill-unlock-condition">${m.skillInfo.unlockCondition}</span>` : ''}
                     </div>
                     ${m.recruited ? `<div class="skill-detail-desc">${m.skillInfo.desc}</div>` : ''}
+                    ${m.recruited && m.skillInfo.isUnlocked ? (() => {
+                        const sk = gameEngine.getMercenarySkill(merc);
+                        if (!sk) return '';
+                        const scalingLines = getSkillScalingInfo(sk, merc);
+                        if (scalingLines.length === 0) return '';
+                        return `<div class="skill-scaling-table">
+                            ${scalingLines.map(l => `<div class="skill-scaling-row">
+                                <span class="scaling-label">${l.label}</span>
+                                <span class="scaling-value">${l.value}</span>
+                                <span class="scaling-growth">${l.growth}</span>
+                            </div>`).join('')}
+                        </div>`;
+                    })() : ''}
                 </div>` : ''}
                 ${m.skillInfo && m.skillInfo.skill2 ? `<div class="detail-skill">
                     <div class="skill-detail-header">
