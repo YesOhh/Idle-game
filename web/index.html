@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>打BOSS - Idle Game</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="app">
+        <!-- ========== 战斗Tab ========== -->
+        <div id="tab-battle" class="tab-page active">
+            <!-- Boss区域 -->
+            <div class="boss-section">
+                <div class="boss-level">
+                    Boss Lv.<span id="boss-level">1</span>
+                    <span id="prestige-badge" class="prestige-badge" style="display:none">🎖️ 第<span id="prestige-count">2</span>周目</span>
+                </div>
+                <div class="boss-sprite" id="boss-sprite">
+                    <div class="boss-icon" id="boss-icon">👹</div>
+                    <div id="damage-container"></div>
+                </div>
+                <div class="boss-hp-container">
+                    <div class="boss-hp-label"><span id="boss-hp-text">100 / 100</span></div>
+                    <div class="pixel-progress">
+                        <div class="pixel-progress-fill" id="boss-hp-bar" style="width: 100%"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 金币统计栏 -->
+            <div class="stats-compact">
+                <div class="stat-compact">
+                    <span class="stat-compact-label">💰</span>
+                    <span class="stat-compact-value" id="gold-text">0</span>
+                </div>
+            </div>
+
+            <!-- 佣兵列表 -->
+            <div class="tab-content">
+                <div class="merc-list-wrapper">
+                    <div class="mercenaries-scroll" id="battle-merc-list"></div>
+                    <div class="merc-skill-overlay" id="merc-skill-overlay"></div>
+                </div>
+
+                <!-- 设置 -->
+                <div class="settings-section">
+                    <div class="setting-item">
+                        <span class="setting-label">显示伤害飘字</span>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="toggle-damage-numbers" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                    <div class="setting-item">
+                        <span class="setting-label">显示技能飘字</span>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="toggle-skill-numbers" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- 重置 / 统计 -->
+                <div class="reset-section">
+                    <button class="stats-btn" id="btn-stats">📊 战况统计</button>
+                    <button class="reset-btn" id="btn-reset">🔄 重新开始游戏</button>
+                </div>
+
+                <!-- 兑换码 -->
+                <div class="redeem-section">
+                    <div class="redeem-title">兑换码</div>
+                    <div class="redeem-input-group">
+                        <input class="redeem-input" id="redeem-input" placeholder="输入兑换码">
+                        <button class="redeem-btn" id="btn-redeem">兑换</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========== 佣兵Tab ========== -->
+        <div id="tab-mercenaries" class="tab-page">
+            <div class="manage-container">
+                <div class="page-header">
+                    <span class="page-title">佣兵管理</span>
+                    <div class="gold-display">
+                        <span class="gold-icon">💰</span>
+                        <span class="gold-value" id="merc-gold-text">0</span>
+                    </div>
+                </div>
+                <div class="manage-scroll-full" id="manage-merc-list"></div>
+            </div>
+        </div>
+
+        <!-- ========== 圣物Tab ========== -->
+        <div id="tab-relics" class="tab-page">
+            <div class="relic-container">
+                <div class="header">
+                    <span class="title">📜 我的圣物库</span>
+                    <div class="subtitle">通关更高周目以获得更多圣物</div>
+                </div>
+                <div class="bonus-card">
+                    <div class="card-title">✨ 总属性加成</div>
+                    <div class="bonus-grid">
+                        <div class="bonus-item"><span class="label">⚔️ 伤害加成</span><span class="value" id="relic-damage">+0%</span></div>
+                        <div class="bonus-item"><span class="label">🪙 金币收益</span><span class="value" id="relic-gold">+0%</span></div>
+                        <div class="bonus-item"><span class="label">⚡ 进攻速度</span><span class="value" id="relic-speed">+0%</span></div>
+                        <div class="bonus-item"><span class="label">📉 招募成本</span><span class="value" id="relic-cost">-0%</span></div>
+                        <div class="bonus-item"><span class="label">🎯 暴击概率</span><span class="value" id="relic-crit-chance">+0%</span></div>
+                        <div class="bonus-item"><span class="label">🔪 暴击伤害</span><span class="value" id="relic-crit-mult">+0%</span></div>
+                    </div>
+                </div>
+                <div class="relic-list-scroll" id="relic-list"></div>
+            </div>
+        </div>
+
+        <!-- ========== 底部Tab栏 ========== -->
+        <div class="tab-bar">
+            <div class="tab-bar-item active" data-tab="battle">⚔️ 战斗</div>
+            <div class="tab-bar-item" data-tab="mercenaries">🛡️ 佣兵</div>
+            <div class="tab-bar-item" data-tab="relics">📜 圣物</div>
+        </div>
+    </div>
+
+    <!-- 离线收益弹窗 -->
+    <div id="modal-offline" class="modal-overlay" style="display:none">
+        <div class="modal-content pixel-card">
+            <div class="modal-title">离线收益</div>
+            <div class="modal-body">
+                <p>离线时间: <span id="offline-time"></span></p>
+                <p>总伤害: <span id="offline-damage"></span></p>
+                <p>获得金币: <span id="offline-gold"></span></p>
+                <p>击败Boss: <span id="offline-bosses"></span></p>
+            </div>
+            <button class="pixel-button" id="btn-close-offline">领取</button>
+        </div>
+    </div>
+
+    <!-- 遗物选择弹窗 -->
+    <div id="modal-relic" class="modal-overlay" style="display:none">
+        <div class="modal-content pixel-card" style="width: 90%; max-height: 80vh;">
+            <div class="modal-title">🏆 凯旋归来！请选择一件战利品</div>
+            <div class="modal-body" id="relic-choices"></div>
+            <div class="text-muted" style="text-align: center; font-size: 12px; margin-top: 10px;">提示：选择后将开启下一周目</div>
+        </div>
+    </div>
+
+    <!-- 战况统计弹窗 -->
+    <div id="modal-stats" class="modal-overlay" style="display:none">
+        <div class="modal-content pixel-card" style="width: 92%; max-height: 85vh; overflow-y: auto;">
+            <div class="modal-title">📉 战况统计</div>
+            <div class="stats-table" id="stats-table-body"></div>
+            <div class="total-stats">
+                <span>总通关耗时:</span>
+                <span class="total-val" id="total-time">0s</span>
+            </div>
+            <div class="section-divider"></div>
+            <div class="modal-title" style="margin-top:8px;">⚔️ 伤害排行</div>
+            <div class="damage-ranking" id="damage-ranking-body"></div>
+            <button class="pixel-button" id="btn-close-stats">关闭</button>
+        </div>
+    </div>
+
+    <!-- Toast -->
+    <div id="toast" class="toast" style="display:none"></div>
+
+    <script type="module" src="app.js"></script>
+</body>
+</html>
