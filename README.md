@@ -128,7 +128,6 @@ HP = 100 × (1.5 ^ 等级)
 ### 调整游戏平衡
 在 `utils/gameEngine.js` 中修改相关公式：
 - `calculateBossMaxHp()` - Boss血量
-- `calculateBossReward()` - Boss奖励
 - `calculateUpgradeCost()` - 升级成本
 
 ## 📱 兼容性

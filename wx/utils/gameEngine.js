@@ -25,14 +25,6 @@ function calculateBossMaxHp(level) {
 
 /**
  * 计算击败Boss的金币奖励
- * @param {number} level - Boss等级
- * @returns {number} - 金币奖励
- */
-function calculateBossReward(level) {
-    // 奖励公式: 10 * level * (1.2 ^ level)
-    return Math.floor(10 * level * Math.pow(1.2, level));
-}
-
 /**
  * 计算总DPS（每秒伤害）
  * @param {Array} mercenaries - 佣兵数组
@@ -478,7 +470,6 @@ module.exports = {
     calculateRecruitCost,
     dealDamageToBoss,
     calculateBossMaxHp,
-    calculateBossReward,
     nextBoss,
     calculateOfflineProgress,
     formatNumber,

@@ -1,7 +1,7 @@
 // app.js - Web版主入口
 import * as saveManager from './utils/saveManager.js';
 import * as gameEngine from './utils/gameEngine.js';
-import { initMercenaries } from './data/mercenaries.js';
+import { initMercenaries, MERCENARIES_DATA } from './data/mercenaries.js';
 import { BOSS_DATA } from './data/bosses.js';
 import { SKILL_LIBRARY } from './data/skills.js';
 
@@ -1010,6 +1010,9 @@ function setupUI() {
     });
     document.getElementById('btn-close-stats').addEventListener('click', () => { document.getElementById('modal-stats').style.display = 'none'; });
 
+    // Simulator modal
+    setupSimulator();
+
     // Offline modal
     document.getElementById('btn-close-offline').addEventListener('click', () => { document.getElementById('modal-offline').style.display = 'none'; });
 
@@ -1164,6 +1167,134 @@ function recruitMerc(mercId) {
     merc.recruited = true;
     showToast('招募成功!');
     refreshAll();
+}
+
+// ========== Simulator Modal ==========
+function setupSimulator() {
+    const modal = document.getElementById('modal-simulator');
+    const select = document.getElementById('sim-merc-select');
+    const categoryNames = { basic: '基础系', iron: '钢铁系', magic: '魔法系', holy: '圣洁系', ancient: '远古系', legend: '传说系' };
+    let lastCat = '';
+    MERCENARIES_DATA.forEach(m => {
+        if (m.category !== lastCat) {
+            const optgroup = document.createElement('optgroup');
+            optgroup.label = categoryNames[m.category] || m.category;
+            select.appendChild(optgroup);
+            lastCat = m.category;
+        }
+        const opt = document.createElement('option');
+        opt.value = m.id;
+        opt.textContent = `${m.icon} ${m.name} (攻击:${gameEngine.formatNumber(m.damage)}, 间隔:${m.attackInterval}s)`;
+        select.lastElementChild.appendChild(opt);
+    });
+
+    let simUpgradeMode = 'damage';
+    document.querySelectorAll('.sim-mode-tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+            document.querySelectorAll('.sim-mode-tab').forEach(t => t.classList.remove('active'));
+            tab.classList.add('active');
+            simUpgradeMode = tab.dataset.mode;
+        });
+    });
+
+    // Open / Close
+    document.getElementById('btn-simulator').addEventListener('click', () => { modal.style.display = 'flex'; });
+    document.getElementById('btn-close-sim').addEventListener('click', () => { modal.style.display = 'none'; });
+    modal.addEventListener('click', (e) => { if (e.target === modal) modal.style.display = 'none'; });
+
+    // Run simulation
+    document.getElementById('btn-run-sim').addEventListener('click', () => {
+        const mercId = select.value;
+        const mercData = MERCENARIES_DATA.find(m => m.id === mercId);
+        if (!mercData) return;
+        const targetLevel = Math.max(2, Math.min(500, parseInt(document.getElementById('sim-target-level').value) || 100));
+
+        const merc = {
+            id: mercData.id, damage: mercData.damage, attackInterval: mercData.attackInterval,
+            baseCost: mercData.baseCost, damageLevel: 0, intervalLevel: 0,
+            _milestoneDamageBonus: 0, _knightHeavyBonus: 0
+        };
+
+        const rows = [];
+        let totalGold = mercData.baseCost;
+        rows.push({
+            displayLevel: 1, type: '雇佣', cost: mercData.baseCost, totalCost: totalGold,
+            damage: gameEngine.calculateUpgradedDamage(merc), interval: gameEngine.calculateUpgradedInterval(merc), note: ''
+        });
+
+        const isKnight = mercData.id === 'knight';
+        for (let lvl = 2; lvl <= targetLevel; lvl++) {
+            const cost = gameEngine.calculateMercenaryUpgradeCost(merc);
+            totalGold += cost;
+            const oldDisplayLevel = merc.damageLevel + merc.intervalLevel + 1;
+            let upgradeType;
+            if (simUpgradeMode === 'damage') upgradeType = 'damage';
+            else if (simUpgradeMode === 'interval') upgradeType = 'interval';
+            else upgradeType = (lvl % 2 === 0) ? 'damage' : 'interval';
+
+            if (upgradeType === 'damage') merc.damageLevel++;
+            else merc.intervalLevel++;
+
+            const newDisplayLevel = merc.damageLevel + merc.intervalLevel + 1;
+            if (isKnight && upgradeType === 'damage') {
+                merc._knightHeavyBonus = (merc._knightHeavyBonus || 0) + merc.damageLevel * merc.damageLevel * newDisplayLevel;
+            }
+
+            let note = '';
+            gameEngine.applyMilestoneDamageCheck(merc, oldDisplayLevel, newDisplayLevel);
+            if (newDisplayLevel === 50) note = '🎯 攻击力×2';
+            if (newDisplayLevel === 75) note = '⚡ 攻速+20%';
+            if (newDisplayLevel === 100) note = '🎯⚡ 攻击力×2+攻速+20%';
+
+            rows.push({
+                displayLevel: newDisplayLevel,
+                type: upgradeType === 'damage' ? '⚔️攻击' : '⚡攻速',
+                cost, totalCost: totalGold,
+                damage: gameEngine.calculateUpgradedDamage(merc),
+                interval: gameEngine.calculateUpgradedInterval(merc),
+                note
+            });
+        }
+
+        // Summary cards
+        const last = rows[rows.length - 1];
+        document.getElementById('sim-stats-cards').style.display = 'grid';
+        document.getElementById('sim-s-level').textContent = `Lv.${last.displayLevel}`;
+        document.getElementById('sim-s-level-detail').textContent = `攻${merc.damageLevel} + 速${merc.intervalLevel}`;
+        document.getElementById('sim-s-damage').textContent = gameEngine.formatNumber(last.damage);
+        document.getElementById('sim-s-damage-detail').textContent = `基础: ${gameEngine.formatNumber(mercData.damage)}`;
+        document.getElementById('sim-s-interval').textContent = `${last.interval.toFixed(4)}s`;
+        document.getElementById('sim-s-interval-detail').textContent = `基础: ${mercData.attackInterval}s`;
+        document.getElementById('sim-s-gold').textContent = gameEngine.formatNumber(last.totalCost);
+        document.getElementById('sim-s-gold-detail').textContent = `雇佣${gameEngine.formatNumber(mercData.baseCost)} + 升级${gameEngine.formatNumber(last.totalCost - mercData.baseCost)}`;
+
+        // Table
+        const tbody = document.getElementById('sim-tbody');
+        tbody.innerHTML = '';
+        rows.forEach(r => {
+            const tr = document.createElement('tr');
+            if (r.displayLevel === 50 || r.displayLevel === 75 || r.displayLevel === 100) tr.classList.add('milestone');
+            tr.innerHTML = `<td>${r.displayLevel}</td><td>${r.type}</td><td class="cost-col">${gameEngine.formatNumber(r.cost)}</td><td class="cost-col">${gameEngine.formatNumber(r.totalCost)}</td><td class="dmg-col">${gameEngine.formatNumber(r.damage)}</td><td class="spd-col">${r.interval.toFixed(4)}s</td><td class="note-col">${r.note}</td>`;
+            tbody.appendChild(tr);
+        });
+        document.getElementById('sim-table-wrap').style.display = 'block';
+    });
+
+    // Export CSV
+    document.getElementById('btn-sim-export').addEventListener('click', () => {
+        const rows = document.querySelectorAll('#sim-tbody tr');
+        if (rows.length === 0) return;
+        let csv = '显示等级,升级类型,本次花费,累计花费,攻击力,攻击间隔,备注\n';
+        rows.forEach(tr => {
+            const cells = tr.querySelectorAll('td');
+            csv += Array.from(cells).map(c => c.textContent.replace(/,/g, '')).join(',') + '\n';
+        });
+        const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = `upgrade_sim_${select.value}.csv`;
+        a.click();
+    });
 }
 
 // ========== Start ==========

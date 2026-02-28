@@ -11,24 +11,6 @@ export function calculateBossMaxHp(level) {
     return Math.floor(30000 * Math.pow(135, level - 1));
 }
 
-export function calculateBossReward(level) {
-    return Math.floor(10 * level * Math.pow(1.2, level));
-}
-
-export function calculateTotalDPS(mercenaries, globalDamageBuff = 0, globalSpeedBuff = 0, prestigeDamageMult = 1) {
-    let totalDPS = 0;
-    mercenaries.forEach(merc => {
-        if (merc.recruited) {
-            let damage = calculateUpgradedDamage(merc, prestigeDamageMult);
-            let interval = calculateUpgradedInterval(merc);
-            if (globalDamageBuff) damage *= (1 + globalDamageBuff);
-            if (globalSpeedBuff) interval *= (1 - globalSpeedBuff);
-            totalDPS += damage / interval;
-        }
-    });
-    return totalDPS;
-}
-
 const ADD_VALUE_TABLE = [2, 3, 4, 6, 9, 13, 19, 28, 42, 63, 95, 142, 212];
 
 function getUpgradeTier(upgradeCount) {

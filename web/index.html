@@ -60,6 +60,7 @@
                     <!-- 重置 / 统计 -->
                     <div class="reset-section">
                         <button class="stats-btn" id="btn-stats">📊 战况统计</button>
+                        <button class="stats-btn simulator-link" id="btn-simulator">🧮 升级模拟器</button>
                         <button class="reset-btn" id="btn-reset">🔄 重新开始游戏</button>
                     </div>
 
@@ -163,6 +164,59 @@
             <div class="modal-title" style="margin-top:8px;">⚔️ 伤害排行</div>
             <div class="damage-ranking" id="damage-ranking-body"></div>
             <button class="pixel-button" id="btn-close-stats">关闭</button>
+        </div>
+    </div>
+
+    <!-- 升级模拟器弹窗 -->
+    <div id="modal-simulator" class="modal-overlay" style="display:none">
+        <div class="modal-content pixel-card sim-modal">
+            <div class="sim-modal-header">
+                <div class="modal-title" style="margin-bottom:0">🧮 升级模拟器</div>
+                <button class="sim-close-btn" id="btn-close-sim">✕</button>
+            </div>
+            <div class="sim-modal-body">
+                <div class="sim-controls">
+                    <div class="sim-control-row">
+                        <div class="sim-control-group">
+                            <label>选择英雄</label>
+                            <select id="sim-merc-select"></select>
+                        </div>
+                        <div class="sim-control-group">
+                            <label>目标等级</label>
+                            <input type="number" id="sim-target-level" value="100" min="2" max="500">
+                        </div>
+                    </div>
+                    <div class="sim-control-row">
+                        <div class="sim-control-group">
+                            <label>升级策略</label>
+                            <div class="sim-mode-tabs">
+                                <button class="sim-mode-tab active" data-mode="damage">只升攻击</button>
+                                <button class="sim-mode-tab" data-mode="interval">只升攻速</button>
+                                <button class="sim-mode-tab" data-mode="alternate">交替升级</button>
+                            </div>
+                        </div>
+                        <button class="pixel-button sim-run-btn" id="btn-run-sim">开始模拟</button>
+                    </div>
+                </div>
+                <div class="sim-stats-cards" id="sim-stats-cards" style="display:none">
+                    <div class="sim-stat-card"><div class="sim-stat-label">显示等级</div><div class="sim-stat-value level" id="sim-s-level">-</div><div class="sim-stat-sub" id="sim-s-level-detail"></div></div>
+                    <div class="sim-stat-card"><div class="sim-stat-label">最终攻击力</div><div class="sim-stat-value damage" id="sim-s-damage">-</div><div class="sim-stat-sub" id="sim-s-damage-detail"></div></div>
+                    <div class="sim-stat-card"><div class="sim-stat-label">攻击间隔</div><div class="sim-stat-value speed" id="sim-s-interval">-</div><div class="sim-stat-sub" id="sim-s-interval-detail"></div></div>
+                    <div class="sim-stat-card"><div class="sim-stat-label">累计花费</div><div class="sim-stat-value gold" id="sim-s-gold">-</div><div class="sim-stat-sub" id="sim-s-gold-detail"></div></div>
+                </div>
+                <div class="sim-table-wrap" id="sim-table-wrap" style="display:none">
+                    <div class="sim-table-top">
+                        <span style="font-size:12px;color:var(--accent-color)">📋 逐级明细</span>
+                        <button class="sim-export-btn" id="btn-sim-export">导出CSV</button>
+                    </div>
+                    <div class="sim-table-scroll">
+                        <table class="sim-table">
+                            <thead><tr><th>等级</th><th>类型</th><th>本次花费</th><th>累计花费</th><th>攻击力</th><th>攻击间隔</th><th class="sim-note-col">备注</th></tr></thead>
+                            <tbody id="sim-tbody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
