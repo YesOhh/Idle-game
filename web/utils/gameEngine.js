@@ -36,7 +36,8 @@ function getUpgradeTier(upgradeCount) {
     return Math.floor((upgradeCount - 5) / 5) + 1;
 }
 
-export function calculateMercenaryBaseDamage(mercenary) {
+// 计算纯升级伤害（不含任何加成和里程碑）
+export function calculateRawUpgradeDamage(mercenary) {
     let effectiveLevel = mercenary.damageLevel || 0;
     if (mercenary.id === 'legend') {
         effectiveLevel = (mercenary.damageLevel || 0) + (mercenary.intervalLevel || 0);
@@ -50,31 +51,58 @@ export function calculateMercenaryBaseDamage(mercenary) {
         let addValue = Math.floor(baseAdd * scale);
         damage += Math.max(1, addValue);
     }
+    return damage;
+}
+
+export function calculateMercenaryBaseDamage(mercenary) {
+    let damage = calculateRawUpgradeDamage(mercenary);
+    // 里程碑奖励（一次性翻倍，存储在 _milestoneDamageBonus 中）
+    if (mercenary._milestoneDamageBonus) damage += mercenary._milestoneDamageBonus;
     if (mercenary._stackingBuff) damage *= (1 + mercenary._stackingBuff);
     if (mercenary._knightHeavyBonus) damage += mercenary._knightHeavyBonus;
     if (mercenary._experienceBonus) damage += mercenary._experienceBonus;
     return Math.floor(damage);
 }
 
-function getMilestoneDamageMultiplier(mercenary) {
-    const displayLevel = (mercenary.damageLevel || 0) + (mercenary.intervalLevel || 0) + 1;
-    let mult = 1;
-    if (displayLevel >= 50) mult *= 2;
-    if (displayLevel >= 100) mult *= 2;
-    return mult;
+// 里程碑攻击力检查：跨越50/100级时一次性翻倍当前攻击力
+export function applyMilestoneDamageCheck(merc, oldDisplayLevel, newDisplayLevel) {
+    if (oldDisplayLevel < 50 && newDisplayLevel >= 50) {
+        const rawDmg = calculateRawUpgradeDamage(merc);
+        const existing = merc._milestoneDamageBonus || 0;
+        merc._milestoneDamageBonus = rawDmg + 2 * existing;
+    }
+    if (oldDisplayLevel < 100 && newDisplayLevel >= 100) {
+        const rawDmg = calculateRawUpgradeDamage(merc);
+        const existing = merc._milestoneDamageBonus || 0;
+        merc._milestoneDamageBonus = rawDmg + 2 * existing;
+    }
+}
+
+// 旧存档迁移：补算里程碑奖励
+export function migrateMilestoneDamageBonus(mercenaries) {
+    if (!mercenaries) return;
+    mercenaries.forEach(merc => {
+        if (merc._milestoneDamageBonus === undefined || merc._milestoneDamageBonus === null) {
+            const displayLevel = (merc.damageLevel || 0) + (merc.intervalLevel || 0) + 1;
+            const rawDmg = calculateRawUpgradeDamage(merc);
+            if (displayLevel >= 100) {
+                merc._milestoneDamageBonus = 3 * rawDmg;
+            } else if (displayLevel >= 50) {
+                merc._milestoneDamageBonus = rawDmg;
+            }
+        }
+    });
 }
 
 export function calculateUpgradedDamage(mercenary, prestigeDamageMult = 1) {
     let baseDamage = calculateMercenaryBaseDamage(mercenary);
     if (mercenary._teachingBonus) baseDamage += mercenary._teachingBonus;
-    baseDamage *= getMilestoneDamageMultiplier(mercenary);
     return Math.floor(baseDamage * prestigeDamageMult);
 }
 
 export function getDamageDisplayInfo(mercenary, prestigeDamageMult = 1) {
     let base = calculateMercenaryBaseDamage(mercenary);
     if (mercenary._teachingBonus) base += mercenary._teachingBonus;
-    base *= getMilestoneDamageMultiplier(mercenary);
     const final = Math.floor(base * prestigeDamageMult);
     const bonus = final - Math.floor(base);
     return { base: Math.floor(base), bonus, final, text: bonus > 0 ? `${formatNumber(Math.floor(base))} (+${formatNumber(bonus)})` : `${formatNumber(Math.floor(base))}` };

@@ -862,6 +862,10 @@ Page({
 
             if (this.data.autoUpgradeType === 'damage') {
                 merc.damageLevel++;
+                // 里程碑攻击力检查
+                const oldLv = (merc.damageLevel - 1) + (merc.intervalLevel || 0) + 1;
+                const newLv = (merc.damageLevel || 0) + (merc.intervalLevel || 0) + 1;
+                gameEngine.applyMilestoneDamageCheck(merc, oldLv, newLv);
                 // 骑士「重装」技能：升级攻击力时额外增加攻击力
                 const knightSkill = gameEngine.getMercenarySkill(merc);
                 if (knightSkill && knightSkill.type === 'knight_heavy_armor') {
@@ -874,6 +878,10 @@ Page({
                 merc.currentDamage = gameEngine.calculateUpgradedDamage(merc, prestigeBonus.damage);
             } else {
                 merc.intervalLevel++;
+                // 里程碑攻击力检查（升级攻速也可能跨越里程碑等级）
+                const oldLv = (merc.damageLevel || 0) + (merc.intervalLevel - 1) + 1;
+                const newLv = (merc.damageLevel || 0) + (merc.intervalLevel || 0) + 1;
+                gameEngine.applyMilestoneDamageCheck(merc, oldLv, newLv);
                 merc.currentInterval = gameEngine.calculateUpgradedInterval(merc);
             }
 
@@ -1042,6 +1050,11 @@ Page({
             globalData.player.gold -= cost;
             mercenary.damageLevel++;
 
+            // 里程碑攻击力检查
+            const oldLv = (mercenary.damageLevel - 1) + (mercenary.intervalLevel || 0) + 1;
+            const newLv = (mercenary.damageLevel || 0) + (mercenary.intervalLevel || 0) + 1;
+            gameEngine.applyMilestoneDamageCheck(mercenary, oldLv, newLv);
+
             // 骑士「重装」技能：升级攻击力时额外增加攻击力
             const knightSkill = gameEngine.getMercenarySkill(mercenary);
             if (knightSkill && knightSkill.type === 'knight_heavy_armor') {
@@ -1088,6 +1101,10 @@ Page({
         if (globalData.player.gold >= cost) {
             globalData.player.gold -= cost;
             mercenary.intervalLevel++;
+            // 里程碑攻击力检查（升级攻速也可能跨越里程碑等级）
+            const oldLv = (mercenary.damageLevel || 0) + (mercenary.intervalLevel - 1) + 1;
+            const newLv = (mercenary.damageLevel || 0) + (mercenary.intervalLevel || 0) + 1;
+            gameEngine.applyMilestoneDamageCheck(mercenary, oldLv, newLv);
             mercenary.currentInterval = gameEngine.calculateUpgradedInterval(mercenary);
             this.updateDisplay();
         } else {

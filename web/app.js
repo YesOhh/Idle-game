@@ -65,6 +65,8 @@ function boot() {
         G.mercenaries = savedData.mercenaries || [];
         G.stats = savedData.stats;
         G.offlineSeconds = savedData.offlineSeconds || 0;
+        // 里程碑迁移：补算旧存档的一次性翻倍奖励
+        gameEngine.migrateMilestoneDamageBonus(G.mercenaries);
     } else {
         initNewGame();
     }
@@ -1109,6 +1111,9 @@ function upgradeMerc(mercId, type) {
     const oldDisplayLevel = (merc.damageLevel || 0) + (merc.intervalLevel || 0) + 1;
     if (type === 'damage') {
         merc.damageLevel++;
+        // 里程碑攻击力检查（跨越50/100级时一次性翻倍）
+        const newLv = (merc.damageLevel || 0) + (merc.intervalLevel || 0) + 1;
+        gameEngine.applyMilestoneDamageCheck(merc, oldDisplayLevel, newLv);
         // 骑士「重装」技能：升级攻击力时额外增加（攻击力等级²×等级）点攻击力
         const knightSkill = gameEngine.getMercenarySkill(merc);
         if (knightSkill && knightSkill.type === 'knight_heavy_armor') {
@@ -1125,6 +1130,9 @@ function upgradeMerc(mercId, type) {
         }
     } else {
         merc.intervalLevel++;
+        // 里程碑攻击力检查（升级攻速也可能跨越里程碑等级）
+        const newLv = (merc.damageLevel || 0) + (merc.intervalLevel || 0) + 1;
+        gameEngine.applyMilestoneDamageCheck(merc, oldDisplayLevel, newLv);
         merc.currentInterval = gameEngine.calculateUpgradedInterval(merc);
     }
     const newDisplayLevel = (merc.damageLevel || 0) + (merc.intervalLevel || 0) + 1;

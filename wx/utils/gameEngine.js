@@ -104,37 +104,37 @@ function getUpgradeTier(upgradeCount) {
     return Math.floor((upgradeCount - 5) / 5) + 1;
 }
 
-function calculateMercenaryBaseDamage(mercenary) {
+// 计算纯升级伤害（不含任何加成和里程碑）
+function calculateRawUpgradeDamage(mercenary) {
     let effectiveLevel = mercenary.damageLevel || 0;
     if (mercenary.id === 'legend') {
         effectiveLevel = (mercenary.damageLevel || 0) + (mercenary.intervalLevel || 0);
     }
 
-    // 使用加法增长计算伤害 (原版机制)
     const baseAtk = mercenary.damage;
-    const scale = baseAtk / 4;  // 缩放系数，使得第一级增加值 = floor(baseAtk / 2)
+    const scale = baseAtk / 4;
     let damage = baseAtk;
 
-    // 计算每次升级增加的攻击力
     for (let upgrade = 1; upgrade <= effectiveLevel; upgrade++) {
-        const resultLevel = upgrade + 1;  // 升级后的等级
         const tier = getUpgradeTier(upgrade);
 
-        // 查表获取基础增加值，超出范围则按1.5倍增长
         let baseAdd = tier < ADD_VALUE_TABLE.length
             ? ADD_VALUE_TABLE[tier]
             : Math.floor(ADD_VALUE_TABLE[12] * Math.pow(1.5, tier - 12));
 
-        // 根据佣兵基础攻击力缩放
         let addValue = Math.floor(baseAdd * scale);
-
-        // 51级及以后：增加值翻倍
-        if (resultLevel >= 51) addValue *= 2;
-        // 101级及以后：增加值再翻倍
-        if (resultLevel >= 101) addValue *= 2;
 
         damage += Math.max(1, addValue);
     }
+
+    return damage;
+}
+
+function calculateMercenaryBaseDamage(mercenary) {
+    let damage = calculateRawUpgradeDamage(mercenary);
+
+    // 里程碑奖励（一次性翻倍，存储在 _milestoneDamageBonus 中）
+    if (mercenary._milestoneDamageBonus) damage += mercenary._milestoneDamageBonus;
 
     // 战士等自带的堆叠Buff (属于该佣兵个体的成长)
     if (mercenary._stackingBuff) {
@@ -152,6 +152,36 @@ function calculateMercenaryBaseDamage(mercenary) {
     }
 
     return Math.floor(damage);
+}
+
+// 里程碑攻击力检查：跨越50/100级时一次性翻倍当前攻击力
+function applyMilestoneDamageCheck(merc, oldDisplayLevel, newDisplayLevel) {
+    if (oldDisplayLevel < 50 && newDisplayLevel >= 50) {
+        const rawDmg = calculateRawUpgradeDamage(merc);
+        const existing = merc._milestoneDamageBonus || 0;
+        merc._milestoneDamageBonus = rawDmg + 2 * existing;
+    }
+    if (oldDisplayLevel < 100 && newDisplayLevel >= 100) {
+        const rawDmg = calculateRawUpgradeDamage(merc);
+        const existing = merc._milestoneDamageBonus || 0;
+        merc._milestoneDamageBonus = rawDmg + 2 * existing;
+    }
+}
+
+// 旧存档迁移：补算里程碑奖励
+function migrateMilestoneDamageBonus(mercenaries) {
+    if (!mercenaries) return;
+    mercenaries.forEach(merc => {
+        if (merc._milestoneDamageBonus === undefined || merc._milestoneDamageBonus === null) {
+            const displayLevel = (merc.damageLevel || 0) + (merc.intervalLevel || 0) + 1;
+            const rawDmg = calculateRawUpgradeDamage(merc);
+            if (displayLevel >= 100) {
+                merc._milestoneDamageBonus = 3 * rawDmg;
+            } else if (displayLevel >= 50) {
+                merc._milestoneDamageBonus = rawDmg;
+            }
+        }
+    });
 }
 
 /**
@@ -186,9 +216,9 @@ function calculateUpgradedInterval(mercenary) {
     let interval = mercenary.attackInterval * Math.pow(0.99, effectiveLevel);
 
     // 应用里程碑奖励 (Lv 75, Lv 100)
-    const totalLevel = (mercenary.damageLevel || 0) + (mercenary.intervalLevel || 0);
-    if (totalLevel >= 75) interval *= 0.8;
-    if (totalLevel >= 100) interval *= 0.8;
+    const displayLevel = (mercenary.damageLevel || 0) + (mercenary.intervalLevel || 0) + 1;
+    if (displayLevel >= 75) interval *= 0.8;
+    if (displayLevel >= 100) interval *= 0.8;
 
     // 应用圣物全局攻速加成 (如果有)
     if (mercenary._prestigeSpeedBuff) {
@@ -457,5 +487,8 @@ module.exports = {
     calculatePrestigeBonus,
     getRandomRelicChoices,
     getDamageDisplayInfo,
-    calculateMercenaryBaseDamage
+    calculateMercenaryBaseDamage,
+    calculateRawUpgradeDamage,
+    applyMilestoneDamageCheck,
+    migrateMilestoneDamageBonus
 };

@@ -11,6 +11,8 @@ App({
     const savedData = saveManager.loadGame();
     if (savedData) {
       this.globalData = savedData;
+      // 里程碑迁移：补算旧存档的一次性翻倍奖励
+      gameEngine.migrateMilestoneDamageBonus(this.globalData.mercenaries);
       console.log('加载已保存的游戏数据');
     } else {
       // 初始化新游戏
