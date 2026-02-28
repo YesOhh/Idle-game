@@ -46,17 +46,19 @@ export function calculateMercenaryBaseDamage(mercenary) {
     return Math.floor(damage);
 }
 
-// 里程碑攻击力检查：跨越50/100级时一次性翻倍当前攻击力
+// 里程碑攻击力检查：跨越50/100级时一次性翻倍当前攻击力（含传授加成）
 export function applyMilestoneDamageCheck(merc, oldDisplayLevel, newDisplayLevel) {
     if (oldDisplayLevel < 50 && newDisplayLevel >= 50) {
         const rawDmg = calculateRawUpgradeDamage(merc);
         const existing = merc._milestoneDamageBonus || 0;
-        merc._milestoneDamageBonus = rawDmg + 2 * existing;
+        const teachingBonus = merc._teachingBonus || 0;
+        merc._milestoneDamageBonus = rawDmg + teachingBonus + 2 * existing;
     }
     if (oldDisplayLevel < 100 && newDisplayLevel >= 100) {
         const rawDmg = calculateRawUpgradeDamage(merc);
         const existing = merc._milestoneDamageBonus || 0;
-        merc._milestoneDamageBonus = rawDmg + 2 * existing;
+        const teachingBonus = merc._teachingBonus || 0;
+        merc._milestoneDamageBonus = rawDmg + teachingBonus + 2 * existing;
     }
 }
 
@@ -67,10 +69,11 @@ export function migrateMilestoneDamageBonus(mercenaries) {
         if (merc._milestoneDamageBonus === undefined || merc._milestoneDamageBonus === null) {
             const displayLevel = (merc.damageLevel || 0) + (merc.intervalLevel || 0) + 1;
             const rawDmg = calculateRawUpgradeDamage(merc);
+            const teachingBonus = merc._teachingBonus || 0;
             if (displayLevel >= 100) {
-                merc._milestoneDamageBonus = 3 * rawDmg;
+                merc._milestoneDamageBonus = 3 * rawDmg + 3 * teachingBonus;
             } else if (displayLevel >= 50) {
-                merc._milestoneDamageBonus = rawDmg;
+                merc._milestoneDamageBonus = rawDmg + teachingBonus;
             }
         }
     });

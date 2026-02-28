@@ -152,16 +152,16 @@ if 显示等级 ≥ 100: 攻击间隔 *= 0.8  （再提速20%）
 ```
 升级后显示等级达到50时：
   rawDmg = 当前纯升级伤害（不含里程碑和其他加成）
+  teachingBonus = 传授加成（_teachingBonus，来自士兵传授技能的累计值）
   existing = 已有的里程碑奖励（可能有之前50级的）
-  _milestoneDamageBonus = rawDmg + 2 × existing
+  _milestoneDamageBonus = rawDmg + teachingBonus + 2 × existing
 ```
 
-**100级时同理**，在已有奖励基础上再翻倍。
+**100级时同理**，在已有奖励基础上再翻倍。传授加成在里程碑触发时被纳入翻倍范围。
 
-**数值示例**：
-- 49级升到50级：rawDmg=110，existing=0 → bonus=110 → 总攻=110+110=**220**（×2）
-- 50→99级正常升级：rawDmg增长到190，bonus不变=110 → 总攻=190+110=**300**
-- 99级升到100级：rawDmg=190，existing=110 → bonus=190+220=410 → 总攻=190+410=**600**（×2）
+**数值示例**（假设传授加成为50）：
+- 49级升到50级：rawDmg=110，teachingBonus=50，existing=0 → bonus=160 → 总攻=110+160+50=**320**（= 2×160）
+- 99级升到100级：rawDmg=190，teachingBonus=80，existing=160 → bonus=190+80+320=590 → 总攻=190+590+80=**860**（= 2×430）
 
 ### 4.2 攻速里程碑
 
