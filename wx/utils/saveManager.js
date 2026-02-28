@@ -38,6 +38,12 @@ function loadGame() {
             const lastSaveTime = saveData.stats.lastSaveTime || now;
             const offlineSeconds = Math.floor((now - lastSaveTime) / 1000);
 
+            // 迁移：修复传授技能双重转生加成bug，清零旧的膨胀数据
+            if (!saveData._teachingBugFixed && saveData.mercenaries) {
+                saveData.mercenaries.forEach(m => { m._teachingBonus = 0; });
+                saveData._teachingBugFixed = true;
+            }
+
             return {
                 ...saveData,
                 offlineSeconds

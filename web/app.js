@@ -151,16 +151,15 @@ function _startTeachingSkillTimer() {
 
 function _processTeachingSkill() {
     if (!G.mercenaries) return;
-    const prestigeBonus = gameEngine.calculatePrestigeBonus(G.player);
     const soldier = G.mercenaries.find(m => m.id === 'royal_guard' && m.recruited);
     if (!soldier) return;
     const skill = SKILL_LIBRARY['team_damage_buff'];
     if (!skill) return;
     const totalLevel = (soldier.damageLevel || 0) + (soldier.intervalLevel || 0) + 1;
     if (totalLevel < skill.baseUnlockLevel) return;
-    const soldierDamage = gameEngine.calculateUpgradedDamage(soldier, prestigeBonus.damage);
+    const soldierBaseDamage = gameEngine.calculateMercenaryBaseDamage(soldier);
     const params = skill.getParams(totalLevel);
-    const bonusDamage = Math.floor(soldierDamage * params.bonusRatio);
+    const bonusDamage = Math.floor(soldierBaseDamage * params.bonusRatio);
     if (bonusDamage <= 0) return;
     let buffedCount = 0;
     G.mercenaries.forEach(merc => {

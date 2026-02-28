@@ -128,8 +128,6 @@ App({
     const globalData = this.globalData;
     if (!globalData || !globalData.mercenaries) return;
 
-    const prestigeBonus = gameEngine.calculatePrestigeBonus(globalData.player);
-
     // 找到士兵（royal_guard）并检查技能是否解锁
     const soldier = globalData.mercenaries.find(m => m.id === 'royal_guard' && m.recruited);
     if (!soldier) return;
@@ -139,10 +137,10 @@ App({
     const totalLevel = (soldier.damageLevel || 0) + (soldier.intervalLevel || 0) + 1;
     if (totalLevel < skill.baseUnlockLevel) return;
 
-    // 计算士兵当前攻击力的1%
-    const soldierDamage = gameEngine.calculateUpgradedDamage(soldier, prestigeBonus.damage);
+    // 计算士兵基础攻击力（不含转生加成）的1%，避免转生倍率双重叠加
+    const soldierBaseDamage = gameEngine.calculateMercenaryBaseDamage(soldier);
     const params = skill.getParams(totalLevel);
-    const bonusDamage = Math.floor(soldierDamage * params.bonusRatio);
+    const bonusDamage = Math.floor(soldierBaseDamage * params.bonusRatio);
 
     if (bonusDamage <= 0) return;
 
