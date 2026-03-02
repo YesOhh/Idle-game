@@ -573,7 +573,7 @@ function showMercSkillText(mercId, text, type = '') {
     el.style.top = (cardRect.top - wrapperRect.top + cardRect.height * 0.6) + 'px';
     el.style.left = (Math.random() * 60 + 20) + '%';
     overlay.appendChild(el);
-    setTimeout(() => el.remove(), 1200);
+    setTimeout(() => el.remove(), 2000);
 }
 
 function showDamageNumber(damage, type = '') {
