@@ -146,9 +146,9 @@ export const SKILL_LIBRARY = {
         id: 'dragon_soul', name: '龙魂觉醒', type: 'dragon_soul', icon: '🐲',
         baseUnlockLevel: 40, baseDescription: '积累龙魂能量释放毁灭龙息',
         getParams: (level) => {
-            const burstMultiplier = 50 + Math.floor((level - 40) / 10) * 15;
+            const burstMultiplier = 6 + Math.floor((level - 40) / 10) * 1;
             const burnDamage = 0.05 + Math.floor((level - 40) / 15) * 0.02;
-            return { maxStacks: 10, burstMultiplier: Math.max(50, burstMultiplier), burnDamage: Math.max(0.05, burnDamage), burnDuration: 5000 };
+            return { maxStacks: 10, burstMultiplier: Math.max(6, burstMultiplier), burnDamage: Math.max(0.05, burnDamage), burnDuration: 5000 };
         },
         getDescription: (level) => {
             const params = SKILL_LIBRARY.dragon_soul.getParams(level);
@@ -171,7 +171,7 @@ export const SKILL_LIBRARY = {
         id: 'time_burst', name: '时空涟漪', type: 'time_burst', icon: '⏳',
         baseUnlockLevel: 35, baseDescription: '周期性释放时空连击',
         getParams: (level) => {
-            const attackCount = 6 + Math.floor((level - 35) / 20);
+            const attackCount = 12 + Math.floor((level - 35) / 20);
             const damageMultiplier = 1.0 + Math.floor((level - 35) / 10) * 0.2;
             return { interval: 60000, attackCount: Math.min(12, attackCount), damageMultiplier: Math.max(1.0, damageMultiplier) };
         },
@@ -246,6 +246,12 @@ export const SKILL_LIBRARY = {
         baseUnlockLevel: 0, baseDescription: '每隔8秒，造成等同攻击力的伤害',
         getParams: (level) => ({ interval: 8000 }),
         getDescription: (level) => '每隔8秒，造成等同攻击力的额外伤害'
+    },
+    extreme_focus: {
+        id: 'extreme_focus', name: '极', type: 'extreme_focus', icon: '⚡',
+        baseUnlockLevel: 0, baseDescription: '升级攻击力时，提升的攻击力额外增加120%，但攻速降低0.5%',
+        getParams: (level) => ({ damageBonus: 1.20, speedPenalty: 0.005 }),
+        getDescription: (level) => '升级攻击力时，提升的攻击力额外+120%，攻速每级-0.5%'
     },
     gold_on_attack: {
         id: 'gold_on_attack', name: '妙手', type: 'gold_on_attack', icon: '💰',

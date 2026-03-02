@@ -1,6 +1,6 @@
 // utils/gameEngine.js - 核心游戏引擎 (ES Module version)
 import { BOSS_DATA } from '../data/bosses.js';
-import { getUnitSkill, getUnitSkillDisplay } from '../data/skills.js';
+import { getUnitSkill, getUnitSkillDisplay, DEFAULT_UNIT_SKILLS, SKILL_LIBRARY } from '../data/skills.js';
 
 export function formatNumber(num) {
     if (num < 1) return parseFloat(num.toFixed(2)).toString();
@@ -18,6 +18,14 @@ function getUpgradeTier(upgradeCount) {
     return Math.floor((upgradeCount - 5) / 5) + 1;
 }
 
+// 查询佣兵是否拥有指定类型的技能
+function hasSkillType(mercenary, skillType) {
+    const skillId = mercenary.evolvedSkillId || DEFAULT_UNIT_SKILLS[mercenary.id];
+    if (!skillId) return false;
+    const skillDef = SKILL_LIBRARY[skillId];
+    return skillDef && skillDef.type === skillType;
+}
+
 // 计算纯升级伤害（不含任何加成和里程碑）
 export function calculateRawUpgradeDamage(mercenary) {
     let effectiveLevel = mercenary.damageLevel || 0;
@@ -26,11 +34,13 @@ export function calculateRawUpgradeDamage(mercenary) {
     }
     const baseAtk = mercenary.damage;
     const scale = baseAtk / 4;
+    const hasExtreme = hasSkillType(mercenary, 'extreme_focus');
     let damage = baseAtk;
     for (let upgrade = 1; upgrade <= effectiveLevel; upgrade++) {
         const tier = getUpgradeTier(upgrade);
         let baseAdd = tier < ADD_VALUE_TABLE.length ? ADD_VALUE_TABLE[tier] : Math.floor(ADD_VALUE_TABLE[12] * Math.pow(1.5, tier - 12));
         let addValue = Math.floor(baseAdd * scale);
+        if (hasExtreme) addValue = Math.floor(addValue * 2.2);
         damage += Math.max(1, addValue);
     }
     return damage;
@@ -105,12 +115,19 @@ export function calculateUpgradedInterval(mercenary) {
     if (displayLevel >= 100) interval *= 0.8;
     if (mercenary._prestigeSpeedBuff) interval *= (1 - mercenary._prestigeSpeedBuff);
     if (mercenary._chaosIntervalPenalty) interval += mercenary._chaosIntervalPenalty;
+    // 「极」技能：每级攻击力升级降低0.5%攻速
+    if (hasSkillType(mercenary, 'extreme_focus')) {
+        const dmgLvl = mercenary.damageLevel || 0;
+        if (dmgLvl > 0) interval *= Math.pow(1.005, dmgLvl);
+    }
     return Math.max(0.1, Number(interval.toFixed(4)));
 }
 
 export function calculatePrestigeBonus(player) {
-    if (!player) return { damage: 1, gold: 1, costReduction: 1, speed: 0, critChance: 0, critMult: 0 };
-    let damageMult = 1, goldMult = 1, costReduction = 1, speedBuff = 0, critChance = 0, critMult = 0;
+    if (!player) return { damage: 1, gold: 1, costReduction: 1, speed: 0, catDamage: {}, catSpeed: {} };
+    let damageMult = 1, goldMult = 1, costReduction = 1, speedBuff = 0;
+    const catDamage = {}; // { basic: 0.10, iron: 0.10, ... }
+    const catSpeed = {};  // { basic: 0.08, magic: 0.08, ... }
     if (player.relics && player.relics.length > 0) {
         player.relics.forEach(relic => {
             const level = relic.level || 1;
@@ -119,11 +136,15 @@ export function calculatePrestigeBonus(player) {
             if (relic.type === 'gold') goldMult += totalVal;
             if (relic.type === 'cost') { for (let i = 0; i < level; i++) costReduction *= (1 - relic.val); }
             if (relic.type === 'speed') speedBuff += totalVal;
-            if (relic.type === 'crit_chance') critChance += totalVal;
-            if (relic.type === 'crit_mult') critMult += totalVal;
+            if (relic.type === 'cat_damage' && relic.category) {
+                catDamage[relic.category] = (catDamage[relic.category] || 0) + totalVal;
+            }
+            if (relic.type === 'cat_speed' && relic.category) {
+                catSpeed[relic.category] = (catSpeed[relic.category] || 0) + totalVal;
+            }
         });
     }
-    return { damage: damageMult, gold: goldMult, costReduction, speed: speedBuff, critChance, critMult };
+    return { damage: damageMult, gold: goldMult, costReduction, speed: speedBuff, catDamage, catSpeed };
 }
 
 export function calculateMercenaryUpgradeCost(mercenary, costReduction = 1) {
@@ -158,8 +179,18 @@ export function calculateOfflineProgress(mercenaries, offlineSeconds, bossLevel,
     mercenaries.forEach(merc => {
         if (!merc.recruited) return;
         const interval = calculateUpgradedInterval(merc);
-        const damage = calculateUpgradedDamage(merc, prestigeBonus.damage);
-        const hits = Math.floor(actualOfflineTime / interval);
+        let damage = calculateUpgradedDamage(merc, prestigeBonus.damage);
+        // Category damage bonus from relics
+        if (merc.category && prestigeBonus.catDamage && prestigeBonus.catDamage[merc.category]) {
+            damage = Math.floor(damage * (1 + prestigeBonus.catDamage[merc.category]));
+        }
+        let effectiveInterval = interval;
+        // Category speed bonus from relics
+        if (merc.category && prestigeBonus.catSpeed && prestigeBonus.catSpeed[merc.category]) {
+            effectiveInterval *= (1 - prestigeBonus.catSpeed[merc.category]);
+        }
+        effectiveInterval = Math.max(0.1, effectiveInterval);
+        const hits = Math.floor(actualOfflineTime / effectiveInterval);
         totalDamage += hits * damage;
     });
     // Simulate boss kills
@@ -181,14 +212,29 @@ export function getMercenarySkillDisplay(mercenary) {
 }
 
 export const RELIC_POOL = [
-    { id: 'relic_dmg_low', name: '士兵的磨刀石', type: 'damage', val: 0.10, desc: '伤害 +10%', icon: '🪵' },
-    { id: 'relic_gold_low', name: '褪色的铜币', type: 'gold', val: 0.10, desc: '金币收益 +10%', icon: '🪙' },
-    { id: 'relic_speed_1', name: '机械发条', type: 'speed', val: 0.05, desc: '攻击速度 +5%', icon: '⚙️' },
-    { id: 'relic_cost_low', name: '战术速记本', type: 'cost', val: 0.05, desc: '升级成本 -5%', icon: '📖' },
-    { id: 'relic_crit_c_1', name: '鹰眼瞄具', type: 'crit_chance', val: 0.02, desc: '暴击率 +2%', icon: '🎯' },
-    { id: 'relic_crit_m_1', name: '锋利刀刃', type: 'crit_mult', val: 0.20, desc: '暴击伤害 +20%', icon: '🔪' },
-    { id: 'relic_dmg_mid', name: '勇士之证', type: 'damage', val: 0.30, desc: '伤害 +30%', icon: '🏅' },
-    { id: 'relic_gold_mid', name: '商人的契约', type: 'gold', val: 0.30, desc: '金币收益 +30%', icon: '📜' }
+    // 全局通用
+    { id: 'relic_dmg_all', name: '士兵的磨刀石', type: 'damage', val: 0.05, desc: '全体伤害 +5%', icon: '🪵' },
+    { id: 'relic_gold', name: '褪色的铜币', type: 'gold', val: 0.10, desc: '金币收益 +10%', icon: '🪙' },
+    { id: 'relic_speed_all', name: '机械发条', type: 'speed', val: 0.05, desc: '全体攻速 +5%', icon: '⚙️' },
+    { id: 'relic_cost', name: '战术速记本', type: 'cost', val: 0.05, desc: '升级成本 -5%', icon: '📖' },
+    // 基础系
+    { id: 'relic_basic_dmg', name: '新兵训练手册', type: 'cat_damage', category: 'basic', val: 0.10, desc: '基础系伤害 +10%', icon: '⭐' },
+    { id: 'relic_basic_spd', name: '轻装行军靴', type: 'cat_speed', category: 'basic', val: 0.08, desc: '基础系攻速 +8%', icon: '👢' },
+    // 钢铁系
+    { id: 'relic_iron_dmg', name: '精钢锻锤', type: 'cat_damage', category: 'iron', val: 0.10, desc: '钢铁系伤害 +10%', icon: '🔨' },
+    { id: 'relic_iron_spd', name: '蒸汽驱动核心', type: 'cat_speed', category: 'iron', val: 0.08, desc: '钢铁系攻速 +8%', icon: '🔧' },
+    // 魔法系
+    { id: 'relic_magic_dmg', name: '秘法水晶球', type: 'cat_damage', category: 'magic', val: 0.10, desc: '魔法系伤害 +10%', icon: '🔮' },
+    { id: 'relic_magic_spd', name: '时间沙漏碎片', type: 'cat_speed', category: 'magic', val: 0.08, desc: '魔法系攻速 +8%', icon: '⏳' },
+    // 圣洁系
+    { id: 'relic_holy_dmg', name: '圣光祝福卷轴', type: 'cat_damage', category: 'holy', val: 0.10, desc: '圣洁系伤害 +10%', icon: '📿' },
+    { id: 'relic_holy_spd', name: '天使之翼羽', type: 'cat_speed', category: 'holy', val: 0.08, desc: '圣洁系攻速 +8%', icon: '🪽' },
+    // 远古系
+    { id: 'relic_ancient_dmg', name: '远古符文石板', type: 'cat_damage', category: 'ancient', val: 0.10, desc: '远古系伤害 +10%', icon: '🗿' },
+    { id: 'relic_ancient_spd', name: '虚空脉动宝珠', type: 'cat_speed', category: 'ancient', val: 0.08, desc: '远古系攻速 +8%', icon: '💎' },
+    // 传说系
+    { id: 'relic_legend_dmg', name: '龙王的遗宝', type: 'cat_damage', category: 'legend', val: 0.10, desc: '传说系伤害 +10%', icon: '👑' },
+    { id: 'relic_legend_spd', name: '命运齿轮', type: 'cat_speed', category: 'legend', val: 0.08, desc: '传说系攻速 +8%', icon: '🌀' }
 ];
 
 export function getRandomRelicChoices() {

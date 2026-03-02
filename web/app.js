@@ -208,6 +208,10 @@ function processBattleTick() {
         let interval = gameEngine.calculateUpgradedInterval(merc);
         if (_globalSpeedBuff) interval *= (1 - _globalSpeedBuff);
         if (_ultimateAura && _ultimateAura.speed) interval *= (1 - _ultimateAura.speed);
+        // Category speed bonus from relics
+        if (merc.category && prestigeBonus.catSpeed && prestigeBonus.catSpeed[merc.category]) {
+            interval *= (1 - prestigeBonus.catSpeed[merc.category]);
+        }
 
         if (merc._attackTimer >= interval) {
             let damage = gameEngine.calculateUpgradedDamage(merc, prestigeBonus.damage);
@@ -331,9 +335,9 @@ function processBattleTick() {
                 }
             }
 
-            // Global crit from relics
-            if (!isCrit && prestigeBonus.critChance > 0 && Math.random() < prestigeBonus.critChance) {
-                thisHitDamage *= (2.0 + prestigeBonus.critMult); isCrit = true;
+            // Category damage bonus from relics
+            if (merc.category && prestigeBonus.catDamage && prestigeBonus.catDamage[merc.category]) {
+                thisHitDamage *= (1 + prestigeBonus.catDamage[merc.category]);
             }
             if (_damageAura) thisHitDamage *= (1 + _damageAura);
             if (_ultimateAura) thisHitDamage *= (1 + _ultimateAura.damage);
@@ -407,6 +411,7 @@ function getSkillLevelLabel(sk, merc, boss) {
         case 'total_team_damage': return '';
         case 'periodic_burst': return '';
         case 'chaos_stack': return '';
+        case 'extreme_focus': return '';
         case 'ultimate': return '';
         case 'knight_heavy_armor': return '';
         case 'knight_fortify': return '';
@@ -467,7 +472,7 @@ function getSkillScalingInfo(sk, merc) {
             lines.push({ label: '全队增伤', value: `+${(sk.val * 100).toFixed(0)}%`, growth: '每+10级 → +3%' });
             break;
         case 'dragon_soul':
-            lines.push({ label: '龙息倍率', value: `${sk.burstMultiplier}x`, growth: '每+10级 → +15x' });
+            lines.push({ label: '龙息倍率', value: `${sk.burstMultiplier}x`, growth: '每+10级 → +1x' });
             lines.push({ label: '灼烧伤害', value: `${(sk.burnDamage * 100).toFixed(0)}%/秒`, growth: '每+15级 → +2%' });
             lines.push({ label: '触发条件', value: '每10次攻击', growth: '固定' });
             break;
@@ -506,6 +511,10 @@ function getSkillScalingInfo(sk, merc) {
             break;
         case 'team_damage_buff':
             lines.push({ label: '效果', value: '每60秒全体+本单位攻击力1%', growth: '固定' });
+            break;
+        case 'extreme_focus':
+            lines.push({ label: '攻击力升级', value: '每次升级墝加量×2.2', growth: '固定+120%' });
+            lines.push({ label: '攻速惩罚', value: `每级-0.5%攻速`, growth: '按攻击力等级累计' });
             break;
     }
     return lines;
@@ -799,8 +808,29 @@ function updateRelicsUI() {
     document.getElementById('relic-gold').textContent = `+${((prestigeBonus.gold - 1) * 100).toFixed(0)}%`;
     document.getElementById('relic-speed').textContent = `+${(prestigeBonus.speed * 100).toFixed(0)}%`;
     document.getElementById('relic-cost').textContent = `-${((1 - prestigeBonus.costReduction) * 100).toFixed(0)}%`;
-    document.getElementById('relic-crit-chance').textContent = `+${(prestigeBonus.critChance * 100).toFixed(0)}%`;
-    document.getElementById('relic-crit-mult').textContent = `+${(prestigeBonus.critMult * 100).toFixed(0)}%`;
+
+    // Category bonuses
+    const catBonusEl = document.getElementById('relic-cat-bonuses');
+    if (catBonusEl) {
+        const catNames = { basic: '⭐基础系', iron: '⚙️钢铁系', magic: '✨魔法系', holy: '☀️圣洁系', ancient: '🌀远古系', legend: '👑传说系' };
+        let catHtml = '';
+        const allCats = new Set([...Object.keys(prestigeBonus.catDamage || {}), ...Object.keys(prestigeBonus.catSpeed || {})]);
+        if (allCats.size > 0) {
+            catHtml += '<div class="bonus-grid" style="margin-top:6px;padding-top:6px;border-top:1px dashed rgba(255,255,255,0.1)">';
+            allCats.forEach(cat => {
+                const dmg = prestigeBonus.catDamage[cat] || 0;
+                const spd = prestigeBonus.catSpeed[cat] || 0;
+                const parts = [];
+                if (dmg > 0) parts.push(`伤害+${(dmg * 100).toFixed(0)}%`);
+                if (spd > 0) parts.push(`攻速+${(spd * 100).toFixed(0)}%`);
+                if (parts.length > 0) {
+                    catHtml += `<div class="bonus-item"><span class="label">${catNames[cat] || cat}</span><span class="value">${parts.join(' ')}</span></div>`;
+                }
+            });
+            catHtml += '</div>';
+        }
+        catBonusEl.innerHTML = catHtml;
+    }
 
     const list = document.getElementById('relic-list');
     const relics = G.player.relics || [];
@@ -917,8 +947,10 @@ function setupUI() {
         const prestigeBonus = gameEngine.calculatePrestigeBonus(G.player);
         let damage = G.player.manualDamage * prestigeBonus.damage;
         let isCrit = false;
-        if (prestigeBonus.critChance > 0 && Math.random() < prestigeBonus.critChance) {
-            damage *= (2.0 + (prestigeBonus.critMult || 0)); isCrit = true;
+        // Apply category bonus for player merc
+        const playerMerc = G.mercenaries.find(m => m.id === 'player');
+        if (playerMerc && playerMerc.category && prestigeBonus.catDamage && prestigeBonus.catDamage[playerMerc.category]) {
+            damage *= (1 + prestigeBonus.catDamage[playerMerc.category]);
         }
         // Deal damage
         const result = gameEngine.dealDamageToBoss(G.boss, damage, prestigeBonus.gold);
@@ -926,7 +958,6 @@ function setupUI() {
         G.player.totalDamage += damage;
         G.player.gold += result.goldEarned;
         // Track manual click damage to player merc
-        const playerMerc = G.mercenaries.find(m => m.id === 'player');
         if (playerMerc) playerMerc._totalDamageDealt = (playerMerc._totalDamageDealt || 0) + damage;
         if (result.defeated) onGlobalBossDefeated();
         showDamageNumber(damage, isCrit ? 'crit' : '');
