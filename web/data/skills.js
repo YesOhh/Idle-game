@@ -164,7 +164,7 @@ export const SKILL_LIBRARY = {
         },
         getDescription: (level) => {
             const params = SKILL_LIBRARY.pure_percent_damage.getParams(level);
-            return `${(params.chance * 100).toFixed(0)}%几率造成Boss当前血量0.01%伤害(不受加成)`;
+            return `${(params.chance * 100).toFixed(0)}%几率造成Boss血量0.01%伤害(上限:全队攻击力×等级/10)`;
         }
     },
     time_burst: {

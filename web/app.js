@@ -207,11 +207,11 @@ function processBattleTick() {
         merc._attackTimer += deltaTime;
 
         let interval = gameEngine.calculateUpgradedInterval(merc);
-        if (_globalSpeedBuff) interval *= (1 - _globalSpeedBuff);
-        if (_ultimateAura && _ultimateAura.speed) interval *= (1 - _ultimateAura.speed);
+        if (_globalSpeedBuff) interval /= (1 + _globalSpeedBuff);
+        if (_ultimateAura && _ultimateAura.speed) interval /= (1 + _ultimateAura.speed);
         // Category speed bonus from relics
         if (merc.category && prestigeBonus.catSpeed && prestigeBonus.catSpeed[merc.category]) {
-            interval *= (1 - prestigeBonus.catSpeed[merc.category]);
+            interval /= (1 + prestigeBonus.catSpeed[merc.category]);
         }
 
         if (merc._attackTimer >= interval) {
@@ -326,7 +326,10 @@ function processBattleTick() {
                     if (!_damageAura) _damageAura = skill.val;
                 } else if (skill.type === 'pure_percent_damage') {
                     if (Math.random() < skill.chance) {
-                        const pd = Math.floor(G.boss.currentHp * skill.percentVal);
+                        const totalLevel = (merc.damageLevel || 0) + (merc.intervalLevel || 0) + 1;
+                        let tt = 0; G.mercenaries.forEach(m => { if (m.recruited) tt += gameEngine.calculateUpgradedDamage(m, prestigeBonus.damage); });
+                        const cap = Math.floor(tt * totalLevel / 10);
+                        const pd = Math.min(Math.floor(G.boss.currentHp * skill.percentVal), cap);
                         thisHitDamage += pd;
                         skillTriggered = { type: 'holy', text: `圣洁之力 ${gameEngine.formatNumber(pd)}` };
                     }
@@ -504,7 +507,8 @@ function getSkillScalingInfo(sk, merc) {
             break;
         case 'pure_percent_damage':
             lines.push({ label: '触发概率', value: `${(sk.chance * 100).toFixed(0)}%`, growth: '每+20级 → +2%' });
-            lines.push({ label: '效果', value: 'Boss当前血量0.01%', growth: '固定 (不受加成)' });
+            lines.push({ label: '百分比伤害', value: 'Boss当前血量0.01%', growth: '固定' });
+            lines.push({ label: '伤害上限', value: '全队攻击力×等级/10', growth: '随等级和全队攻击力成长' });
             break;
         case 'time_burst':
             lines.push({ label: '攻击次数', value: `${sk.attackCount}次`, growth: '每+20级 → +1次 (上限12)' });
@@ -632,8 +636,8 @@ function updateBattleMercList() {
         const dmgInfo = gameEngine.getDamageDisplayInfo(merc, prestigeBonus.damage);
         let currentInterval = gameEngine.calculateUpgradedInterval(merc);
         // Apply active speed buffs to display
-        if (_globalSpeedBuff) currentInterval *= (1 - _globalSpeedBuff);
-        if (_ultimateAura && _ultimateAura.speed) currentInterval *= (1 - _ultimateAura.speed);
+        if (_globalSpeedBuff) currentInterval /= (1 + _globalSpeedBuff);
+        if (_ultimateAura && _ultimateAura.speed) currentInterval /= (1 + _ultimateAura.speed);
         currentInterval = Math.max(0.05, currentInterval);
         const upgradeCost = gameEngine.calculateMercenaryUpgradeCost(merc, prestigeBonus.costReduction);
         const canAffordUpgrade = G.player.gold >= upgradeCost;
@@ -666,8 +670,8 @@ function updateBattleMercList() {
         const damageUpgradeEffect = gameEngine.formatNumber(nextDmgInfo.final - dmgInfo.final);
         const tempMercInt = { ...merc, intervalLevel: (merc.intervalLevel || 0) + 1 };
         let nextInterval = gameEngine.calculateUpgradedInterval(tempMercInt);
-        if (_globalSpeedBuff) nextInterval *= (1 - _globalSpeedBuff);
-        if (_ultimateAura && _ultimateAura.speed) nextInterval *= (1 - _ultimateAura.speed);
+        if (_globalSpeedBuff) nextInterval /= (1 + _globalSpeedBuff);
+        if (_ultimateAura && _ultimateAura.speed) nextInterval /= (1 + _ultimateAura.speed);
         nextInterval = Math.max(0.05, nextInterval);
         const intervalUpgradeEffect = (currentInterval - nextInterval).toFixed(4);
 

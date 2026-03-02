@@ -111,9 +111,9 @@ export function calculateUpgradedInterval(mercenary) {
     let interval = mercenary.attackInterval * Math.pow(0.99, effectiveLevel);
     // 里程碑：显示等级 = damageLevel + intervalLevel + 1
     const displayLevel = (mercenary.damageLevel || 0) + (mercenary.intervalLevel || 0) + 1;
-    if (displayLevel >= 75) interval *= 0.8;
-    if (displayLevel >= 100) interval *= 0.8;
-    if (mercenary._prestigeSpeedBuff) interval *= (1 - mercenary._prestigeSpeedBuff);
+    if (displayLevel >= 75) interval /= 1.2;
+    if (displayLevel >= 100) interval /= 1.2;
+    if (mercenary._prestigeSpeedBuff) interval /= (1 + mercenary._prestigeSpeedBuff);
     if (mercenary._chaosIntervalPenalty) interval += mercenary._chaosIntervalPenalty;
     // 「极」技能：每级攻击力升级降低0.5%攻速
     if (hasSkillType(mercenary, 'extreme_focus')) {
@@ -187,7 +187,7 @@ export function calculateOfflineProgress(mercenaries, offlineSeconds, bossLevel,
         let effectiveInterval = interval;
         // Category speed bonus from relics
         if (merc.category && prestigeBonus.catSpeed && prestigeBonus.catSpeed[merc.category]) {
-            effectiveInterval *= (1 - prestigeBonus.catSpeed[merc.category]);
+            effectiveInterval /= (1 + prestigeBonus.catSpeed[merc.category]);
         }
         effectiveInterval = Math.max(0.1, effectiveInterval);
         const hits = Math.floor(actualOfflineTime / effectiveInterval);
