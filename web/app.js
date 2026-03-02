@@ -277,9 +277,25 @@ function processBattleTick() {
                     merc._timeBurstTimer += interval * 1000;
                     if (merc._timeBurstTimer >= skill.interval) {
                         merc._timeBurstTimer = 0;
-                        thisHitDamage = Math.floor(thisHitDamage * skill.damageMultiplier) * skill.attackCount;
-                        isCrit = true;
-                        skillTriggered = { type: 'time_burst', text: `时空涟漪 x${skill.attackCount}!` };
+                        // Each burst hit is a full independent attack
+                        const burstBaseDmg = Math.floor(damage * skill.damageMultiplier);
+                        for (let bi = 0; bi < skill.attackCount; bi++) {
+                            let burstHit = burstBaseDmg;
+                            // Apply global buffs to each hit independently
+                            if (merc.category && prestigeBonus.catDamage && prestigeBonus.catDamage[merc.category]) {
+                                burstHit = Math.floor(burstHit * (1 + prestigeBonus.catDamage[merc.category]));
+                            }
+                            if (_damageAura) burstHit = Math.floor(burstHit * (1 + _damageAura));
+                            if (_ultimateAura) burstHit = Math.floor(burstHit * (1 + _ultimateAura.damage));
+                            if (_bossDebuff) burstHit = Math.floor(burstHit * (1 + _bossDebuff));
+                            dealGlobalDamage(burstHit);
+                            merc._totalDamageDealt = (merc._totalDamageDealt || 0) + burstHit;
+                            if (_showDamageNumbers) showDamageNumber(burstHit, 'crit');
+                        }
+                        if (_showSkillNumbers) showMercSkillText(merc.id, `时空涟漪 x${skill.attackCount}!`, getSkillClass('time_burst'));
+                        // Skip normal hit processing for this attack — damage already dealt
+                        merc._attackTimer -= interval;
+                        return;
                     }
                 } else if (skill.type === 'iron_fist') {
                     if (Math.random() < skill.chance) {

@@ -196,8 +196,8 @@ export const SKILL_LIBRARY = {
         id: 'periodic_burst', name: '浴火重生', type: 'periodic_burst', icon: '🔥',
         baseUnlockLevel: 35, baseDescription: '周期性自动触发大量伤害',
         getParams: (level) => {
-            const burstMult = 50 + Math.floor((level - 35) / 10) * 20;
-            return { interval: 60000, multiplier: Math.max(50, burstMult) };
+            const burstMult = 8 + Math.floor((level - 35) / 10) * 2;
+            return { interval: 60000, multiplier: Math.max(8, burstMult) };
         },
         getDescription: (level) => {
             const params = SKILL_LIBRARY.periodic_burst.getParams(level);
