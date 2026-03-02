@@ -55,6 +55,7 @@ function initNewGame(keepPermanent = false) {
     _globalSpeedBuff = 0; _speedBuffActive = false;
     _bossDebuff = 0; _bossDebuffActive = false;
     _damageAura = 0; _ultimateAura = null;
+    // Reset per-merc accumulated state (soul_devour etc) will be reset via new merc objects
 }
 
 function boot() {
@@ -244,6 +245,7 @@ function processBattleTick() {
                         merc._dragonSoulStacks = 0; thisHitDamage *= skill.burstMultiplier; isCrit = true;
                         const burnDamagePerTick = Math.floor(damage * skill.burnDamage);
                         const burnTicks = skill.burnDuration / 1000;
+                        const totalBurnDmg = burnDamagePerTick * burnTicks;
                         if (_dragonBurnTimer) clearInterval(_dragonBurnTimer);
                         let burnCount = 0;
                         _dragonBurnTimer = setInterval(() => {
@@ -251,7 +253,7 @@ function processBattleTick() {
                             if (burnCount > burnTicks || G.boss.currentHp <= 0) { clearInterval(_dragonBurnTimer); _dragonBurnTimer = null; return; }
                             dealGlobalDamage(burnDamagePerTick);
                         }, 1000);
-                        skillTriggered = { type: 'damage_buff', text: `龙息 x${skill.burstMultiplier}!` };
+                        skillTriggered = { type: 'damage_buff', text: `龙息x${skill.burstMultiplier} ${gameEngine.formatNumber(thisHitDamage)}! 灼烧${gameEngine.formatNumber(totalBurnDmg)}` };
                     }
                 } else if (skill.type === 'chaos_stack') {
                     if (Math.random() < skill.chance) {
@@ -294,10 +296,16 @@ function processBattleTick() {
                         _bossDebuffTimer = setTimeout(() => { _bossDebuff = 0; _bossDebuffActive = false; }, skill.duration);
                         skillTriggered = { type: 'freeze', text: `冰霜冻结 +${(skill.val * 100).toFixed(0)}%!` };
                     }
-                } else if (skill.type === 'summon') {
-                    const total = Math.floor(damage * skill.damageRatio) * skill.count;
-                    thisHitDamage += total;
-                    skillTriggered = { type: 'summon', text: `召唤x${skill.count} +${gameEngine.formatNumber(total)}` };
+                } else if (skill.type === 'soul_devour') {
+                    if (Math.random() < skill.chance) {
+                        merc._soulCount = Math.min((merc._soulCount || 0) + 1, skill.maxSouls);
+                    }
+                    const soulCount = merc._soulCount || 0;
+                    if (soulCount > 0) {
+                        const total = Math.floor(damage * skill.damageRatio * soulCount);
+                        thisHitDamage += total;
+                        skillTriggered = { type: 'summon', text: `💀x${soulCount}/${skill.maxSouls} +${gameEngine.formatNumber(total)}` };
+                    }
                 } else if (skill.type === 'damage_aura') {
                     if (!_damageAura) _damageAura = skill.val;
                 } else if (skill.type === 'pure_percent_damage') {
@@ -403,7 +411,7 @@ function getSkillLevelLabel(sk, merc, boss) {
         case 'berserker_combo': return '';
         case 'global_speed_buff': return '';
         case 'boss_debuff': return '';
-        case 'summon': return '';
+        case 'soul_devour': return '';
         case 'damage_aura': return '';
         case 'dragon_soul': return '';
         case 'pure_percent_damage': return '';
@@ -464,9 +472,11 @@ function getSkillScalingInfo(sk, merc) {
             lines.push({ label: '增伤效果', value: `+${(sk.val * 100).toFixed(0)}%受伤`, growth: '每+10级 → +5%' });
             lines.push({ label: '持续时间', value: '4秒', growth: '固定' });
             break;
-        case 'summon':
-            lines.push({ label: '召唤数量', value: `${sk.count}个`, growth: '每+20级 → +1个 (上限5)' });
-            lines.push({ label: '单体伤害', value: `${(sk.damageRatio * 100).toFixed(0)}%攻击力`, growth: '每+10级 → +3%' });
+        case 'soul_devour':
+            lines.push({ label: '召唤概率', value: '15%', growth: '固定15%' });
+            lines.push({ label: '灵魂上限', value: `${sk.maxSouls}个`, growth: '每+20级 → +1个' });
+            lines.push({ label: '单体伤害', value: `${(sk.damageRatio * 100).toFixed(1)}%攻击力`, growth: '每+10级 → +1.5%' });
+            lines.push({ label: '满编加成', value: `+${(sk.damageRatio * sk.maxSouls * 100).toFixed(0)}%`, growth: '= 单体 × 上限' });
             break;
         case 'damage_aura':
             lines.push({ label: '全队增伤', value: `+${(sk.val * 100).toFixed(0)}%`, growth: '每+10级 → +3%' });
@@ -501,7 +511,7 @@ function getSkillScalingInfo(sk, merc) {
         case 'ultimate':
             lines.push({ label: '全队增伤', value: `+${(sk.teamDamageBonus * 100).toFixed(0)}%`, growth: '每+10级 → +5%' });
             lines.push({ label: '全队攻速', value: `+${(sk.teamSpeedBonus * 100).toFixed(0)}%`, growth: '随增伤同步' });
-            lines.push({ label: '暴击', value: '25%几率5.0x', growth: '固定' });
+            lines.push({ label: '暴击', value: '15%几率5.0x', growth: '固定' });
             break;
         case 'knight_heavy_armor':
             lines.push({ label: '效果', value: '升级攻击力时额外+攻击力等级²×等级', growth: '随等级增长' });

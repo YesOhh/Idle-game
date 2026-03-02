@@ -117,17 +117,17 @@ export const SKILL_LIBRARY = {
             return `12%几率使Boss受伤+${(params.val * 100).toFixed(0)}% (4秒)`;
         }
     },
-    summon: {
-        id: 'summon', name: '亡灵召唤', type: 'summon', icon: '💀',
-        baseUnlockLevel: 30, baseDescription: '召唤骷髅军团协助攻击',
+    soul_devour: {
+        id: 'soul_devour', name: '噬魂', type: 'soul_devour', icon: '💀',
+        baseUnlockLevel: 30, baseDescription: '通过战斗汲取灵魂，亡灵军团逐渐壮大',
         getParams: (level) => {
-            const skeletonCount = Math.min(5, 1 + Math.floor((level - 30) / 20));
-            const skeletonDmg = 0.10 + Math.floor((level - 30) / 10) * 0.03;
-            return { count: Math.max(1, skeletonCount), damageRatio: Math.max(0.10, skeletonDmg) };
+            const damageRatio = 0.08 + Math.floor((level - 30) / 10) * 0.015;
+            const maxSouls = 15 + Math.floor((level - 30) / 20);
+            return { chance: 0.15, damageRatio: Math.max(0.08, damageRatio), maxSouls: Math.max(15, maxSouls) };
         },
         getDescription: (level) => {
-            const params = SKILL_LIBRARY.summon.getParams(level);
-            return `召唤${params.count}个骷髅，各造成${(params.damageRatio * 100).toFixed(0)}%伤害`;
+            const params = SKILL_LIBRARY.soul_devour.getParams(level);
+            return `每次攻击15%几率召唤亡灵(上限${params.maxSouls})，每个造成${(params.damageRatio * 100).toFixed(1)}%伤害`;
         }
     },
     damage_aura: {
@@ -146,9 +146,9 @@ export const SKILL_LIBRARY = {
         id: 'dragon_soul', name: '龙魂觉醒', type: 'dragon_soul', icon: '🐲',
         baseUnlockLevel: 40, baseDescription: '积累龙魂能量释放毁灭龙息',
         getParams: (level) => {
-            const burstMultiplier = 6 + Math.floor((level - 40) / 10) * 1;
+            const burstMultiplier = 5 + Math.floor((level - 40) / 10) * 1;
             const burnDamage = 0.05 + Math.floor((level - 40) / 15) * 0.02;
-            return { maxStacks: 10, burstMultiplier: Math.max(6, burstMultiplier), burnDamage: Math.max(0.05, burnDamage), burnDuration: 5000 };
+            return { maxStacks: 10, burstMultiplier: Math.max(5, burstMultiplier), burnDamage: Math.max(0.05, burnDamage), burnDuration: 5000 };
         },
         getDescription: (level) => {
             const params = SKILL_LIBRARY.dragon_soul.getParams(level);
@@ -171,7 +171,7 @@ export const SKILL_LIBRARY = {
         id: 'time_burst', name: '时空涟漪', type: 'time_burst', icon: '⏳',
         baseUnlockLevel: 35, baseDescription: '周期性释放时空连击',
         getParams: (level) => {
-            const attackCount = 12 + Math.floor((level - 35) / 20);
+            const attackCount = 9 + Math.floor((level - 35) / 20);
             const damageMultiplier = 1.0 + Math.floor((level - 35) / 10) * 0.2;
             return { interval: 60000, attackCount: Math.min(12, attackCount), damageMultiplier: Math.max(1.0, damageMultiplier) };
         },
@@ -222,11 +222,11 @@ export const SKILL_LIBRARY = {
         baseUnlockLevel: 50, baseDescription: '终极技能，集合所有效果',
         getParams: (level) => {
             const allBonus = 0.15 + Math.floor((level - 50) / 10) * 0.05;
-            return { teamDamageBonus: Math.max(0.15, allBonus), teamSpeedBonus: Math.max(0.15, allBonus) * 0.5, critChance: 0.25, critMult: 5.0 };
+            return { teamDamageBonus: Math.max(0.15, allBonus), teamSpeedBonus: Math.max(0.15, allBonus) * 0.5, critChance: 0.15, critMult: 5.0 };
         },
         getDescription: (level) => {
             const params = SKILL_LIBRARY.ultimate.getParams(level);
-            return `全队伤害+${(params.teamDamageBonus * 100).toFixed(0)}%，攻速+${(params.teamSpeedBonus * 100).toFixed(0)}%，25%暴击5倍`;
+            return `全队伤害+${(params.teamDamageBonus * 100).toFixed(0)}%，攻速+${(params.teamSpeedBonus * 100).toFixed(0)}%，15%暴击5倍`;
         }
     },
     legend_dual_growth: {
@@ -280,7 +280,7 @@ export const DEFAULT_UNIT_SKILLS = {
     'mage': 'global_speed_buff',
     'night_swordsman': 'shadow_crit',
     'ice_daughter': 'boss_debuff',
-    'necromancer': 'summon',
+    'necromancer': 'soul_devour',
     'priest': 'damage_aura',
     'dragon': 'dragon_soul',
     'angel': 'pure_percent_damage',
