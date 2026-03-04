@@ -18,19 +18,33 @@ function getUpgradeTier(upgradeCount) {
     return Math.floor((upgradeCount - 5) / 5) + 1;
 }
 
-// 查询佣兵是否拥有指定类型的技能
+// 查询佣兵是否拥有指定类型的技能（检查默认技能和进化技能）
 function hasSkillType(mercenary, skillType) {
-    const skillId = mercenary.evolvedSkillId || DEFAULT_UNIT_SKILLS[mercenary.id];
-    if (!skillId) return false;
-    const skillDef = SKILL_LIBRARY[skillId];
-    return skillDef && skillDef.type === skillType;
+    const defaultSkillId = DEFAULT_UNIT_SKILLS[mercenary.id];
+    const evolvedSkillId = mercenary.evolvedSkillId;
+    const defaultDef = defaultSkillId ? SKILL_LIBRARY[defaultSkillId] : null;
+    const evolvedDef = evolvedSkillId ? SKILL_LIBRARY[evolvedSkillId] : null;
+    return (defaultDef && defaultDef.type === skillType) || (evolvedDef && evolvedDef.type === skillType);
+}
+
+// 统计佣兵拥有指定类型技能的数量（0/1/2）
+function countSkillType(mercenary, skillType) {
+    let count = 0;
+    const defaultSkillId = DEFAULT_UNIT_SKILLS[mercenary.id];
+    const evolvedSkillId = mercenary.evolvedSkillId;
+    const defaultDef = defaultSkillId ? SKILL_LIBRARY[defaultSkillId] : null;
+    const evolvedDef = evolvedSkillId ? SKILL_LIBRARY[evolvedSkillId] : null;
+    if (defaultDef && defaultDef.type === skillType) count++;
+    if (evolvedDef && evolvedDef.type === skillType) count++;
+    return count;
 }
 
 // 计算纯升级伤害（不含任何加成和里程碑）
 export function calculateRawUpgradeDamage(mercenary) {
     let effectiveLevel = mercenary.damageLevel || 0;
-    if (mercenary.id === 'legend') {
-        effectiveLevel = (mercenary.damageLevel || 0) + (mercenary.intervalLevel || 0);
+    const dualCount = countSkillType(mercenary, 'legend_dual_growth');
+    if (dualCount > 0) {
+        effectiveLevel = (mercenary.damageLevel || 0) + (mercenary.intervalLevel || 0) * dualCount;
     }
     const baseAtk = mercenary.damage;
     const scale = baseAtk / 4;
@@ -105,8 +119,9 @@ export function getDamageDisplayInfo(mercenary, prestigeDamageMult = 1) {
 
 export function calculateUpgradedInterval(mercenary) {
     let effectiveLevel = mercenary.intervalLevel || 0;
-    if (mercenary.id === 'legend') {
-        effectiveLevel = (mercenary.intervalLevel || 0) + (mercenary.damageLevel || 0);
+    const dualCount = countSkillType(mercenary, 'legend_dual_growth');
+    if (dualCount > 0) {
+        effectiveLevel = (mercenary.intervalLevel || 0) + (mercenary.damageLevel || 0) * dualCount;
     }
     let interval = mercenary.attackInterval * Math.pow(0.99, effectiveLevel);
     // 里程碑：显示等级 = damageLevel + intervalLevel + 1

@@ -95,26 +95,26 @@ export const SKILL_LIBRARY = {
     },
     global_speed_buff: {
         id: 'global_speed_buff', name: '奥术激涌', type: 'global_speed_buff', icon: '⚡',
-        baseUnlockLevel: 20, baseDescription: '攻击时有几率使全体攻速提升',
+        baseUnlockLevel: 20, baseDescription: '攻击时有几率使全体攻速提升（全局唯一）',
         getParams: (level) => {
             const bonusSpeed = 0.05 + Math.floor((level - 20) / 10) * 0.05;
             return { chance: 0.10, val: Math.max(0.05, bonusSpeed), duration: 5000 };
         },
         getDescription: (level) => {
             const params = SKILL_LIBRARY.global_speed_buff.getParams(level);
-            return `10%几率使全体攻速提升${(params.val * 100).toFixed(0)}% (持续5秒)`;
+            return `10%几率使全体攻速提升${(params.val * 100).toFixed(0)}% (持续5秒)（全局唯一）`;
         }
     },
     boss_debuff: {
         id: 'boss_debuff', name: '冰霜冻结', type: 'boss_debuff', icon: '❄️',
-        baseUnlockLevel: 25, baseDescription: '攻击时有概率冻结Boss增加其受到伤害',
+        baseUnlockLevel: 25, baseDescription: '攻击时有概率冻结Boss增加其受到伤害（全局唯一）',
         getParams: (level) => {
             const debuffVal = 0.15 + Math.floor((level - 25) / 10) * 0.05;
             return { chance: 0.12, val: Math.max(0.15, debuffVal), duration: 4000 };
         },
         getDescription: (level) => {
             const params = SKILL_LIBRARY.boss_debuff.getParams(level);
-            return `12%几率使Boss受伤+${(params.val * 100).toFixed(0)}% (4秒)`;
+            return `12%几率使Boss受伤+${(params.val * 100).toFixed(0)}% (4秒)（全局唯一）`;
         }
     },
     soul_devour: {
@@ -132,14 +132,14 @@ export const SKILL_LIBRARY = {
     },
     damage_aura: {
         id: 'damage_aura', name: '神圣祝福', type: 'damage_aura', icon: '✨',
-        baseUnlockLevel: 25, baseDescription: '为全队提供永久伤害加成光环',
+        baseUnlockLevel: 25, baseDescription: '为全队提供永久伤害加成光环（全局唯一）',
         getParams: (level) => {
             const auraVal = 0.08 + Math.floor((level - 25) / 10) * 0.03;
             return { val: Math.max(0.08, auraVal) };
         },
         getDescription: (level) => {
             const params = SKILL_LIBRARY.damage_aura.getParams(level);
-            return `全队永久伤害+${(params.val * 100).toFixed(0)}%`;
+            return `全队永久伤害+${(params.val * 100).toFixed(0)}%（全局唯一）`;
         }
     },
     dragon_soul: {
@@ -219,14 +219,14 @@ export const SKILL_LIBRARY = {
     },
     ultimate: {
         id: 'ultimate', name: '万物终结', type: 'ultimate', icon: '✨',
-        baseUnlockLevel: 50, baseDescription: '终极技能，集合所有效果',
+        baseUnlockLevel: 50, baseDescription: '终极技能，集合所有效果（全局唯一）',
         getParams: (level) => {
             const allBonus = 0.15 + Math.floor((level - 50) / 10) * 0.05;
             return { teamDamageBonus: Math.max(0.15, allBonus), teamSpeedBonus: Math.max(0.15, allBonus) * 0.5, critChance: 0.15, critMult: 5.0 };
         },
         getDescription: (level) => {
             const params = SKILL_LIBRARY.ultimate.getParams(level);
-            return `全队伤害+${(params.teamDamageBonus * 100).toFixed(0)}%，攻速+${(params.teamSpeedBonus * 100).toFixed(0)}%，15%暴击5倍`;
+            return `全队伤害+${(params.teamDamageBonus * 100).toFixed(0)}%，攻速+${(params.teamSpeedBonus * 100).toFixed(0)}%，15%暴击5倍（全局唯一）`;
         }
     },
     legend_dual_growth: {
@@ -411,9 +411,8 @@ export function getEvolvedUnitSkillDisplay(mercenary) {
 }
 
 export function getEvolvableSkills(mercId) {
-    const excludeIds = ['sync_click_damage', 'legend_dual_growth', 'legend_sword', 'meta_legend_sword', 'knight_heavy_armor', 'knight_fortify', 'experience_growth', 'team_damage_buff', 'extreme_focus'];
-    const defaultSkillId = DEFAULT_UNIT_SKILLS[mercId];
+    const excludeIds = ['sync_click_damage', 'legend_sword', 'meta_legend_sword', 'knight_heavy_armor', 'knight_fortify', 'experience_growth', 'team_damage_buff', 'extreme_focus'];
     return Object.values(SKILL_LIBRARY)
-        .filter(skill => !excludeIds.includes(skill.id) && skill.id !== defaultSkillId)
+        .filter(skill => !excludeIds.includes(skill.id))
         .map(skill => ({ id: skill.id, name: skill.name, icon: skill.icon, baseDescription: skill.baseDescription, baseUnlockLevel: skill.baseUnlockLevel }));
 }

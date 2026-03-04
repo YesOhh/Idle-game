@@ -336,7 +336,7 @@ function processBattleTick() {
                         skillTriggered = { type: 'summon', text: `💀x${soulCount}/${skill.maxSouls} +${gameEngine.formatNumber(total)}` };
                     }
                 } else if (skill.type === 'damage_aura') {
-                    if (!_damageAura) _damageAura = skill.val;
+                    _damageAura = skill.val;
                 } else if (skill.type === 'pure_percent_damage') {
                     if (Math.random() < skill.chance) {
                         const dmgLvPlus1 = (merc.damageLevel || 0) + 1;
@@ -360,7 +360,7 @@ function processBattleTick() {
                         skillTriggered = { type: 'phoenix', text: `浴火重生 x${skill.multiplier}!` };
                     }
                 } else if (skill.type === 'ultimate') {
-                    if (!_ultimateAura) _ultimateAura = { damage: skill.teamDamageBonus, speed: skill.teamSpeedBonus };
+                    _ultimateAura = { damage: skill.teamDamageBonus, speed: skill.teamSpeedBonus };
                     if (Math.random() < skill.critChance) { thisHitDamage *= skill.critMult; isCrit = true; skillTriggered = { type: 'ultimate', text: `万物终结 x${skill.critMult}!` }; }
                 } else if (skill.type === 'legend_dual_growth') {
                     // 传说之剑: 1%概率挥出传说之剑
