@@ -915,6 +915,12 @@ input:checked + .toggle-slider:before { transform: translateX(18px); }
     padding: 7px 10px; border-radius: 5px; font-family: inherit; font-size: 12px; width: 100%;
 }
 .sim-control-group select:focus, .sim-control-group input:focus { outline: none; border-color: var(--secondary-color); }
+.sim-current-levels { min-width: 100%; }
+.sim-level-inputs { display: flex; align-items: center; gap: 10px; }
+.sim-level-input-group { display: flex; align-items: center; gap: 4px; }
+.sim-level-input-group span { font-size: 11px; color: var(--text-secondary); white-space: nowrap; }
+.sim-level-input-group input { width: 65px !important; text-align: center; }
+.sim-current-display { font-size: 13px; font-weight: bold; color: var(--accent-color); white-space: nowrap; }
 .sim-mode-tabs { display: flex; border-radius: 5px; overflow: hidden; border: 1px solid var(--border-color); }
 .sim-mode-tab {
     padding: 6px 12px; font-size: 11px; cursor: pointer; background: var(--bg-dark);

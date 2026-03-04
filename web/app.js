@@ -1248,6 +1248,30 @@ function setupSimulator() {
         select.lastElementChild.appendChild(opt);
     });
 
+    // Auto-fill current levels when selecting a merc
+    const simDmgInput = document.getElementById('sim-current-dmg');
+    const simSpdInput = document.getElementById('sim-current-spd');
+    const simTotalDisplay = document.getElementById('sim-current-total');
+    function updateSimTotalDisplay() {
+        const d = parseInt(simDmgInput.value) || 0;
+        const s = parseInt(simSpdInput.value) || 0;
+        simTotalDisplay.textContent = d + s + 1;
+    }
+    simDmgInput.addEventListener('input', updateSimTotalDisplay);
+    simSpdInput.addEventListener('input', updateSimTotalDisplay);
+    select.addEventListener('change', () => {
+        const mercId = select.value;
+        const gameMerc = G.mercenaries ? G.mercenaries.find(m => m.id === mercId) : null;
+        if (gameMerc && gameMerc.recruited) {
+            simDmgInput.value = gameMerc.damageLevel || 0;
+            simSpdInput.value = gameMerc.intervalLevel || 0;
+        } else {
+            simDmgInput.value = 0;
+            simSpdInput.value = 0;
+        }
+        updateSimTotalDisplay();
+    });
+
     let simUpgradeMode = 'damage';
     document.querySelectorAll('.sim-mode-tab').forEach(tab => {
         tab.addEventListener('click', () => {
@@ -1267,23 +1291,45 @@ function setupSimulator() {
         const mercId = select.value;
         const mercData = MERCENARIES_DATA.find(m => m.id === mercId);
         if (!mercData) return;
-        const targetLevel = Math.max(2, Math.min(500, parseInt(document.getElementById('sim-target-level').value) || 100));
+        const startDmgLevel = Math.max(0, parseInt(simDmgInput.value) || 0);
+        const startSpdLevel = Math.max(0, parseInt(simSpdInput.value) || 0);
+        const startDisplayLevel = startDmgLevel + startSpdLevel + 1;
+        const targetLevel = Math.max(startDisplayLevel + 1, Math.min(500, parseInt(document.getElementById('sim-target-level').value) || 100));
 
         const merc = {
             id: mercData.id, damage: mercData.damage, attackInterval: mercData.attackInterval,
-            baseCost: mercData.baseCost, damageLevel: 0, intervalLevel: 0,
+            baseCost: mercData.baseCost, damageLevel: startDmgLevel, intervalLevel: startSpdLevel,
             _milestoneDamageBonus: 0, _knightHeavyBonus: 0
         };
 
+        // Pre-compute milestone bonuses for levels already passed
+        if (startDisplayLevel >= 50) {
+            const rawDmg = gameEngine.calculateRawUpgradeDamage(merc);
+            merc._milestoneDamageBonus = rawDmg;
+        }
+        if (startDisplayLevel >= 100) {
+            const rawDmg = gameEngine.calculateRawUpgradeDamage(merc);
+            merc._milestoneDamageBonus = (merc._milestoneDamageBonus || 0) + rawDmg + merc._milestoneDamageBonus;
+        }
+        // Pre-compute knight heavy bonus
+        const isKnight = mercData.id === 'knight';
+        if (isKnight) {
+            let knightBonus = 0;
+            for (let dl = 1; dl <= startDmgLevel; dl++) {
+                const dispAtThatPoint = dl + startSpdLevel + 1;
+                knightBonus += dl * dl * dispAtThatPoint;
+            }
+            merc._knightHeavyBonus = knightBonus;
+        }
+
         const rows = [];
-        let totalGold = mercData.baseCost;
+        let totalGold = 0;
         rows.push({
-            displayLevel: 1, type: '雇佣', cost: mercData.baseCost, totalCost: totalGold,
-            damage: gameEngine.calculateUpgradedDamage(merc), interval: gameEngine.calculateUpgradedInterval(merc), note: ''
+            displayLevel: startDisplayLevel, type: '当前', cost: 0, totalCost: 0,
+            damage: gameEngine.calculateUpgradedDamage(merc), interval: gameEngine.calculateUpgradedInterval(merc), note: `⚔️${startDmgLevel} + ⚡${startSpdLevel}`
         });
 
-        const isKnight = mercData.id === 'knight';
-        for (let lvl = 2; lvl <= targetLevel; lvl++) {
+        for (let lvl = startDisplayLevel + 1; lvl <= targetLevel; lvl++) {
             const cost = gameEngine.calculateMercenaryUpgradeCost(merc);
             totalGold += cost;
             const oldDisplayLevel = merc.damageLevel + merc.intervalLevel + 1;
@@ -1326,7 +1372,7 @@ function setupSimulator() {
         document.getElementById('sim-s-interval').textContent = `${last.interval.toFixed(4)}s`;
         document.getElementById('sim-s-interval-detail').textContent = `基础: ${mercData.attackInterval}s`;
         document.getElementById('sim-s-gold').textContent = gameEngine.formatNumber(last.totalCost);
-        document.getElementById('sim-s-gold-detail').textContent = `雇佣${gameEngine.formatNumber(mercData.baseCost)} + 升级${gameEngine.formatNumber(last.totalCost - mercData.baseCost)}`;
+        document.getElementById('sim-s-gold-detail').textContent = `从 Lv.${startDisplayLevel} 到 Lv.${last.displayLevel} 的升级费用`;
 
         // Table
         const tbody = document.getElementById('sim-tbody');

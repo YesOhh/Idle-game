@@ -186,6 +186,24 @@
                         </div>
                     </div>
                     <div class="sim-control-row">
+                        <div class="sim-control-group sim-current-levels">
+                            <label>当前等级 <span style="font-size:10px;color:#888">(选英雄后自动填充)</span></label>
+                            <div class="sim-level-inputs">
+                                <div class="sim-level-input-group">
+                                    <span>⚔️攻击</span>
+                                    <input type="number" id="sim-current-dmg" value="0" min="0" max="500">
+                                </div>
+                                <div class="sim-level-input-group">
+                                    <span>⚡攻速</span>
+                                    <input type="number" id="sim-current-spd" value="0" min="0" max="500">
+                                </div>
+                                <div class="sim-current-display">
+                                    = Lv.<span id="sim-current-total">1</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="sim-control-row">
                         <div class="sim-control-group">
                             <label>升级策略</label>
                             <div class="sim-mode-tabs">
