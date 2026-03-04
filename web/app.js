@@ -1175,6 +1175,38 @@ function setupUI() {
         icon.classList.add('hit');
     });
 
+    // Evolution tooltip toggle
+    document.getElementById('evolution-stat').addEventListener('click', (e) => {
+        e.stopPropagation();
+        const tooltip = document.getElementById('evolution-tooltip');
+        if (tooltip.style.display !== 'none') {
+            tooltip.style.display = 'none';
+            return;
+        }
+        const pool = gameEngine.getEvolvableSkillsForMerc(null);
+        const globalUniqueIds = ['damage_aura', 'ultimate', 'global_speed_buff', 'boss_debuff'];
+        let html = '<div class="evolution-tooltip-title">🧬 可进化技能一览</div>';
+        pool.forEach(sk => {
+            const isUnique = globalUniqueIds.includes(sk.id);
+            html += `<div class="evolution-tooltip-item">
+                <span class="evolution-tooltip-icon">${sk.icon}</span>
+                <div class="evolution-tooltip-info">
+                    <div class="evolution-tooltip-name">${sk.name}${isUnique ? ' <span class="evolution-tooltip-unique">（全局唯一）</span>' : ''}</div>
+                    <div class="evolution-tooltip-desc">${sk.baseDescription}</div>
+                </div>
+            </div>`;
+        });
+        tooltip.innerHTML = html;
+        tooltip.style.display = 'block';
+    });
+    // Close tooltip when clicking elsewhere
+    document.addEventListener('click', (e) => {
+        const tooltip = document.getElementById('evolution-tooltip');
+        if (tooltip && !e.target.closest('#evolution-stat')) {
+            tooltip.style.display = 'none';
+        }
+    });
+
     // Battle merc list delegation (use pointerdown to avoid lost clicks from DOM rebuild)
     document.getElementById('battle-merc-list').addEventListener('pointerdown', (e) => {
         // Toggle expand
