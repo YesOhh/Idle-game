@@ -605,7 +605,7 @@ function getSkillScalingInfo(sk, merc) {
             break;
         case 'total_team_damage':
             lines.push({ label: '触发概率', value: '10%', growth: '固定' });
-            lines.push({ label: '伤害倍率', value: `全队攻击力总和×${(sk.ratio * 100).toFixed(0)}%`, growth: '每+10级 → +10% (上限100%)' });
+            lines.push({ label: '伤害倍率', value: `全队攻击力总和×${(sk.ratio * 100).toFixed(0)}%`, growth: '每+10级 → +10% (上限150%)' });
             break;
         case 'periodic_burst':
             lines.push({ label: '伤害倍率', value: `${sk.multiplier}x`, growth: '每+10级 → +20x' });
