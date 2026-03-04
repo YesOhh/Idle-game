@@ -724,11 +724,11 @@ function updateBattleMercList() {
             </div>
             <div class="merc-expand-content">
                 <div class="upgrade-box" data-upgrade-dmg="${merc.id}">
-                    <div class="upgrade-info"><span class="upgrade-title">当前等级${(merc.damageLevel||0)+1}　升级攻击力</span><span class="upgrade-effect">攻击力 +${damageUpgradeEffect}</span></div>
+                    <div class="upgrade-info"><span class="upgrade-title">当前攻击力等级${merc.damageLevel||0}　升级攻击力</span><span class="upgrade-effect">攻击力 +${damageUpgradeEffect}</span></div>
                     <div class="upgrade-cost ${canAffordUpgrade ? '' : 'disabled'}">花费　💰 ${gameEngine.formatNumber(upgradeCost)}</div>
                 </div>
                 <div class="upgrade-box" data-upgrade-int="${merc.id}">
-                    <div class="upgrade-info"><span class="upgrade-title">当前等级${(merc.intervalLevel||0)+1}　升级攻击速度</span><span class="upgrade-effect">攻击间隔 -${intervalUpgradeEffect}秒</span></div>
+                    <div class="upgrade-info"><span class="upgrade-title">当前攻速等级${merc.intervalLevel||0}　升级攻击速度</span><span class="upgrade-effect">攻击间隔 -${intervalUpgradeEffect}秒</span></div>
                     <div class="upgrade-cost ${canAffordUpgrade ? '' : 'disabled'}">花费　💰 ${gameEngine.formatNumber(upgradeCost)}</div>
                 </div>
                 <div class="merc-description">${merc.description}</div>

@@ -243,9 +243,9 @@ export const SKILL_LIBRARY = {
     },
     meta_legend_sword: {
         id: 'meta_legend_sword', name: '元传说之剑', type: 'meta_legend_sword', icon: '🗡️',
-        baseUnlockLevel: 75, baseDescription: '传说之剑额外增加（全军攻击力×(攻击力等级+1)÷10）点伤害',
+        baseUnlockLevel: 75, baseDescription: '传说之剑额外增加（全军攻击力×(攻击力等级+1)/10）点伤害',
         getParams: (level) => ({}),
-        getDescription: (level) => '传说之剑额外+（全军攻击力×(攻击力等级+1)÷10）点伤害'
+        getDescription: (level) => '传说之剑额外+（全军攻击力×(攻击力等级+1)/10）点伤害'
     },
     knight_heavy_armor: {
         id: 'knight_heavy_armor', name: '重装', type: 'knight_heavy_armor', icon: '🛡️',
