@@ -226,7 +226,7 @@ export const SKILL_LIBRARY = {
         },
         getDescription: (level) => {
             const params = SKILL_LIBRARY.ultimate.getParams(level);
-            return `全队伤害+${(params.teamDamageBonus * 100).toFixed(0)}%，攻速+${(params.teamSpeedBonus * 100).toFixed(0)}%，攻击时15%暴击5倍（全局唯一）`;
+            return `全队伤害+${(params.teamDamageBonus * 100).toFixed(0)}%，攻速+${(params.teamSpeedBonus * 100).toFixed(0)}%，全队攻击时15%概率5倍暴击（全局唯一）`;
         }
     },
     legend_dual_growth: {

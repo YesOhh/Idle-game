@@ -325,12 +325,13 @@ Boss血量 = floor(30000 × 135^(等级-1))
    ├─ 虚空侵蚀：          thisHitDamage += 全队攻击力总和 × ratio(40%~100%)
    ├─ 时空涟漪：          thisHitDamage = 基础×damageMultiplier × attackCount
    ├─ 浴火重生：          thisHitDamage × multiplier（每60秒触发）
-   ├─ 万物终结（暴击）：  thisHitDamage × critMult
+   ├─ 浴火重生：          thisHitDamage × multiplier（每60秒触发）
    └─ 稳固：              thisHitDamage += 骑士全额攻击力（每8秒触发）
 4. 分系圣物加成：         thisHitDamage × (1 + 该系cat_damage%)
 5. 全局光环加成：
    ├─ 神圣祝福光环：      thisHitDamage × (1 + aura%)
    ├─ 万物终结光环：      thisHitDamage × (1 + teamDamageBonus%)
+   ├─ 万物终结暴击：      15%概率 thisHitDamage × 5.0（全队光环效果）
    └─ 冰霜冻结减抗：      thisHitDamage × (1 + debuff%)
 6. 最终伤害 = floor(thisHitDamage)
 ```
@@ -451,7 +452,7 @@ costReduction = (1 - val₁)^level₁ × (1 - val₂)^level₂ × ...
 | ⚔️ | 传说之剑 | 传说 | 传说 | Lv.35 | 概率触发 | 1%概率造成9999999999×(攻击力等级+1)伤害 |
 | 🗡️ | 元传说之剑 | 传说 | 传说 | Lv.75 | 被动增强 | 传说之剑额外+全军攻击力×(攻击力等级+1)/10 |
 | 🌀 | 混沌法则 | 混沌 | 传说 | Lv.45 | 概率触发 | 攻击力↑ 但攻击间隔↑ |
-| ✨ | 万物终结 | 无极 | 传说 | Lv.50 | 永久光环+概率 | 全队增伤增速+暴击 |
+| ✨ | 万物终结 | 无极 | 传说 | Lv.50 | 永久光环 | 全队增伤增速+全队暴击 |
 | ⚡ | 极 | 通用进化 | — | Lv.0 | 被动 | 攻击力+120%但攻速-0.5%/级 |
 
 ### 8.2 技能等级成长表
@@ -700,7 +701,7 @@ Lv.75解锁。传说之剑触发时额外增加基于全军攻击力的伤害。
 公式：
 - `全队增伤 = max(15%, 15% + floor((等级-50)/10) × 5%)`
 - `全队增速 = 增伤 × 50%`
-- `暴击 = 15%概率 5.0倍（固定）`
+- `全队暴击 = 15%概率 5.0倍（固定，光环效果作用于所有佣兵）`
 
 #### ⚡ 极（通用可进化技能）
 

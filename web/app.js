@@ -374,8 +374,7 @@ function processBattleTick() {
                         skillTriggered = { type: 'phoenix', text: `浴火重生 x${skill.multiplier}!` };
                     }
                 } else if (skill.type === 'ultimate') {
-                    _ultimateAura = { damage: skill.teamDamageBonus, speed: skill.teamSpeedBonus };
-                    if (Math.random() < skill.critChance) { thisHitDamage *= skill.critMult; isCrit = true; skillTriggered = { type: 'ultimate', text: `万物终结 x${skill.critMult}!` }; }
+                    _ultimateAura = { damage: skill.teamDamageBonus, speed: skill.teamSpeedBonus, critChance: skill.critChance, critMult: skill.critMult };
                 } else if (skill.type === 'legend_dual_growth') {
                     // 传说之剑: 1%概率挥出传说之剑
                     const lTotalLevel = (merc.damageLevel || 0) + (merc.intervalLevel || 0) + 1;
@@ -415,6 +414,10 @@ function processBattleTick() {
             }
             if (_damageAura) thisHitDamage *= (1 + _damageAura);
             if (_ultimateAura) thisHitDamage *= (1 + _ultimateAura.damage);
+            if (_ultimateAura && _ultimateAura.critChance && Math.random() < _ultimateAura.critChance) {
+                thisHitDamage *= _ultimateAura.critMult; isCrit = true;
+                if (!skillTriggered) skillTriggered = { type: 'ultimate', text: `万物终结 x${_ultimateAura.critMult}!` };
+            }
             if (_bossDebuff) thisHitDamage *= (1 + _bossDebuff);
             thisHitDamage = Math.floor(thisHitDamage);
 
@@ -616,7 +619,7 @@ function getSkillScalingInfo(sk, merc) {
         case 'ultimate':
             lines.push({ label: '全队增伤', value: `+${(sk.teamDamageBonus * 100).toFixed(0)}%`, growth: '每+10级 → +5%' });
             lines.push({ label: '全队攻速', value: `+${(sk.teamSpeedBonus * 100).toFixed(0)}%`, growth: '随增伤同步' });
-            lines.push({ label: '暴击', value: '15%几率5.0x', growth: '固定' });
+            lines.push({ label: '全队暴击', value: '15%几率5.0x', growth: '固定（光环效果）' });
             break;
         case 'knight_heavy_armor':
             lines.push({ label: '效果', value: '升级攻击力时额外+攻击力等级²×等级', growth: '随等级增长' });
