@@ -156,6 +156,7 @@ body {
 .damage-number.skill-void { color: #8a2be2; font-size: 26px; }
 .damage-number.skill-phoenix { color: #ff4500; font-size: 28px; }
 .damage-number.skill-ultimate { color: #fff; font-size: 30px; text-shadow: 0 0 5px #ffd700, 0 0 10px #ff69b4, 0 0 15px #00ffff; }
+.damage-number.skill-legend-sword { color: #ffd700; font-size: 32px; text-shadow: 0 0 5px #e74c3c, 0 0 10px #ff4500, 0 0 20px #ffd700; }
 
 /* Speed buff border effect */
 .boss-section.speed-buff-active {
@@ -323,6 +324,7 @@ body {
 .merc-skill-float.skill-void { color: #8a2be2; font-size: 13px; }
 .merc-skill-float.skill-phoenix { color: #ff4500; font-size: 13px; }
 .merc-skill-float.skill-ultimate { color: #fff; font-size: 14px; text-shadow: 0 0 5px #ffd700, 0 0 10px #ff69b4; }
+.merc-skill-float.skill-legend-sword { color: #ffd700; font-size: 14px; text-shadow: 0 0 5px #e74c3c, 0 0 10px #ff4500, 0 0 15px #ffd700; }
 @keyframes mercSkillFloat {
     0% { opacity: 1; transform: translateY(0); }
     70% { opacity: 1; }

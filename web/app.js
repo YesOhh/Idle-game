@@ -326,9 +326,9 @@ function processBattleTick() {
                     if (!_damageAura) _damageAura = skill.val;
                 } else if (skill.type === 'pure_percent_damage') {
                     if (Math.random() < skill.chance) {
-                        const totalLevel = (merc.damageLevel || 0) + (merc.intervalLevel || 0) + 1;
+                        const dmgLvPlus1 = (merc.damageLevel || 0) + 1;
                         let tt = 0; G.mercenaries.forEach(m => { if (m.recruited) tt += gameEngine.calculateUpgradedDamage(m, prestigeBonus.damage); });
-                        const cap = Math.floor(tt * totalLevel / 10);
+                        const cap = Math.floor(tt * dmgLvPlus1 / 30);
                         const pd = Math.min(Math.floor(G.boss.currentHp * skill.percentVal), cap);
                         thisHitDamage += pd;
                         skillTriggered = { type: 'holy', text: `圣洁之力 ${gameEngine.formatNumber(pd)}` };
@@ -349,6 +349,24 @@ function processBattleTick() {
                 } else if (skill.type === 'ultimate') {
                     if (!_ultimateAura) _ultimateAura = { damage: skill.teamDamageBonus, speed: skill.teamSpeedBonus };
                     if (Math.random() < skill.critChance) { thisHitDamage *= skill.critMult; isCrit = true; skillTriggered = { type: 'ultimate', text: `万物终结 x${skill.critMult}!` }; }
+                } else if (skill.type === 'legend_dual_growth') {
+                    // 传说之剑: 1%概率挥出传说之剑
+                    const lTotalLevel = (merc.damageLevel || 0) + (merc.intervalLevel || 0) + 1;
+                    if (lTotalLevel >= 35 && Math.random() < 0.01) {
+                        const dmgLv = (merc.damageLevel || 0) + 1;
+                        let swordDmg = 9999999999 * dmgLv;
+                        let metaActive = false;
+                        // 元传说之剑: 额外增加全军攻击力×(攻击力等级+1)/10
+                        if (lTotalLevel >= 75) {
+                            let tt = 0;
+                            G.mercenaries.forEach(m => { if (m.recruited) tt += gameEngine.calculateUpgradedDamage(m, prestigeBonus.damage); });
+                            swordDmg += Math.floor(tt * dmgLv / 10);
+                            metaActive = true;
+                        }
+                        thisHitDamage += swordDmg; isCrit = true;
+                        const tag = metaActive ? '元传说之剑' : '传说之剑';
+                        skillTriggered = { type: 'legend_sword', text: `⚔️${tag} +${gameEngine.formatNumber(swordDmg)}!` };
+                    }
                 } else if (skill.type === 'knight_heavy_armor') {
                     // 「稳固」技能：每隔8秒造成等同攻击力的额外伤害
                     if (typeof merc._fortifyTimer === 'undefined') merc._fortifyTimer = 0;
@@ -442,6 +460,12 @@ function getSkillLevelLabel(sk, merc, boss) {
         case 'ultimate': return '';
         case 'knight_heavy_armor': return '';
         case 'knight_fortify': return '';
+        case 'legend_dual_growth': {
+            const tl = (merc.damageLevel || 0) + (merc.intervalLevel || 0) + 1;
+            if (tl >= 75) return '⚔️元';
+            if (tl >= 35) return '⚔️';
+            return '';
+        }
         default: return '';
     }
 }
@@ -508,7 +532,7 @@ function getSkillScalingInfo(sk, merc) {
         case 'pure_percent_damage':
             lines.push({ label: '触发概率', value: `${(sk.chance * 100).toFixed(0)}%`, growth: '每+20级 → +2%' });
             lines.push({ label: '百分比伤害', value: 'Boss当前血量0.01%', growth: '固定' });
-            lines.push({ label: '伤害上限', value: '全队攻击力×等级/10', growth: '随等级和全队攻击力成长' });
+            lines.push({ label: '伤害上限', value: '全队攻击力×(攻击力等级+1)/30', growth: '随攻击力等级和全队攻击力成长' });
             break;
         case 'time_burst':
             lines.push({ label: '攻击次数', value: `${sk.attackCount}次`, growth: '每+20级 → +1次 (上限12)' });
@@ -551,7 +575,7 @@ function getSkillScalingInfo(sk, merc) {
 }
 
 function getSkillClass(skillType) {
-    const map = { stacking_buff: 'skill', crit: 'skill-crit', speed_buff: 'skill-mage', damage_buff: 'skill-dragon', combo: 'skill-combo', burn: 'skill-burn', chaos: 'skill-chaos', time_burst: 'skill-time', gold: 'skill-gold', team_buff: 'skill-royal', teaching: 'skill-royal', iron_fist: 'skill-iron', freeze: 'skill-freeze', summon: 'skill-summon', holy: 'skill-holy', void: 'skill-void', phoenix: 'skill-phoenix', ultimate: 'skill-ultimate', knight_fortify: 'skill-iron' };
+    const map = { stacking_buff: 'skill', crit: 'skill-crit', speed_buff: 'skill-mage', damage_buff: 'skill-dragon', combo: 'skill-combo', burn: 'skill-burn', chaos: 'skill-chaos', time_burst: 'skill-time', gold: 'skill-gold', team_buff: 'skill-royal', teaching: 'skill-royal', iron_fist: 'skill-iron', freeze: 'skill-freeze', summon: 'skill-summon', holy: 'skill-holy', void: 'skill-void', phoenix: 'skill-phoenix', ultimate: 'skill-ultimate', knight_fortify: 'skill-iron', legend_sword: 'skill-legend-sword' };
     return map[skillType] || 'skill';
 }
 
@@ -649,6 +673,7 @@ function updateBattleMercList() {
         let skillInfo = gameEngine.getMercenarySkillDisplay(merc);
         let shortName = '';
         let skill2ShortName = '';
+        let skill3ShortName = '';
         let skillLevelLabel = '';
         if (skillInfo && skillInfo.name) {
             const m = skillInfo.name.match(/【(.+?)】/);
@@ -656,6 +681,10 @@ function updateBattleMercList() {
             if (skillInfo.skill2 && skillInfo.skill2.name) {
                 const m2 = skillInfo.skill2.name.match(/【(.+?)】/);
                 skill2ShortName = m2 ? m2[1] : skillInfo.skill2.name;
+            }
+            if (skillInfo.skill3 && skillInfo.skill3.name) {
+                const m3 = skillInfo.skill3.name.match(/【(.+?)】/);
+                skill3ShortName = m3 ? m3[1] : skillInfo.skill3.name;
             }
         }
         // Compute level-dependent skill label
@@ -689,16 +718,17 @@ function updateBattleMercList() {
                     ${skillInfo ? `<div class="merc-skill-tag">
                         <span class="skill-tag ${skillInfo.isUnlocked ? 'unlocked' : 'locked'}">[${shortName}]${skillLevelLabel ? `<span class="skill-level-label"> ${skillLevelLabel}</span>` : ''}</span>
                         ${skillInfo.skill2 ? `<span class="skill-tag ${skillInfo.skill2.isUnlocked ? 'unlocked' : 'locked'}">[${skill2ShortName}]</span>` : ''}
+                        ${skillInfo.skill3 ? `<span class="skill-tag ${skillInfo.skill3.isUnlocked ? 'unlocked' : 'locked'}">[${skill3ShortName}]</span>` : ''}
                     </div>` : ''}
                 </div>
             </div>
             <div class="merc-expand-content">
                 <div class="upgrade-box" data-upgrade-dmg="${merc.id}">
-                    <div class="upgrade-info"><span class="upgrade-title">升级攻击力 等级 ${(merc.damageLevel||0)+1}</span><span class="upgrade-effect">攻击力 +${damageUpgradeEffect}</span></div>
+                    <div class="upgrade-info"><span class="upgrade-title">当前等级${(merc.damageLevel||0)+1}　升级攻击力</span><span class="upgrade-effect">攻击力 +${damageUpgradeEffect}</span></div>
                     <div class="upgrade-cost ${canAffordUpgrade ? '' : 'disabled'}">花费　💰 ${gameEngine.formatNumber(upgradeCost)}</div>
                 </div>
                 <div class="upgrade-box" data-upgrade-int="${merc.id}">
-                    <div class="upgrade-info"><span class="upgrade-title">升级攻击速度 等级 ${(merc.intervalLevel||0)+1}</span><span class="upgrade-effect">攻击间隔 -${intervalUpgradeEffect}秒</span></div>
+                    <div class="upgrade-info"><span class="upgrade-title">当前等级${(merc.intervalLevel||0)+1}　升级攻击速度</span><span class="upgrade-effect">攻击间隔 -${intervalUpgradeEffect}秒</span></div>
                     <div class="upgrade-cost ${canAffordUpgrade ? '' : 'disabled'}">花费　💰 ${gameEngine.formatNumber(upgradeCost)}</div>
                 </div>
                 <div class="merc-description">${merc.description}</div>
@@ -734,6 +764,13 @@ function updateBattleMercList() {
                     </div>
                     <div class="skill-detail-desc">${skillInfo.skill2.desc}</div>
                 </div>` : ''}
+                ${skillInfo && skillInfo.skill3 ? `<div class="skill-detail">
+                    <div class="skill-detail-header">
+                        <span class="skill-detail-name ${skillInfo.skill3.isUnlocked ? 'unlocked' : 'locked'}">${skill3ShortName}</span>
+                        ${!skillInfo.skill3.isUnlocked ? `<span class="skill-unlock-condition">${skillInfo.skill3.unlockCondition}</span>` : ''}
+                    </div>
+                    <div class="skill-detail-desc">${skillInfo.skill3.desc}</div>
+                </div>` : ''}
             </div>
         </div>`;
     });
@@ -756,6 +793,7 @@ function updateManageMercList() {
             const m = skillInfo.name.match(/【(.+?)】/);
             skillInfo.shortName = m ? m[1] : skillInfo.name;
             if (skillInfo.skill2) { const m2 = skillInfo.skill2.name.match(/【(.+?)】/); skillInfo.skill2.shortName = m2 ? m2[1] : skillInfo.skill2.name; }
+            if (skillInfo.skill3) { const m3 = skillInfo.skill3.name.match(/【(.+?)】/); skillInfo.skill3.shortName = m3 ? m3[1] : skillInfo.skill3.name; }
         }
         return { ...merc, recruitCost, currentDamageText: gameEngine.formatNumber(dmgInfo.final), currentIntervalText: currentInterval.toFixed(4), recruitCostText: gameEngine.formatNumber(recruitCost), canAffordRecruit: !merc.recruited && G.player.gold >= recruitCost, skillInfo, categoryInfo: getCategoryInfo(merc.category) };
     });

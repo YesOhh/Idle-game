@@ -164,7 +164,7 @@ export const SKILL_LIBRARY = {
         },
         getDescription: (level) => {
             const params = SKILL_LIBRARY.pure_percent_damage.getParams(level);
-            return `${(params.chance * 100).toFixed(0)}%几率造成Boss血量0.01%伤害(上限:全队攻击力×等级/10)`;
+            return `${(params.chance * 100).toFixed(0)}%几率造成Boss血量0.01%伤害(上限:全队攻击力×(攻击力等级+1)/30)`;
         }
     },
     time_burst: {
@@ -234,6 +234,18 @@ export const SKILL_LIBRARY = {
         baseUnlockLevel: 0, baseDescription: '升级攻击力时攻击速度也会提升，反之亦然',
         getParams: (level) => ({}),
         getDescription: (level) => '升级攻击力时攻击速度也会提升，反之亦然'
+    },
+    legend_sword: {
+        id: 'legend_sword', name: '传说之剑', type: 'legend_sword', icon: '⚔️',
+        baseUnlockLevel: 35, baseDescription: '攻击时有1%概率挥出传说之剑，造成巨额伤害',
+        getParams: (level) => ({ chance: 0.01, baseDamagePerLevel: 9999999999 }),
+        getDescription: (level) => `1%概率造成（9999999999×(攻击力等级+1)）点伤害`
+    },
+    meta_legend_sword: {
+        id: 'meta_legend_sword', name: '元传说之剑', type: 'meta_legend_sword', icon: '🗡️',
+        baseUnlockLevel: 75, baseDescription: '传说之剑额外增加（全军攻击力×(攻击力等级+1)÷10）点伤害',
+        getParams: (level) => ({}),
+        getDescription: (level) => '传说之剑额外+（全军攻击力×(攻击力等级+1)÷10）点伤害'
     },
     knight_heavy_armor: {
         id: 'knight_heavy_armor', name: '重装', type: 'knight_heavy_armor', icon: '🛡️',
@@ -317,7 +329,19 @@ export function getUnitSkillDisplay(mercenary) {
     const isUnlocked = totalLevel >= skillDef.baseUnlockLevel;
 
     if (skillDef.type === 'legend_dual_growth') {
-        return { name: `【${skillDef.name}】`, isUnlocked: mercenary.recruited, desc: mercenary.recruited ? skillDef.getDescription(totalLevel) : '（招募后解锁）', baseDesc: skillDef.baseDescription, unlockCondition: '招募后解锁', icon: skillDef.icon };
+        const swordDef = SKILL_LIBRARY['legend_sword'];
+        const metaDef = SKILL_LIBRARY['meta_legend_sword'];
+        const swordUnlocked = totalLevel >= swordDef.baseUnlockLevel;
+        const metaUnlocked = totalLevel >= metaDef.baseUnlockLevel;
+        let swordDesc = swordDef.baseDescription;
+        if (swordUnlocked) swordDesc = swordDef.getDescription(totalLevel);
+        let metaDesc = metaDef.baseDescription;
+        if (metaUnlocked) metaDesc = metaDef.getDescription(totalLevel);
+        return {
+            name: `【${skillDef.name}】`, isUnlocked: mercenary.recruited, desc: mercenary.recruited ? skillDef.getDescription(totalLevel) : '（招募后解锁）', baseDesc: skillDef.baseDescription, unlockCondition: '招募后解锁', icon: skillDef.icon,
+            skill2: { name: '【传说之剑】', isUnlocked: swordUnlocked, desc: swordDesc, baseDesc: swordDef.baseDescription, unlockCondition: `Lv.${swordDef.baseUnlockLevel}解锁` },
+            skill3: { name: '【元传说之剑】', isUnlocked: metaUnlocked, desc: metaDesc, baseDesc: metaDef.baseDescription, unlockCondition: `Lv.${metaDef.baseUnlockLevel}解锁` }
+        };
     }
     if (skillDef.type === 'sync_click_damage') {
         return { name: `【${skillDef.name}】`, isUnlocked: mercenary.recruited, desc: skillDef.baseDescription, baseDesc: skillDef.baseDescription, unlockCondition: '雇佣即解锁', icon: skillDef.icon };
@@ -362,7 +386,7 @@ export function getUnitSkillDisplay(mercenary) {
 }
 
 export function getEvolvableSkills() {
-    const excludeIds = ['sync_click_damage', 'legend_dual_growth', 'knight_heavy_armor', 'knight_fortify', 'experience_growth'];
+    const excludeIds = ['sync_click_damage', 'legend_dual_growth', 'legend_sword', 'meta_legend_sword', 'knight_heavy_armor', 'knight_fortify', 'experience_growth'];
     return Object.values(SKILL_LIBRARY)
         .filter(skill => !excludeIds.includes(skill.id))
         .map(skill => ({ id: skill.id, name: skill.name, icon: skill.icon, baseDescription: skill.baseDescription, baseUnlockLevel: skill.baseUnlockLevel }));
