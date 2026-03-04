@@ -125,7 +125,7 @@ function processOfflineProgress(offlineSeconds) {
 
 // ========== 自动保存 ==========
 function startAutoSave() {
-    setInterval(() => { saveManager.saveGame(G); }, 30000);
+    setInterval(() => { saveManager.saveGame(G); }, 10000);
 }
 
 // ========== 全局战斗 ==========
@@ -170,6 +170,7 @@ function _processTeachingSkill() {
     if (buffedCount > 0) {
         if (_showSkillNumbers) showMercSkillText('royal_guard', `📚传授 +${gameEngine.formatNumber(bonusDamage)}`, 'skill-royal');
         updateBattleMercList();
+        saveManager.saveGame(G);
     }
 }
 
