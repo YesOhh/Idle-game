@@ -44,37 +44,50 @@
                         </div>
                     </div>
 
-                    <!-- 设置 -->
-                    <div class="settings-section">
-                        <div class="setting-item">
-                            <span class="setting-label">显示伤害飘字</span>
-                            <label class="toggle-switch">
-                                <input type="checkbox" id="toggle-damage-numbers" checked>
-                                <span class="toggle-slider"></span>
-                            </label>
-                        </div>
-                        <div class="setting-item">
-                            <span class="setting-label">显示技能飘字</span>
-                            <label class="toggle-switch">
-                                <input type="checkbox" id="toggle-skill-numbers" checked>
-                                <span class="toggle-slider"></span>
-                            </label>
-                        </div>
+                    <!-- 设置按钮 -->
+                    <div class="settings-trigger-row">
+                        <button class="settings-trigger-btn" id="btn-open-settings">⚙️ 设置 / 更多</button>
                     </div>
 
-                    <!-- 重置 / 统计 -->
-                    <div class="reset-section">
-                        <button class="stats-btn" id="btn-stats">📊 战况统计</button>
-                        <button class="stats-btn simulator-link" id="btn-simulator">🧮 升级模拟器</button>
-                        <button class="reset-btn" id="btn-reset">🔄 重新开始游戏</button>
-                    </div>
+                </div>
 
-                    <!-- 兑换码 -->
-                    <div class="redeem-section">
-                        <div class="redeem-title">兑换码</div>
-                        <div class="redeem-input-group">
-                            <input class="redeem-input" id="redeem-input" placeholder="输入兑换码">
-                            <button class="redeem-btn" id="btn-redeem">兑换</button>
+                <!-- 设置弹窗 -->
+                <div class="settings-modal-overlay" id="settings-modal" style="display:none">
+                    <div class="settings-modal">
+                        <div class="settings-modal-header">
+                            <span>⚙️ 设置</span>
+                            <button class="settings-modal-close" id="btn-close-settings">✕</button>
+                        </div>
+                        <div class="settings-modal-body">
+                            <!-- 飘字开关 -->
+                            <div class="setting-item">
+                                <span class="setting-label">显示伤害飘字</span>
+                                <label class="toggle-switch">
+                                    <input type="checkbox" id="toggle-damage-numbers" checked>
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </div>
+                            <div class="setting-item">
+                                <span class="setting-label">显示技能飘字</span>
+                                <label class="toggle-switch">
+                                    <input type="checkbox" id="toggle-skill-numbers" checked>
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </div>
+                            <!-- 功能按钮 -->
+                            <div class="settings-modal-buttons">
+                                <button class="stats-btn" id="btn-stats">📊 战况统计</button>
+                                <button class="stats-btn simulator-link" id="btn-simulator">🧮 升级模拟器</button>
+                                <button class="reset-btn" id="btn-reset">🔄 重新开始游戏</button>
+                            </div>
+                            <!-- 兑换码 -->
+                            <div class="redeem-section-modal">
+                                <div class="redeem-title">兑换码</div>
+                                <div class="redeem-input-group">
+                                    <input class="redeem-input" id="redeem-input" placeholder="输入兑换码">
+                                    <button class="redeem-btn" id="btn-redeem">兑换</button>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>

@@ -1263,6 +1263,17 @@ function setupUI() {
         }
     });
 
+    // Settings modal open/close
+    document.getElementById('btn-open-settings').addEventListener('click', () => {
+        document.getElementById('settings-modal').style.display = 'flex';
+    });
+    document.getElementById('btn-close-settings').addEventListener('click', () => {
+        document.getElementById('settings-modal').style.display = 'none';
+    });
+    document.getElementById('settings-modal').addEventListener('click', (e) => {
+        if (e.target === e.currentTarget) e.currentTarget.style.display = 'none';
+    });
+
     // Toggle damage numbers
     document.getElementById('toggle-damage-numbers').addEventListener('change', (e) => {
         _showDamageNumbers = e.target.checked;
