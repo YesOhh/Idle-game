@@ -16,24 +16,24 @@ export const SKILL_LIBRARY = {
         },
         getDescription: (level) => {
             const params = SKILL_LIBRARY.stacking_buff.getParams(level);
-            return `${(params.chance * 100).toFixed(0)}%几率永久提升1%攻击力`;
+            return `攻击时${(params.chance * 100).toFixed(0)}%几率永久提升1%攻击力`;
         }
     },
     crit_burst: {
         id: 'crit_burst', name: '爆裂', type: 'crit', icon: '💥',
-        baseUnlockLevel: 10, baseDescription: '攻击有几率造成多倍暴击伤害',
+        baseUnlockLevel: 10, baseDescription: '攻击时有几率造成多倍暴击伤害',
         getParams: (level) => {
             const extraMult = Math.floor((level - 20) / 10) * 0.5;
             return { chance: 0.20, multiplier: 3.0 + Math.max(0, extraMult) };
         },
         getDescription: (level) => {
             const params = SKILL_LIBRARY.crit_burst.getParams(level);
-            return `20%几率造成${params.multiplier.toFixed(1)}倍伤害`;
+            return `攻击时20%几率造成${params.multiplier.toFixed(1)}倍伤害`;
         }
     },
     shadow_crit: {
         id: 'shadow_crit', name: '暗影突袭', type: 'crit', icon: '🌑',
-        baseUnlockLevel: 20, baseDescription: '极高暴击率的暗影攻击',
+        baseUnlockLevel: 20, baseDescription: '攻击时极高概率触发暗影暴击',
         getParams: (level) => {
             const critChance = Math.min(0.60, 0.35 + Math.floor((level - 20) / 10) * 0.05);
             const critMult = 2.0 + Math.floor((level - 20) / 15) * 0.3;
@@ -41,7 +41,7 @@ export const SKILL_LIBRARY = {
         },
         getDescription: (level) => {
             const params = SKILL_LIBRARY.shadow_crit.getParams(level);
-            return `${(params.chance * 100).toFixed(0)}%几率造成${params.multiplier.toFixed(1)}倍伤害`;
+            return `攻击时${(params.chance * 100).toFixed(0)}%几率造成${params.multiplier.toFixed(1)}倍伤害`;
         }
     },
     team_damage_buff: {
@@ -69,7 +69,7 @@ export const SKILL_LIBRARY = {
         },
         getDescription: (level) => {
             const params = SKILL_LIBRARY.iron_fist.getParams(level);
-            return `10%几率造成钢铁系总攻击力${(params.multiplier * 100).toFixed(0)}%伤害`;
+            return `攻击时10%几率造成钢铁系总攻击力${(params.multiplier * 100).toFixed(0)}%伤害`;
         }
     },
     berserker_combo: {
@@ -102,7 +102,7 @@ export const SKILL_LIBRARY = {
         },
         getDescription: (level) => {
             const params = SKILL_LIBRARY.global_speed_buff.getParams(level);
-            return `10%几率使全体攻速提升${(params.val * 100).toFixed(0)}% (持续5秒)（全局唯一）`;
+            return `攻击时10%几率使全体攻速提升${(params.val * 100).toFixed(0)}% (持续5秒)（全局唯一）`;
         }
     },
     boss_debuff: {
@@ -114,7 +114,7 @@ export const SKILL_LIBRARY = {
         },
         getDescription: (level) => {
             const params = SKILL_LIBRARY.boss_debuff.getParams(level);
-            return `12%几率使Boss受伤+${(params.val * 100).toFixed(0)}% (4秒)（全局唯一）`;
+            return `攻击时12%几率使Boss受伤+${(params.val * 100).toFixed(0)}% (4秒)（全局唯一）`;
         }
     },
     soul_devour: {
@@ -157,14 +157,14 @@ export const SKILL_LIBRARY = {
     },
     pure_percent_damage: {
         id: 'pure_percent_damage', name: '圣洁之力', type: 'pure_percent_damage', icon: '👼',
-        baseUnlockLevel: 30, baseDescription: '概率造成Boss当前血量0.02%伤害(上限:全队攻击力×(攻击力等级+1)/12)',
+        baseUnlockLevel: 30, baseDescription: '攻击时概率造成Boss当前血量0.02%伤害(上限:全队攻击力×(攻击力等级+1)/12)',
         getParams: (level) => {
             const chance = 0.10 + Math.floor((level - 30) / 15) * 0.02;
             return { chance: Math.max(0.10, chance), percentVal: 0.0002, ignoreBonus: true };
         },
         getDescription: (level) => {
             const params = SKILL_LIBRARY.pure_percent_damage.getParams(level);
-            return `${(params.chance * 100).toFixed(0)}%几率造成Boss血量${(params.percentVal * 100).toFixed(2)}%伤害(上限:全队攻击力×(攻击力等级+1)/12)`;
+            return `攻击时${(params.chance * 100).toFixed(0)}%几率造成Boss血量${(params.percentVal * 100).toFixed(2)}%伤害(上限:全队攻击力×(攻击力等级+1)/12)`;
         }
     },
     time_burst: {
@@ -182,14 +182,14 @@ export const SKILL_LIBRARY = {
     },
     total_team_damage: {
         id: 'total_team_damage', name: '虚空侵蚀', type: 'total_team_damage', icon: '🌌',
-        baseUnlockLevel: 40, baseDescription: '概率造成全队攻击力总和的伤害（伤害随等级提升）',
+        baseUnlockLevel: 40, baseDescription: '攻击时概率造成全队攻击力总和的伤害（伤害随等级提升）',
         getParams: (level) => {
             const ratio = Math.min(1.0, 0.40 + Math.floor((level - 40) / 10) * 0.10);
             return { chance: 0.10, ratio };
         },
         getDescription: (level) => {
             const params = SKILL_LIBRARY.total_team_damage.getParams(level);
-            return `10%几率造成全队攻击力总和的${(params.ratio * 100).toFixed(0)}%伤害`;
+            return `攻击时10%几率造成全队攻击力总和的${(params.ratio * 100).toFixed(0)}%伤害`;
         }
     },
     periodic_burst: {
@@ -206,7 +206,7 @@ export const SKILL_LIBRARY = {
     },
     chaos_stack: {
         id: 'chaos_stack', name: '混沌法则', type: 'chaos_stack', icon: '🌀',
-        baseUnlockLevel: 45, baseDescription: '每次攻击概率增加攻击力，但也增加攻击间隔',
+        baseUnlockLevel: 45, baseDescription: '攻击时概率增加攻击力，但也增加攻击间隔',
         getParams: (level) => {
             const chance = 0.15 + Math.floor((level - 45) / 10) * 0.03;
             const atkBonus = 0.05 + Math.floor((level - 45) / 15) * 0.02;
@@ -214,7 +214,7 @@ export const SKILL_LIBRARY = {
         },
         getDescription: (level) => {
             const params = SKILL_LIBRARY.chaos_stack.getParams(level);
-            return `${(params.chance * 100).toFixed(0)}%几率攻击力+${(params.atkBonus * 100).toFixed(0)}%，攻击间隔+0.1秒`;
+            return `攻击时${(params.chance * 100).toFixed(0)}%几率攻击力+${(params.atkBonus * 100).toFixed(0)}%，攻击间隔+0.1秒`;
         }
     },
     ultimate: {
@@ -226,7 +226,7 @@ export const SKILL_LIBRARY = {
         },
         getDescription: (level) => {
             const params = SKILL_LIBRARY.ultimate.getParams(level);
-            return `全队伤害+${(params.teamDamageBonus * 100).toFixed(0)}%，攻速+${(params.teamSpeedBonus * 100).toFixed(0)}%，15%暴击5倍（全局唯一）`;
+            return `全队伤害+${(params.teamDamageBonus * 100).toFixed(0)}%，攻速+${(params.teamSpeedBonus * 100).toFixed(0)}%，攻击时15%暴击5倍（全局唯一）`;
         }
     },
     legend_dual_growth: {
@@ -239,7 +239,7 @@ export const SKILL_LIBRARY = {
         id: 'legend_sword', name: '传说之剑', type: 'legend_sword', icon: '⚔️',
         baseUnlockLevel: 35, baseDescription: '攻击时有1%概率挥出传说之剑，造成巨额伤害',
         getParams: (level) => ({ chance: 0.01, baseDamagePerLevel: 9999999999 }),
-        getDescription: (level) => `1%概率造成（9999999999×(攻击力等级+1)）点伤害`
+        getDescription: (level) => `攻击时1%概率造成（9999999999×(攻击力等级+1)）点伤害`
     },
     meta_legend_sword: {
         id: 'meta_legend_sword', name: '元传说之剑', type: 'meta_legend_sword', icon: '🗡️',

@@ -75,7 +75,7 @@ export const MERCENARIES_DATA = [
     },
     {
         id: 'void_lord', name: '虚空', baseCost: 2160000000000, damage: 1800000000, attackInterval: 3.5,
-        description: '来自虚空的存在，造成Boss当前血量百分比伤害', icon: '🌌', category: 'ancient'
+        description: '来自虚空的存在，攻击时概率造成全队攻击力总和的伤害', icon: '🌌', category: 'ancient'
     },
     {
         id: 'phoenix', name: '凤凰', baseCost: 2850000000000, damage: 1900000000, attackInterval: 5.0,
