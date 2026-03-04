@@ -368,6 +368,40 @@ body {
 .skill-unlock-condition { font-size: 9px; color: var(--warning-color); background: rgba(254,202,87,0.15); padding: 1px 4px; border-radius: 2px; }
 .skill-detail-desc { font-size: 11px; color: var(--text-secondary); line-height: 1.4; }
 
+/* Evolved skill styles */
+.skill-tag.evolved.unlocked { color: #00e5ff; background: rgba(0,229,255,0.15); }
+.skill-tag.evolved.locked { color: var(--text-muted); background: rgba(96,96,112,0.2); }
+.skill-detail.evolved-skill { background: rgba(0,229,255,0.08); border: 1px solid rgba(0,229,255,0.3); }
+.skill-detail-name.evolved.unlocked { color: #00e5ff; }
+.skill-detail-name.evolved.locked { color: var(--text-muted); }
+
+/* Evolution button */
+.evolution-section { margin-top: 6px; text-align: center; }
+.evolution-btn {
+    width: 100%;
+    padding: 6px 12px;
+    font-size: 12px;
+    font-weight: bold;
+    font-family: inherit;
+    color: #00e5ff;
+    background: rgba(0,229,255,0.1);
+    border: 1px dashed rgba(0,229,255,0.4);
+    border-radius: 5px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.evolution-btn:hover:not(.disabled) {
+    background: rgba(0,229,255,0.2);
+    border-color: #00e5ff;
+    box-shadow: 0 0 8px rgba(0,229,255,0.3);
+}
+.evolution-btn.disabled {
+    color: var(--text-muted);
+    background: rgba(96,96,112,0.1);
+    border-color: rgba(96,96,112,0.3);
+    cursor: not-allowed;
+}
+
 /* Skill scaling table */
 .skill-scaling-table { margin-top: 6px; padding-top: 5px; border-top: 1px dashed rgba(168,85,247,0.25); }
 .skill-scaling-row { display: flex; align-items: center; gap: 6px; padding: 2px 0; font-size: 10px; }
@@ -500,6 +534,7 @@ input:checked + .toggle-slider:before { transform: translateX(18px); }
 .detail-label { color: var(--text-muted); }
 .detail-value { color: var(--success-color); font-weight: bold; }
 .detail-skill { padding: 8px; background: rgba(0,0,0,0.2); border-radius: 6px; margin-bottom: 8px; }
+.detail-skill.evolved-skill { background: rgba(0,229,255,0.08); border: 1px solid rgba(0,229,255,0.2); }
 .detail-cost { font-size: 13px; color: var(--text-muted); margin-bottom: 8px; }
 .cost-row { color: var(--warning-color); font-weight: bold; margin-top: 3px; }
 .detail-actions { display: flex; justify-content: center; }

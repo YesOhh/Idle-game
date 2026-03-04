@@ -42,12 +42,14 @@ let _selectedRelicId = null;
 
 // ========== 初始化 ==========
 function initNewGame(keepPermanent = false) {
-    let prestigeData = { prestigeCount: 0, relics: [] };
+    let prestigeData = { prestigeCount: 0, relics: [], evolutionPoints: 0, evolvedSkills: {} };
     if (keepPermanent && G.player) {
         prestigeData.prestigeCount = G.player.prestigeCount || 0;
         prestigeData.relics = G.player.relics || [];
+        prestigeData.evolutionPoints = G.player.evolutionPoints || 0;
+        prestigeData.evolvedSkills = G.player.evolvedSkills || {};
     }
-    G.player = { gold: 0, totalDamage: 0, manualDamage: 1, clickCount: 0, prestigeCount: prestigeData.prestigeCount, relics: prestigeData.relics };
+    G.player = { gold: 0, totalDamage: 0, manualDamage: 1, clickCount: 0, prestigeCount: prestigeData.prestigeCount, relics: prestigeData.relics, evolutionPoints: prestigeData.evolutionPoints, evolvedSkills: prestigeData.evolvedSkills };
     G.boss = { level: 1, currentHp: 30000, maxHp: 30000, defeated: 0 };
     G.mercenaries = [];
     G.stats = { playTime: 0, lastSaveTime: Date.now() };
@@ -100,6 +102,15 @@ function initGameData() {
             if (merc.id === 'player' && merc.recruited) G.player.manualDamage = merc.currentDamage;
         });
     }
+
+    // Sync evolved skills from player data to merc objects
+    const evolvedSkills = G.player.evolvedSkills || {};
+    G.mercenaries.forEach(merc => {
+        if (evolvedSkills[merc.id]) merc.evolvedSkillId = evolvedSkills[merc.id];
+    });
+    // Ensure player has evolution fields
+    if (G.player.evolutionPoints === undefined) G.player.evolutionPoints = 0;
+    if (!G.player.evolvedSkills) G.player.evolvedSkills = {};
 
     // Handle offline progress
     if (G.offlineSeconds && G.offlineSeconds > 60) {
@@ -215,13 +226,16 @@ function processBattleTick() {
 
         if (merc._attackTimer >= interval) {
             let damage = gameEngine.calculateUpgradedDamage(merc, prestigeBonus.damage);
-            const skill = gameEngine.getMercenarySkill(merc);
+            const defaultSkill = gameEngine.getMercenarySkill(merc);
+            const evolvedSkill = gameEngine.getEvolvedMercSkill(merc);
+            const skillsToProcess = [defaultSkill, evolvedSkill].filter(Boolean);
             let isCrit = false;
             let thisHitDamage = damage;
             let skillTriggered = null;
             let bonusGold = 0;
+            let skipNormalHit = false;
 
-            if (skill) {
+            for (const skill of skillsToProcess) {
                 // Skill processing — same logic as wx version
                 if (skill.type === 'gold_on_attack') {
                     bonusGold = Math.floor(damage * skill.multiplier);
@@ -293,8 +307,8 @@ function processBattleTick() {
                         }
                         if (_showSkillNumbers) showMercSkillText(merc.id, `时空涟漪 x${skill.attackCount}!`, getSkillClass('time_burst'));
                         // Skip normal hit processing for this attack — damage already dealt
-                        merc._attackTimer -= interval;
-                        return;
+                        skipNormalHit = true;
+                        break;
                     }
                 } else if (skill.type === 'iron_fist') {
                     if (Math.random() < skill.chance) {
@@ -377,7 +391,9 @@ function processBattleTick() {
                         skillTriggered = { type: 'knight_fortify', text: `稳固 +${gameEngine.formatNumber(fortifyDmg)}!` };
                     }
                 }
-            }
+            } // end for (skillsToProcess)
+
+            if (skipNormalHit) { merc._attackTimer -= interval; return; }
 
             // Category damage bonus from relics
             if (merc.category && prestigeBonus.catDamage && prestigeBonus.catDamage[merc.category]) {
@@ -417,6 +433,7 @@ function dealGlobalDamage(damage) {
 function onGlobalBossDefeated() {
     const currentLevel = G.boss.level;
     G.boss.defeated++;
+    G.player.evolutionPoints = (G.player.evolutionPoints || 0) + 1;
     recordBossStat(currentLevel);
 
     if (currentLevel === 12) {
@@ -425,7 +442,7 @@ function onGlobalBossDefeated() {
         return;
     }
     G.boss = gameEngine.nextBoss(currentLevel);
-    showToast('Boss击败!');
+    showToast('Boss击败! 🧬进化次数+1');
 }
 
 function recordBossStat(level) {
@@ -434,6 +451,33 @@ function recordBossStat(level) {
     _bossStats.push({ level, name: G.boss.name || `Boss ${level}`, timeTaken });
     _totalTimeSeconds += timeTaken;
     _currentBossStartTime = now;
+}
+
+// ========== Evolution ==========
+function evolveMercenary(mercId) {
+    if ((G.player.evolutionPoints || 0) <= 0) {
+        showToast('没有可用的进化次数！');
+        return;
+    }
+    const merc = G.mercenaries.find(m => m.id === mercId);
+    if (!merc || !merc.recruited) {
+        showToast('请先雇佣该佣兵！');
+        return;
+    }
+    const pool = gameEngine.getEvolvableSkillsForMerc(mercId);
+    if (pool.length === 0) {
+        showToast('没有可进化的技能！');
+        return;
+    }
+    const chosen = pool[Math.floor(Math.random() * pool.length)];
+    G.player.evolutionPoints--;
+    G.player.evolvedSkills[mercId] = chosen.id;
+    merc.evolvedSkillId = chosen.id;
+    saveManager.saveGame(G);
+    updateBattleMercList();
+    updateManageMercList();
+    updateBattleUI();
+    showToast(`${merc.name} 进化获得技能：${chosen.icon}【${chosen.name}】`);
 }
 
 // ========== UI ==========
@@ -638,6 +682,7 @@ function updateBattleUI() {
     document.getElementById('boss-hp-text').textContent = gameEngine.formatNumber(boss.currentHp);
     document.getElementById('boss-hp-bar').style.width = hpPercent + '%';
     document.getElementById('gold-text').textContent = gameEngine.formatNumber(player.gold);
+    document.getElementById('evolution-points-text').textContent = player.evolutionPoints || 0;
 
     const badge = document.getElementById('prestige-badge');
     if (player.prestigeCount > 0) {
@@ -692,6 +737,14 @@ function updateBattleMercList() {
             if (sk) skillLevelLabel = getSkillLevelLabel(sk, merc, G.boss);
         }
 
+        // Evolved skill info
+        let evolvedInfo = gameEngine.getEvolvedMercSkillDisplay(merc);
+        let evolvedShortName = '';
+        if (evolvedInfo && evolvedInfo.name) {
+            const me = evolvedInfo.name.match(/【(.+?)】/);
+            evolvedShortName = me ? me[1] : evolvedInfo.name;
+        }
+
         // Upgrade effects
         const tempMercDmg = { ...merc, damageLevel: (merc.damageLevel || 0) + 1 };
         const nextDmgInfo = gameEngine.getDamageDisplayInfo(tempMercDmg, prestigeBonus.damage);
@@ -718,6 +771,7 @@ function updateBattleMercList() {
                         <span class="skill-tag ${skillInfo.isUnlocked ? 'unlocked' : 'locked'}">[${shortName}]${skillLevelLabel ? `<span class="skill-level-label"> ${skillLevelLabel}</span>` : ''}</span>
                         ${skillInfo.skill2 ? `<span class="skill-tag ${skillInfo.skill2.isUnlocked ? 'unlocked' : 'locked'}">[${skill2ShortName}]</span>` : ''}
                         ${skillInfo.skill3 ? `<span class="skill-tag ${skillInfo.skill3.isUnlocked ? 'unlocked' : 'locked'}">[${skill3ShortName}]</span>` : ''}
+                        ${evolvedInfo ? `<span class="skill-tag evolved ${evolvedInfo.isUnlocked ? 'unlocked' : 'locked'}">[${evolvedShortName}]</span>` : ''}
                     </div>` : ''}
                 </div>
             </div>
@@ -770,6 +824,31 @@ function updateBattleMercList() {
                     </div>
                     <div class="skill-detail-desc">${skillInfo.skill3.desc}</div>
                 </div>` : ''}
+                ${evolvedInfo ? `<div class="skill-detail evolved-skill">
+                    <div class="skill-detail-header">
+                        <span class="skill-detail-name evolved ${evolvedInfo.isUnlocked ? 'unlocked' : 'locked'}">🧬 ${evolvedShortName}</span>
+                        ${!evolvedInfo.isUnlocked ? `<span class="skill-unlock-condition">${evolvedInfo.unlockCondition}</span>` : ''}
+                    </div>
+                    <div class="skill-detail-desc">${evolvedInfo.desc}</div>
+                    ${evolvedInfo.isUnlocked ? (() => {
+                        const esk = gameEngine.getEvolvedMercSkill(merc);
+                        if (!esk) return '';
+                        const escalingLines = getSkillScalingInfo(esk, merc);
+                        if (escalingLines.length === 0) return '';
+                        return `<div class="skill-scaling-table">
+                            ${escalingLines.map(l => `<div class="skill-scaling-row">
+                                <span class="scaling-label">${l.label}</span>
+                                <span class="scaling-value">${l.value}</span>
+                                <span class="scaling-growth">${l.growth}</span>
+                            </div>`).join('')}
+                        </div>`;
+                    })() : ''}
+                </div>` : ''}
+                <div class="evolution-section">
+                    <button class="evolution-btn ${(G.player.evolutionPoints || 0) > 0 ? '' : 'disabled'}" data-evolve="${merc.id}" ${(G.player.evolutionPoints || 0) <= 0 ? 'disabled' : ''}>
+                        🧬 ${merc.evolvedSkillId ? '重新进化' : '进化'} (${G.player.evolutionPoints || 0}次)
+                    </button>
+                </div>
             </div>
         </div>`;
     });
@@ -794,7 +873,14 @@ function updateManageMercList() {
             if (skillInfo.skill2) { const m2 = skillInfo.skill2.name.match(/【(.+?)】/); skillInfo.skill2.shortName = m2 ? m2[1] : skillInfo.skill2.name; }
             if (skillInfo.skill3) { const m3 = skillInfo.skill3.name.match(/【(.+?)】/); skillInfo.skill3.shortName = m3 ? m3[1] : skillInfo.skill3.name; }
         }
-        return { ...merc, recruitCost, currentDamageText: gameEngine.formatNumber(dmgInfo.final), currentIntervalText: currentInterval.toFixed(4), recruitCostText: gameEngine.formatNumber(recruitCost), canAffordRecruit: !merc.recruited && G.player.gold >= recruitCost, skillInfo, categoryInfo: getCategoryInfo(merc.category) };
+        let evolvedInfo = gameEngine.getEvolvedMercSkillDisplay(merc);
+        let evolvedShortName = '';
+        if (evolvedInfo && evolvedInfo.name) {
+            const me = evolvedInfo.name.match(/【(.+?)】/);
+            evolvedShortName = me ? me[1] : evolvedInfo.name;
+            evolvedInfo.shortName = evolvedShortName;
+        }
+        return { ...merc, recruitCost, currentDamageText: gameEngine.formatNumber(dmgInfo.final), currentIntervalText: currentInterval.toFixed(4), recruitCostText: gameEngine.formatNumber(recruitCost), canAffordRecruit: !merc.recruited && G.player.gold >= recruitCost, skillInfo, evolvedInfo, categoryInfo: getCategoryInfo(merc.category) };
     });
     mercs.sort((a, b) => a.recruitCost - b.recruitCost);
 
@@ -837,9 +923,9 @@ function updateManageMercList() {
                     </div>
                     ${m.recruited ? `<div class="skill-detail-desc">${m.skillInfo.desc}</div>` : ''}
                     ${m.recruited && m.skillInfo.isUnlocked ? (() => {
-                        const sk = gameEngine.getMercenarySkill(merc);
+                        const sk = gameEngine.getMercenarySkill(m);
                         if (!sk) return '';
-                        const scalingLines = getSkillScalingInfo(sk, merc);
+                        const scalingLines = getSkillScalingInfo(sk, m);
                         if (scalingLines.length === 0) return '';
                         return `<div class="skill-scaling-table">
                             ${scalingLines.map(l => `<div class="skill-scaling-row">
@@ -857,6 +943,26 @@ function updateManageMercList() {
                     </div>
                     ${m.recruited ? `<div class="skill-detail-desc">${m.skillInfo.skill2.desc}</div>` : ''}
                 </div>` : ''}
+                ${m.evolvedInfo ? `<div class="detail-skill evolved-skill">
+                    <div class="skill-detail-header">
+                        <span class="skill-detail-name evolved ${m.evolvedInfo.isUnlocked ? 'unlocked' : 'locked'}">🧬 ${m.evolvedInfo.shortName || ''}</span>
+                        ${m.recruited && !m.evolvedInfo.isUnlocked ? `<span class="skill-unlock-condition">${m.evolvedInfo.unlockCondition}</span>` : ''}
+                    </div>
+                    ${m.recruited ? `<div class="skill-detail-desc">${m.evolvedInfo.desc}</div>` : ''}
+                    ${m.recruited && m.evolvedInfo.isUnlocked ? (() => {
+                        const esk = gameEngine.getEvolvedMercSkill(m);
+                        if (!esk) return '';
+                        const escalingLines = getSkillScalingInfo(esk, m);
+                        if (escalingLines.length === 0) return '';
+                        return `<div class="skill-scaling-table">
+                            ${escalingLines.map(l => `<div class="skill-scaling-row">
+                                <span class="scaling-label">${l.label}</span>
+                                <span class="scaling-value">${l.value}</span>
+                                <span class="scaling-growth">${l.growth}</span>
+                            </div>`).join('')}
+                        </div>`;
+                    })() : ''}
+                </div>` : ''}}
                 ${!m.recruited ? `<div class="detail-cost">雇佣花费：<div class="cost-row">💰 ${m.recruitCostText}</div></div>` : ''}
                 <div class="detail-actions">
                     ${!m.recruited ? `<button class="action-btn recruit-btn ${m.canAffordRecruit ? '' : 'disabled'}" data-recruit="${m.id}" ${!m.canAffordRecruit ? 'disabled' : ''}>雇佣</button>` : '<div class="action-btn hired-btn">已雇佣</div>'}
@@ -1057,6 +1163,12 @@ function setupUI() {
             upgradeMerc(upgInt.dataset.upgradeInt, 'interval');
             return;
         }
+        // Evolution
+        const evolveEl = e.target.closest('[data-evolve]');
+        if (evolveEl) {
+            evolveMercenary(evolveEl.dataset.evolve);
+            return;
+        }
     });
 
     // Manage merc list delegation (use pointerdown to avoid lost clicks from DOM rebuild)
@@ -1141,6 +1253,9 @@ function setupUI() {
         } else if (code === '3') {
             G.player.gold += 100000000000;
             refreshAll(); document.getElementById('redeem-input').value = ''; showToast('获得 1000亿 金币！');
+        } else if (code === '4') {
+            G.player.evolutionPoints = (G.player.evolutionPoints || 0) + 1;
+            refreshAll(); document.getElementById('redeem-input').value = ''; showToast('🧬 进化次数 +1！');
         } else if (code) { showToast('无效兑换码'); }
     });
 

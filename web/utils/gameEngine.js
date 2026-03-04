@@ -1,6 +1,6 @@
 // utils/gameEngine.js - 核心游戏引擎 (ES Module version)
 import { BOSS_DATA } from '../data/bosses.js';
-import { getUnitSkill, getUnitSkillDisplay, DEFAULT_UNIT_SKILLS, SKILL_LIBRARY } from '../data/skills.js';
+import { getUnitSkill, getUnitSkillDisplay, getEvolvedUnitSkill, getEvolvedUnitSkillDisplay, getEvolvableSkills, DEFAULT_UNIT_SKILLS, SKILL_LIBRARY } from '../data/skills.js';
 
 export function formatNumber(num) {
     if (num < 1) return parseFloat(num.toFixed(2)).toString();
@@ -209,6 +209,18 @@ export function getMercenarySkill(mercenary) {
 
 export function getMercenarySkillDisplay(mercenary) {
     return getUnitSkillDisplay(mercenary);
+}
+
+export function getEvolvedMercSkill(mercenary) {
+    return getEvolvedUnitSkill(mercenary);
+}
+
+export function getEvolvedMercSkillDisplay(mercenary) {
+    return getEvolvedUnitSkillDisplay(mercenary);
+}
+
+export function getEvolvableSkillsForMerc(mercId) {
+    return getEvolvableSkills(mercId);
 }
 
 export const RELIC_POOL = [

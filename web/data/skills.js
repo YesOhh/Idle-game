@@ -310,7 +310,7 @@ export function getSkillDefinition(skillId) {
 
 export function getUnitSkill(mercenary) {
     const totalLevel = (mercenary.damageLevel || 0) + (mercenary.intervalLevel || 0) + 1;
-    const skillId = mercenary.evolvedSkillId || DEFAULT_UNIT_SKILLS[mercenary.id];
+    const skillId = DEFAULT_UNIT_SKILLS[mercenary.id];
     if (!skillId) return null;
     const skillDef = SKILL_LIBRARY[skillId];
     if (!skillDef) return null;
@@ -322,7 +322,7 @@ export function getUnitSkill(mercenary) {
 
 export function getUnitSkillDisplay(mercenary) {
     const totalLevel = (mercenary.damageLevel || 0) + (mercenary.intervalLevel || 0) + 1;
-    const skillId = mercenary.evolvedSkillId || DEFAULT_UNIT_SKILLS[mercenary.id];
+    const skillId = DEFAULT_UNIT_SKILLS[mercenary.id];
     if (!skillId) return null;
     const skillDef = SKILL_LIBRARY[skillId];
     if (!skillDef) return null;
@@ -385,9 +385,35 @@ export function getUnitSkillDisplay(mercenary) {
     return { name: `【${skillDef.name}】`, isUnlocked, desc: isUnlocked ? skillDef.getDescription(totalLevel) : skillDef.baseDescription, baseDesc: skillDef.baseDescription, unlockCondition: skillDef.baseUnlockLevel === 0 ? '雇佣即解锁' : `Lv.${skillDef.baseUnlockLevel}解锁`, icon: skillDef.icon };
 }
 
-export function getEvolvableSkills() {
-    const excludeIds = ['sync_click_damage', 'legend_dual_growth', 'legend_sword', 'meta_legend_sword', 'knight_heavy_armor', 'knight_fortify', 'experience_growth'];
+export function getEvolvedUnitSkill(mercenary) {
+    if (!mercenary.evolvedSkillId) return null;
+    const totalLevel = (mercenary.damageLevel || 0) + (mercenary.intervalLevel || 0) + 1;
+    const skillDef = SKILL_LIBRARY[mercenary.evolvedSkillId];
+    if (!skillDef) return null;
+    if (totalLevel < skillDef.baseUnlockLevel) return null;
+    const params = skillDef.getParams(totalLevel);
+    return { ...params, id: skillDef.id, type: skillDef.type, name: skillDef.name, icon: skillDef.icon, desc: skillDef.getDescription(totalLevel) };
+}
+
+export function getEvolvedUnitSkillDisplay(mercenary) {
+    if (!mercenary.evolvedSkillId) return null;
+    const totalLevel = (mercenary.damageLevel || 0) + (mercenary.intervalLevel || 0) + 1;
+    const skillDef = SKILL_LIBRARY[mercenary.evolvedSkillId];
+    if (!skillDef) return null;
+    const isUnlocked = totalLevel >= skillDef.baseUnlockLevel;
+    return {
+        name: `【${skillDef.name}】`, isUnlocked,
+        desc: isUnlocked ? skillDef.getDescription(totalLevel) : skillDef.baseDescription,
+        baseDesc: skillDef.baseDescription,
+        unlockCondition: `Lv.${skillDef.baseUnlockLevel}解锁`,
+        icon: skillDef.icon
+    };
+}
+
+export function getEvolvableSkills(mercId) {
+    const excludeIds = ['sync_click_damage', 'legend_dual_growth', 'legend_sword', 'meta_legend_sword', 'knight_heavy_armor', 'knight_fortify', 'experience_growth', 'team_damage_buff', 'extreme_focus'];
+    const defaultSkillId = DEFAULT_UNIT_SKILLS[mercId];
     return Object.values(SKILL_LIBRARY)
-        .filter(skill => !excludeIds.includes(skill.id))
+        .filter(skill => !excludeIds.includes(skill.id) && skill.id !== defaultSkillId)
         .map(skill => ({ id: skill.id, name: skill.name, icon: skill.icon, baseDescription: skill.baseDescription, baseUnlockLevel: skill.baseUnlockLevel }));
 }
