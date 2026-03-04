@@ -719,6 +719,7 @@ input:checked + .toggle-slider:before { transform: translateX(18px); }
         width: 400px;
         flex-shrink: 0;
         overflow-y: auto;
+        overflow-x: hidden;
         padding-right: 8px;
     }
     .battle-right {

@@ -39,6 +39,8 @@ let _totalTimeSeconds = 0;
 let _currentBossStartTime = Date.now();
 let _selectedMercId = null;
 let _selectedRelicId = null;
+let _battleMercListHovered = false;
+let _lastBattleMercHTML = '';
 
 // ========== 初始化 ==========
 function initNewGame(keepPermanent = false) {
@@ -191,7 +193,7 @@ function _processTeachingSkill() {
     });
     if (buffedCount > 0) {
         if (_showSkillNumbers) showMercSkillText('royal_guard', `📚传授 +${gameEngine.formatNumber(bonusDamage)}`, 'skill-royal');
-        updateBattleMercList();
+        updateBattleMercList(true);
         saveManager.saveGame(G);
     }
 }
@@ -490,7 +492,7 @@ function evolveMercenary(mercId) {
     G.player.evolvedSkills[mercId] = chosen.id;
     merc.evolvedSkillId = chosen.id;
     saveManager.saveGame(G);
-    updateBattleMercList();
+    updateBattleMercList(true);
     updateManageMercList();
     updateBattleUI();
     showToast(`${merc.name} 进化获得技能：${chosen.icon}【${chosen.name}】`);
@@ -709,9 +711,11 @@ function updateBattleUI() {
     }
 }
 
-function updateBattleMercList() {
+function updateBattleMercList(force) {
     const container = document.getElementById('battle-merc-list');
     if (!container) return;
+    // Skip timer-triggered re-render while mouse is hovering to prevent button flash
+    if (!force && _battleMercListHovered) return;
     const prestigeBonus = gameEngine.calculatePrestigeBonus(G.player);
 
     const recruited = G.mercenaries.filter(m => m.recruited);
@@ -868,7 +872,17 @@ function updateBattleMercList() {
             </div>
         </div>`;
     });
+    // Skip DOM update if content hasn't changed (avoids repaint flicker)
+    if (html === _lastBattleMercHTML && !force) return;
+    _lastBattleMercHTML = html;
     container.innerHTML = html;
+
+    // Attach hover tracking listeners
+    if (!container._hoverTracked) {
+        container.addEventListener('mouseenter', () => { _battleMercListHovered = true; });
+        container.addEventListener('mouseleave', () => { _battleMercListHovered = false; });
+        container._hoverTracked = true;
+    }
 }
 
 // ------- Mercenary manage tab -------
@@ -1165,7 +1179,7 @@ function setupUI() {
         if (toggle) {
             const id = toggle.dataset.toggle;
             _expandedMercIds[id] = !_expandedMercIds[id];
-            updateBattleMercList();
+            updateBattleMercList(true);
             return;
         }
         // Upgrade damage
@@ -1370,7 +1384,7 @@ function upgradeMerc(mercId, type) {
     const newDisplayLevel = (merc.damageLevel || 0) + (merc.intervalLevel || 0) + 1;
     // 里程碑提示
     checkMilestone(merc, oldDisplayLevel, newDisplayLevel);
-    updateBattleMercList();
+    updateBattleMercList(true);
 }
 
 function checkMilestone(merc, oldLv, newLv) {
