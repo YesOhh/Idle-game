@@ -254,7 +254,7 @@ function processBattleTick() {
                     bonusGold = Math.floor(damage * skill.multiplier);
                     skillTriggered = { type: 'gold', text: `+${gameEngine.formatNumber(bonusGold)}💰` };
                 } else if (skill.type === 'stacking_buff') {
-                    if (Math.random() < skill.chance) { merc._stackingBuff = (merc._stackingBuff || 0) + skill.val; skillTriggered = { type: 'stacking_buff', text: '熟练+1%' }; }
+                    if (Math.random() < skill.chance) { merc._stackingBuff = (merc._stackingBuff || 0) + skill.val; const buffInc = Math.floor(damage * skill.val); skillTriggered = { type: 'stacking_buff', text: `熟练 +${gameEngine.formatNumber(buffInc)}` }; }
                 } else if (skill.type === 'crit') {
                     if (Math.random() < skill.chance) { thisHitDamage *= skill.multiplier; isCrit = true; skillTriggered = { type: 'crit', text: '爆裂!' }; }
                 } else if (skill.type === 'global_speed_buff') {
@@ -354,7 +354,7 @@ function processBattleTick() {
                     if (Math.random() < skill.chance) {
                         const dmgLvPlus1 = (merc.damageLevel || 0) + 1;
                         let tt = 0; G.mercenaries.forEach(m => { if (m.recruited) tt += gameEngine.calculateUpgradedDamage(m, prestigeBonus.damage); });
-                        const cap = Math.floor(tt * dmgLvPlus1 / 12);
+                        const cap = Math.floor(tt * dmgLvPlus1 / 18);
                         const pd = Math.min(Math.floor(G.boss.currentHp * skill.percentVal), cap);
                         thisHitDamage += pd;
                         skillTriggered = { type: 'holy', text: `圣洁之力 ${gameEngine.formatNumber(pd)}` };
@@ -591,9 +591,9 @@ function getSkillScalingInfo(sk, merc) {
             lines.push({ label: '触发条件', value: '每10次攻击', growth: '固定' });
             break;
         case 'pure_percent_damage':
-            lines.push({ label: '触发概率', value: `${(sk.chance * 100).toFixed(0)}%`, growth: '每+15级 → +2%' });
+            lines.push({ label: '触发概率', value: `${(sk.chance * 100).toFixed(0)}%`, growth: '每+10级 → 概率+1%' });
             lines.push({ label: '百分比伤害', value: 'Boss当前血量0.02%', growth: '固定' });
-            lines.push({ label: '伤害上限', value: '全队攻击力×(攻击力等级+1)/12', growth: '随攻击力等级和全队攻击力成长' });
+            lines.push({ label: '伤害上限', value: '全队攻击力×(攻击力等级+1)/18', growth: '随攻击力等级和全队攻击力成长' });
             break;
         case 'time_burst':
             lines.push({ label: '攻击次数', value: `${sk.attackCount}次`, growth: '每+20级 → +1次 (上限12)' });
