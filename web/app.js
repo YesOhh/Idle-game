@@ -66,8 +66,6 @@ function boot() {
         G.mercenaries = savedData.mercenaries || [];
         G.stats = savedData.stats;
         G.offlineSeconds = savedData.offlineSeconds || 0;
-        // 里程碑迁移：补算旧存档的一次性翻倍奖励
-        gameEngine.migrateMilestoneDamageBonus(G.mercenaries);
     } else {
         initNewGame();
     }
