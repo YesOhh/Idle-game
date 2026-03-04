@@ -157,14 +157,14 @@ export const SKILL_LIBRARY = {
     },
     pure_percent_damage: {
         id: 'pure_percent_damage', name: '圣洁之力', type: 'pure_percent_damage', icon: '👼',
-        baseUnlockLevel: 30, baseDescription: '概率造成Boss当前血量百分比伤害',
+        baseUnlockLevel: 30, baseDescription: '概率造成Boss当前血量0.02%伤害(上限:全队攻击力×(攻击力等级+1)/12)',
         getParams: (level) => {
-            const chance = 0.08 + Math.floor((level - 30) / 20) * 0.02;
-            return { chance: Math.max(0.08, chance), percentVal: 0.0001, ignoreBonus: true };
+            const chance = 0.10 + Math.floor((level - 30) / 15) * 0.02;
+            return { chance: Math.max(0.10, chance), percentVal: 0.0002, ignoreBonus: true };
         },
         getDescription: (level) => {
             const params = SKILL_LIBRARY.pure_percent_damage.getParams(level);
-            return `${(params.chance * 100).toFixed(0)}%几率造成Boss血量0.01%伤害(上限:全队攻击力×(攻击力等级+1)/30)`;
+            return `${(params.chance * 100).toFixed(0)}%几率造成Boss血量${(params.percentVal * 100).toFixed(2)}%伤害(上限:全队攻击力×(攻击力等级+1)/12)`;
         }
     },
     time_burst: {
@@ -182,14 +182,14 @@ export const SKILL_LIBRARY = {
     },
     total_team_damage: {
         id: 'total_team_damage', name: '虚空侵蚀', type: 'total_team_damage', icon: '🌌',
-        baseUnlockLevel: 40, baseDescription: '概率造成全队攻击力总和的伤害',
+        baseUnlockLevel: 40, baseDescription: '概率造成全队攻击力总和的伤害（伤害随等级提升）',
         getParams: (level) => {
-            const chance = 0.10 + Math.floor((level - 40) / 15) * 0.03;
-            return { chance: Math.max(0.10, chance) };
+            const ratio = Math.min(1.0, 0.40 + Math.floor((level - 40) / 10) * 0.10);
+            return { chance: 0.10, ratio };
         },
         getDescription: (level) => {
             const params = SKILL_LIBRARY.total_team_damage.getParams(level);
-            return `${(params.chance * 100).toFixed(0)}%几率造成全队攻击力总和的伤害`;
+            return `10%几率造成全队攻击力总和的${(params.ratio * 100).toFixed(0)}%伤害`;
         }
     },
     periodic_burst: {

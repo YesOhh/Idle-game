@@ -178,15 +178,15 @@ body {
 .rank-row:nth-child(odd) { background: rgba(255,255,255,0.03); }
 .rank-bar { position: absolute; left: 0; top: 0; bottom: 0; background: rgba(52, 152, 219, 0.12); border-radius: 4px; pointer-events: none; z-index: 0; }
 .rank-row > span { position: relative; z-index: 1; }
-.col-rank { width: 24px; text-align: center; font-weight: bold; font-size: 13px; }
+.col-rank { width: 24px; flex-shrink: 0; text-align: center; font-weight: bold; font-size: 13px; }
 .rank-1 { color: #ffd700; }
 .rank-2 { color: #c0c0c0; }
 .rank-3 { color: #cd7f32; }
 .rank-other { color: #7f8c8d; }
-.col-name { flex: 1; font-size: 13px; display: flex; align-items: center; gap: 4px; }
+.col-name { width: 70px; flex-shrink: 0; font-size: 13px; display: flex; align-items: center; gap: 4px; }
 .rank-icon { font-size: 16px; }
-.col-dmg { width: 90px; text-align: right; font-size: 12px; color: #e74c3c; font-weight: bold; }
-.col-pct { width: 48px; text-align: right; font-size: 11px; color: #95a5a6; }
+.col-dmg { flex: 1; min-width: 0; text-align: right; font-size: 12px; color: #e74c3c; font-weight: bold; }
+.col-pct { width: 48px; flex-shrink: 0; text-align: right; font-size: 11px; color: #95a5a6; }
 .rank-total { text-align: right; font-size: 12px; color: #bdc3c7; padding: 8px 8px 0; border-top: 1px solid rgba(255,255,255,0.08); margin-top: 4px; }
 
 @keyframes floatUp {

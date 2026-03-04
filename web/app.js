@@ -68,6 +68,10 @@ function boot() {
         G.mercenaries = savedData.mercenaries || [];
         G.stats = savedData.stats;
         G.offlineSeconds = savedData.offlineSeconds || 0;
+        // Restore boss kill stats
+        _bossStats = G.player.bossStats || [];
+        _totalTimeSeconds = G.player.totalTimeSeconds || 0;
+        _currentBossStartTime = G.player.currentBossStartTime || Date.now();
     } else {
         initNewGame();
     }
@@ -77,7 +81,7 @@ function boot() {
     setupUI();
     startUITimer();
     // Save immediately when page is closed/refreshed
-    window.addEventListener('beforeunload', () => { saveManager.saveGame(G); });
+    window.addEventListener('beforeunload', () => { syncBossStatsToPlayer(); saveManager.saveGame(G); });
 }
 
 function initGameData() {
@@ -134,9 +138,16 @@ function processOfflineProgress(offlineSeconds) {
     showOfflineModal(hours, minutes, seconds, result.totalDamage, result.gold, result.bossesDefeated);
 }
 
+// ========== Boss统计同步 ==========
+function syncBossStatsToPlayer() {
+    G.player.bossStats = _bossStats;
+    G.player.totalTimeSeconds = _totalTimeSeconds;
+    G.player.currentBossStartTime = _currentBossStartTime;
+}
+
 // ========== 自动保存 ==========
 function startAutoSave() {
-    setInterval(() => { saveManager.saveGame(G); }, 10000);
+    setInterval(() => { syncBossStatsToPlayer(); saveManager.saveGame(G); }, 10000);
 }
 
 // ========== 全局战斗 ==========
@@ -341,7 +352,7 @@ function processBattleTick() {
                     if (Math.random() < skill.chance) {
                         const dmgLvPlus1 = (merc.damageLevel || 0) + 1;
                         let tt = 0; G.mercenaries.forEach(m => { if (m.recruited) tt += gameEngine.calculateUpgradedDamage(m, prestigeBonus.damage); });
-                        const cap = Math.floor(tt * dmgLvPlus1 / 30);
+                        const cap = Math.floor(tt * dmgLvPlus1 / 12);
                         const pd = Math.min(Math.floor(G.boss.currentHp * skill.percentVal), cap);
                         thisHitDamage += pd;
                         skillTriggered = { type: 'holy', text: `圣洁之力 ${gameEngine.formatNumber(pd)}` };
@@ -349,8 +360,9 @@ function processBattleTick() {
                 } else if (skill.type === 'total_team_damage') {
                     if (Math.random() < skill.chance) {
                         let tt = 0; G.mercenaries.forEach(m => { if (m.recruited) tt += gameEngine.calculateUpgradedDamage(m, prestigeBonus.damage); });
-                        thisHitDamage += tt; isCrit = true;
-                        skillTriggered = { type: 'void', text: `虚空侵蚀 +${gameEngine.formatNumber(tt)}!` };
+                        const voidDmg = Math.floor(tt * skill.ratio);
+                        thisHitDamage += voidDmg; isCrit = true;
+                        skillTriggered = { type: 'void', text: `虚空侵蚀 +${gameEngine.formatNumber(voidDmg)}!` };
                     }
                 } else if (skill.type === 'periodic_burst') {
                     if (typeof merc._periodicBurstTimer === 'undefined') merc._periodicBurstTimer = 0;
@@ -451,6 +463,10 @@ function recordBossStat(level) {
     _bossStats.push({ level, name: G.boss.name || `Boss ${level}`, timeTaken });
     _totalTimeSeconds += timeTaken;
     _currentBossStartTime = now;
+    // Persist to player data
+    G.player.bossStats = _bossStats;
+    G.player.totalTimeSeconds = _totalTimeSeconds;
+    G.player.currentBossStartTime = _currentBossStartTime;
 }
 
 // ========== Evolution ==========
@@ -573,9 +589,9 @@ function getSkillScalingInfo(sk, merc) {
             lines.push({ label: '触发条件', value: '每10次攻击', growth: '固定' });
             break;
         case 'pure_percent_damage':
-            lines.push({ label: '触发概率', value: `${(sk.chance * 100).toFixed(0)}%`, growth: '每+20级 → +2%' });
-            lines.push({ label: '百分比伤害', value: 'Boss当前血量0.01%', growth: '固定' });
-            lines.push({ label: '伤害上限', value: '全队攻击力×(攻击力等级+1)/30', growth: '随攻击力等级和全队攻击力成长' });
+            lines.push({ label: '触发概率', value: `${(sk.chance * 100).toFixed(0)}%`, growth: '每+15级 → +2%' });
+            lines.push({ label: '百分比伤害', value: 'Boss当前血量0.02%', growth: '固定' });
+            lines.push({ label: '伤害上限', value: '全队攻击力×(攻击力等级+1)/12', growth: '随攻击力等级和全队攻击力成长' });
             break;
         case 'time_burst':
             lines.push({ label: '攻击次数', value: `${sk.attackCount}次`, growth: '每+20级 → +1次 (上限12)' });
@@ -583,8 +599,8 @@ function getSkillScalingInfo(sk, merc) {
             lines.push({ label: '冷却', value: '60秒', growth: '固定' });
             break;
         case 'total_team_damage':
-            lines.push({ label: '触发概率', value: `${(sk.chance * 100).toFixed(0)}%`, growth: '每+15级 → +3%' });
-            lines.push({ label: '效果', value: '全队攻击力总和伤害', growth: '固定' });
+            lines.push({ label: '触发概率', value: '10%', growth: '固定' });
+            lines.push({ label: '伤害倍率', value: `全队攻击力总和×${(sk.ratio * 100).toFixed(0)}%`, growth: '每+10级 → +10% (上限100%)' });
             break;
         case 'periodic_burst':
             lines.push({ label: '伤害倍率', value: `${sk.multiplier}x`, growth: '每+10级 → +20x' });
@@ -1075,6 +1091,7 @@ function onPrestige(selectedRelic) {
     initGameData();
     _battlePaused = false;
     _bossStats = []; _totalTimeSeconds = 0; _currentBossStartTime = Date.now();
+    G.player.bossStats = []; G.player.totalTimeSeconds = 0; G.player.currentBossStartTime = _currentBossStartTime;
     refreshAll();
     showToast(`开启第 ${G.player.prestigeCount + 1} 周目!`);
 }
