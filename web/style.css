@@ -736,6 +736,27 @@ input:checked + .toggle-slider:before { transform: translateX(18px); }
 }
 .pixel-button:active { box-shadow: 0 1px 4px var(--glow-primary); transform: translateY(1px); }
 
+.link-btn-muted {
+    font-size: 12px; color: #888; cursor: pointer; text-decoration: underline;
+    transition: color 0.15s;
+}
+.link-btn-muted:hover { color: var(--primary-color); }
+
+/* Custom confirm modal */
+.confirm-msg { font-size: 14px; color: var(--text-primary); line-height: 1.6; margin-bottom: 18px; text-align: center; }
+.confirm-btns { display: flex; gap: 10px; }
+.confirm-btn {
+    flex: 1; padding: 9px 0; border: none; border-radius: 6px; font-size: 14px;
+    font-weight: bold; cursor: pointer; text-align: center;
+}
+.confirm-btn-cancel { background: var(--bg-medium); color: #aaa; }
+.confirm-btn-cancel:hover { background: var(--border-color); color: var(--text-primary); }
+.confirm-btn-ok {
+    background: linear-gradient(135deg, var(--primary-color), #ff8f8f);
+    color: var(--text-primary); box-shadow: 0 2px 8px var(--glow-primary);
+}
+.confirm-btn-ok:active { transform: translateY(1px); }
+
 .pixel-card {
     background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 8px;
     padding: 15px; box-shadow: 0 4px 16px rgba(0,0,0,0.3);

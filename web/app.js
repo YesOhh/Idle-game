@@ -683,6 +683,17 @@ function showToast(msg) {
     setTimeout(() => { el.style.display = 'none'; }, 2000);
 }
 
+function showConfirm(msg, onOk) {
+    const overlay = document.getElementById('custom-confirm-overlay');
+    document.getElementById('confirm-msg').textContent = msg;
+    overlay.style.display = 'flex';
+    const okBtn = document.getElementById('confirm-ok');
+    const cancelBtn = document.getElementById('confirm-cancel');
+    const cleanup = () => { overlay.style.display = 'none'; okBtn.onclick = null; cancelBtn.onclick = null; };
+    okBtn.onclick = () => { cleanup(); onOk(); };
+    cancelBtn.onclick = cleanup;
+}
+
 function formatTime(seconds) {
     if (seconds < 60) return `${seconds}s`;
     if (seconds < 3600) { const m = Math.floor(seconds / 60); return `${m}m ${seconds % 60}s`; }
@@ -1296,11 +1307,12 @@ function setupUI() {
     });
     document.getElementById('btn-close-stats').addEventListener('click', () => { document.getElementById('modal-stats').style.display = 'none'; });
     document.getElementById('btn-reset-damage-stats').addEventListener('click', () => {
-        if (!confirm('确定要重置所有佣兵的伤害统计数据吗？（不影响实际战斗，仅清除排行数据）')) return;
-        G.mercenaries.forEach(m => { m._totalDamageDealt = 0; });
-        updateDamageRanking();
-        saveManager.saveGame(G);
-        showToast('伤害统计已重置！');
+        showConfirm('确定要重置所有佣兵的伤害统计吗？\n（不影响实际战斗，仅清除排行数据）', () => {
+            G.mercenaries.forEach(m => { m._totalDamageDealt = 0; });
+            updateDamageRanking();
+            saveManager.saveGame(G);
+            showToast('伤害统计已重置！');
+        });
     });
 
     // Simulator modal
@@ -1311,7 +1323,7 @@ function setupUI() {
 
     // Reset game
     document.getElementById('btn-reset').addEventListener('click', () => {
-        if (confirm('确定要清除所有进度重新开始吗？')) {
+        showConfirm('确定要清除所有进度重新开始吗？', () => {
             saveManager.deleteSave();
             initNewGame();
             G.mercenaries = initMercenaries();
@@ -1321,7 +1333,7 @@ function setupUI() {
             _expandedMercIds = {}; _selectedMercId = null; _selectedRelicId = null;
             refreshAll();
             showToast('游戏已重置');
-        }
+        });
     });
 
     // Redeem
