@@ -782,7 +782,10 @@ function updateBattleMercList(force) {
         // Upgrade effects
         const tempMercDmg = { ...merc, damageLevel: (merc.damageLevel || 0) + 1 };
         const nextDmgInfo = gameEngine.getDamageDisplayInfo(tempMercDmg, prestigeBonus.damage);
-        const damageUpgradeEffect = gameEngine.formatNumber(nextDmgInfo.final - dmgInfo.final);
+        let damageGain = nextDmgInfo.final - dmgInfo.final;
+        // 有「极」时预览只显示基础升级量（不含2.2倍），极的加成由飘字提示
+        if (gameEngine.hasSkillOfType(merc, 'extreme_focus')) damageGain = Math.floor(damageGain / 2.2);
+        const damageUpgradeEffect = gameEngine.formatNumber(damageGain);
         const tempMercInt = { ...merc, intervalLevel: (merc.intervalLevel || 0) + 1 };
         let nextInterval = gameEngine.calculateUpgradedInterval(tempMercInt);
         if (_globalSpeedBuff) nextInterval /= (1 + _globalSpeedBuff);
