@@ -579,6 +579,14 @@ function getSkillScalingInfo(sk, merc) {
         case 'berserker_combo': {
             lines.push({ label: '最高加成', value: `+${(sk.maxBonus * 100).toFixed(0)}%`, growth: '每+10级 → +30%' });
             lines.push({ label: '阶段触发', value: 'Boss血量<85%/60%/35%/10%', growth: '按阶段递增' });
+            // Current bonus based on Boss HP
+            if (G.boss) {
+                const hpPct = G.boss.currentHp / G.boss.maxHp;
+                let curBonus = 0;
+                for (const t of sk.thresholds) { if (hpPct < t.hpPercent) { curBonus = t.bonusPercent; } }
+                const dmgBonusVal = curBonus > 0 ? (sk.maxBonus * curBonus * 100).toFixed(0) : '0';
+                lines.push({ label: '当前狂暴', value: `+${dmgBonusVal}%伤害`, growth: `Boss血量${(hpPct * 100).toFixed(1)}%` });
+            }
             break;
         }
         case 'global_speed_buff':
@@ -907,6 +915,21 @@ function updateBattleMercList(force) {
                         ${!skillInfo.skill2.isUnlocked ? `<span class="skill-unlock-condition">${skillInfo.skill2.unlockCondition}</span>` : ''}
                     </div>
                     <div class="skill-detail-desc">${skillInfo.skill2.desc}</div>
+                    ${skillInfo.skill2.isUnlocked ? (() => {
+                        const sk2 = gameEngine.getMercenarySkill(merc);
+                        if (!sk2 || sk2.type !== 'berserker_combo' || !sk2.comboUnlocked) return '';
+                        if (!G.boss) return '';
+                        const hpPct = G.boss.currentHp / G.boss.maxHp;
+                        let curCombo = 0;
+                        for (const t of sk2.thresholds) { if (hpPct < t.hpPercent) { curCombo = t.comboChance; } }
+                        return `<div class="skill-scaling-table">
+                            <div class="skill-scaling-row">
+                                <span class="scaling-label">当前连击</span>
+                                <span class="scaling-value">${(curCombo * 100).toFixed(0)}%概率</span>
+                                <span class="scaling-growth">Boss血量${(hpPct * 100).toFixed(1)}%</span>
+                            </div>
+                        </div>`;
+                    })() : ''}
                 </div>` : ''}
                 ${skillInfo && skillInfo.skill3 ? `<div class="skill-detail">
                     <div class="skill-detail-header">
@@ -1043,6 +1066,21 @@ function updateManageMercList() {
                         ${m.recruited && !m.skillInfo.skill2.isUnlocked ? `<span class="skill-unlock-condition">${m.skillInfo.skill2.unlockCondition}</span>` : ''}
                     </div>
                     ${m.recruited ? `<div class="skill-detail-desc">${m.skillInfo.skill2.desc}</div>` : ''}
+                    ${m.recruited && m.skillInfo.skill2.isUnlocked ? (() => {
+                        const sk2 = gameEngine.getMercenarySkill(m);
+                        if (!sk2 || sk2.type !== 'berserker_combo' || !sk2.comboUnlocked) return '';
+                        if (!G.boss) return '';
+                        const hpPct = G.boss.currentHp / G.boss.maxHp;
+                        let curCombo = 0;
+                        for (const t of sk2.thresholds) { if (hpPct < t.hpPercent) { curCombo = t.comboChance; } }
+                        return `<div class="skill-scaling-table">
+                            <div class="skill-scaling-row">
+                                <span class="scaling-label">当前连击</span>
+                                <span class="scaling-value">${(curCombo * 100).toFixed(0)}%概率</span>
+                                <span class="scaling-growth">Boss血量${(hpPct * 100).toFixed(1)}%</span>
+                            </div>
+                        </div>`;
+                    })() : ''}
                 </div>` : ''}
                 ${m.evolvedInfo ? `<div class="detail-skill evolved-skill">
                     <div class="skill-detail-header">
