@@ -157,14 +157,14 @@ export const SKILL_LIBRARY = {
     },
     pure_percent_damage: {
         id: 'pure_percent_damage', name: '圣洁之力', type: 'pure_percent_damage', icon: '👼',
-        baseUnlockLevel: 30, baseDescription: '攻击时概率造成Boss当前血量0.02%伤害(上限:全队攻击力×(攻击力等级+1)/18)',
+        baseUnlockLevel: 30, baseDescription: '攻击时概率造成Boss当前血量0.02%伤害(上限:全队攻击力×(攻击力等级+1)/30)',
         getParams: (level) => {
             const chance = 0.10 + Math.floor((level - 30) / 10) * 0.01;
             return { chance: Math.max(0.10, chance), percentVal: 0.0002, ignoreBonus: true };
         },
         getDescription: (level) => {
             const params = SKILL_LIBRARY.pure_percent_damage.getParams(level);
-            return `攻击时${(params.chance * 100).toFixed(0)}%几率造成Boss血量${(params.percentVal * 100).toFixed(2)}%伤害(上限:全队攻击力×(攻击力等级+1)/18)`;
+            return `攻击时${(params.chance * 100).toFixed(0)}%几率造成Boss血量${(params.percentVal * 100).toFixed(2)}%伤害(上限:全队攻击力×(攻击力等级+1)/30)`;
         }
     },
     time_burst: {

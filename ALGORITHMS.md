@@ -69,7 +69,7 @@
 | 升级费用 | `damageLevel + intervalLevel` | 费用 = base × 1.15^(damageLevel+intervalLevel) |
 | 传说之剑伤害 | `damageLevel + 1`（从1） | 伤害 = 9999999999 × (damageLevel + 1) |
 | 骑士重装加成 | `damageLevel` + 显示等级 | 加成 = damageLevel² × 显示等级 |
-| 圣洁之力伤害上限 | `damageLevel + 1`（从1） | 上限 = 全队攻击力 × (damageLevel+1) / 18 |
+| 圣洁之力伤害上限 | `damageLevel + 1`（从1） | 上限 = 全队攻击力 × (damageLevel+1) / 30 |
 
 > 传说之剑和圣洁之力的公式中使用 `damageLevel + 1`，确保即使未升级攻击力（damageLevel=0）时也能造成伤害。
 
@@ -322,7 +322,7 @@ Boss血量 = floor(30000 × 135^(等级-1))
    ├─ 混沌法则：          thisHitDamage × (1 + 累积混沌攻击加成)
    ├─ 钢铁神拳：          thisHitDamage += 钢铁系总攻击力 × 倍率
    ├─ 噬魂：              thisHitDamage += 攻击力 × damageRatio × soulCount（15%概率+1灵魂）
-   ├─ 圣洁之力：          thisHitDamage += min(Boss当前血量 × 0.02%, 全队攻击力×(攻击力等级+1)/18)
+   ├─ 圣洁之力：          thisHitDamage += min(Boss当前血量 × 0.02%, 全队攻击力×(攻击力等级+1)/30)
    ├─ 虚空侵蚀：          thisHitDamage += 全队攻击力总和 × ratio(40%起，每10级+10%)
    ├─ 时空涟漪：          thisHitDamage = 基础×damageMultiplier × attackCount
    ├─ 浴火重生：          thisHitDamage × multiplier（每60秒触发）
@@ -445,7 +445,7 @@ costReduction = (1 - val₁)^level₁ × (1 - val₂)^level₂ × ...
 | 💀 | 噬魂 | 亡灵法师 | 魔法 | Lv.30 | 渐进累积 | 15%召唤亡灵，满编后高加成 |
 | ✨ | 神圣祝福 | 圣职者 | 圣洁 | Lv.25 | 永久光环 | 全队伤害加成 |
 | 🐲 | 龙魂觉醒 | 龙骑士 | 圣洁 | Lv.40 | 计数触发 | 每10击释放龙息+灼烧 |
-| 👼 | 圣洁之力 | 天使 | 圣洁 | Lv.30 | 概率触发 | Boss当前血量0.02%真伤(上限:全队×(等级+1)/18) |
+| 👼 | 圣洁之力 | 天使 | 圣洁 | Lv.30 | 概率触发 | Boss当前血量0.02%真伤(上限:全队×(等级+1)/30) |
 | ⏳ | 时空涟漪 | 时光 | 远古 | Lv.35 | 定时触发 | 每60秒多次时空攻击 |
 | 🌌 | 虚空侵蚀 | 虚空 | 远古 | Lv.40 | 概率触发 | 10%几率造成全队总和40%+伤害（无上限） |
 | 🔥 | 浴火重生 | 凤凰 | 远古 | Lv.35 | 定时触发 | 每60秒超高倍伤害 |
@@ -617,7 +617,7 @@ costReduction = (1 - val₁)^level₁ × (1 - val₂)^level₂ × ...
 | 概率 | 10% | 11% | 12% | 13% | 14% | 15% | 16% | 17% |
 
 公式：`概率 = max(10%, 10% + floor((等级-30)/10) × 1%)`
-伤害 = min(Boss当前血量 × 0.02%, 全队攻击力总和 × (攻击力等级+1) / 18)
+伤害 = min(Boss当前血量 × 0.02%, 全队攻击力总和 × (攻击力等级+1) / 30)
 > 不受任何加成影响。伤害上限随全队变强和攻击力等级提高自然成长，防止后期对高血Boss过强。
 
 #### ⏳ 时空涟漪（时光）— 时空连击
