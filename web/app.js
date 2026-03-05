@@ -1295,6 +1295,13 @@ function setupUI() {
         document.getElementById('modal-stats').style.display = 'flex';
     });
     document.getElementById('btn-close-stats').addEventListener('click', () => { document.getElementById('modal-stats').style.display = 'none'; });
+    document.getElementById('btn-reset-damage-stats').addEventListener('click', () => {
+        if (!confirm('确定要重置所有佣兵的伤害统计数据吗？（不影响实际战斗，仅清除排行数据）')) return;
+        G.mercenaries.forEach(m => { m._totalDamageDealt = 0; });
+        updateDamageRanking();
+        saveManager.saveGame(G);
+        showToast('伤害统计已重置！');
+    });
 
     // Simulator modal
     setupSimulator();

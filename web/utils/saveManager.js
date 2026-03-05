@@ -14,6 +14,7 @@ export function saveGame(gameData) {
                 delete clone._timeBurstTimer;
                 delete clone._periodicBurstTimer;
                 delete clone._dragonSoulStacks;
+                delete clone._fortifyTimer;
                 return clone;
             }) : [],
             stats: { ...gameData.stats, lastSaveTime: Date.now() }
