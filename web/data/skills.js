@@ -184,7 +184,7 @@ export const SKILL_LIBRARY = {
         id: 'total_team_damage', name: '虚空侵蚀', type: 'total_team_damage', icon: '🌌',
         baseUnlockLevel: 40, baseDescription: '攻击时概率造成全队攻击力总和的伤害（伤害随等级提升）',
         getParams: (level) => {
-            const ratio = Math.min(1.50, 0.40 + Math.floor((level - 40) / 10) * 0.10);
+            const ratio = 0.40 + Math.floor((level - 40) / 10) * 0.10;
             return { chance: 0.10, ratio };
         },
         getDescription: (level) => {
