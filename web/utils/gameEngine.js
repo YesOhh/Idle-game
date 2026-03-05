@@ -64,7 +64,6 @@ export function calculateMercenaryBaseDamage(mercenary) {
     let damage = calculateRawUpgradeDamage(mercenary);
     // 里程碑奖励（一次性翻倍，存储在 _milestoneDamageBonus 中）
     if (mercenary._milestoneDamageBonus) damage += mercenary._milestoneDamageBonus;
-    if (mercenary._stackingBuff) damage *= (1 + mercenary._stackingBuff);
     if (mercenary._knightHeavyBonus) damage += mercenary._knightHeavyBonus;
     if (mercenary._experienceBonus) damage += mercenary._experienceBonus;
     return Math.floor(damage);
@@ -106,12 +105,15 @@ export function migrateMilestoneDamageBonus(mercenaries) {
 export function calculateUpgradedDamage(mercenary, prestigeDamageMult = 1) {
     let baseDamage = calculateMercenaryBaseDamage(mercenary);
     if (mercenary._teachingBonus) baseDamage += mercenary._teachingBonus;
+    // 熟练Buff：永久固定加成，每次触发时 += 当前攻击力×1%
+    if (mercenary._stackingBuff) baseDamage += mercenary._stackingBuff;
     return Math.floor(baseDamage * prestigeDamageMult);
 }
 
 export function getDamageDisplayInfo(mercenary, prestigeDamageMult = 1) {
     let base = calculateMercenaryBaseDamage(mercenary);
     if (mercenary._teachingBonus) base += mercenary._teachingBonus;
+    if (mercenary._stackingBuff) base += mercenary._stackingBuff;
     const final = Math.floor(base * prestigeDamageMult);
     const bonus = final - Math.floor(base);
     return { base: Math.floor(base), bonus, final, text: bonus > 0 ? `${formatNumber(Math.floor(base))} (+${formatNumber(bonus)})` : `${formatNumber(Math.floor(base))}` };

@@ -11,12 +11,12 @@ export const SKILL_LIBRARY = {
         id: 'stacking_buff', name: '熟练', type: 'stacking_buff', icon: '💪',
         baseUnlockLevel: 10, baseDescription: '每次攻击有几率永久提升攻击力',
         getParams: (level) => {
-            const extraChance = Math.floor((level - 10) / 10) * 0.01;
-            return { chance: 0.03 + Math.max(0, extraChance), val: 0.01 };
+            const extraChance = Math.floor((level - 10) / 10) * 0.005;
+            return { chance: Math.min(0.05, 0.03 + Math.max(0, extraChance)), val: 0.01 };
         },
         getDescription: (level) => {
             const params = SKILL_LIBRARY.stacking_buff.getParams(level);
-            return `攻击时${(params.chance * 100).toFixed(0)}%几率永久提升1%攻击力`;
+            return `攻击时${(params.chance * 100).toFixed(1)}%几率永久增加当前攻击力的1%`;
         }
     },
     crit_burst: {

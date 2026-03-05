@@ -101,6 +101,13 @@ function initGameData() {
             if (merc.recruited === undefined) merc.recruited = false;
             if (merc.damageLevel === undefined) merc.damageLevel = 0;
             if (merc.intervalLevel === undefined) merc.intervalLevel = 0;
+            // 迁移旧版熟练Buff：复利乘数转为固定加成
+            if (merc._stackingBuff !== undefined && merc._stackingBuff >= 1 && merc._stackingBuff < 10000) {
+                // 旧版存的是乘数（≥1），转为等效固定加成
+                const rawDmg = gameEngine.calculateMercenaryBaseDamage(merc) + (merc._teachingBonus || 0);
+                merc._stackingBuff = Math.floor(rawDmg * (merc._stackingBuff - 1));
+                console.log(`[迁移] ${merc.name}: 熟练Buff乘数 → 固定加成 ${gameEngine.formatNumber(merc._stackingBuff)}`);
+            }
             const prestigeBonus = gameEngine.calculatePrestigeBonus(G.player);
             merc._prestigeSpeedBuff = prestigeBonus.speed;
             merc.currentDamage = gameEngine.calculateUpgradedDamage(merc, prestigeBonus.damage);
@@ -254,7 +261,12 @@ function processBattleTick() {
                     bonusGold = Math.floor(damage * skill.multiplier);
                     skillTriggered = { type: 'gold', text: `+${gameEngine.formatNumber(bonusGold)}💰` };
                 } else if (skill.type === 'stacking_buff') {
-                    if (Math.random() < skill.chance) { merc._stackingBuff = (merc._stackingBuff || 0) + skill.val; const buffInc = Math.floor(damage * skill.val); skillTriggered = { type: 'stacking_buff', text: `熟练 +${gameEngine.formatNumber(buffInc)}` }; }
+                    if (Math.random() < skill.chance) {
+                        // 熟练：永久增加当前攻击力的1%作为固定加成
+                        const buffInc = Math.floor(damage * skill.val);
+                        merc._stackingBuff = (merc._stackingBuff || 0) + buffInc;
+                        skillTriggered = { type: 'stacking_buff', text: `熟练 +${gameEngine.formatNumber(buffInc)}` };
+                    }
                 } else if (skill.type === 'crit') {
                     if (Math.random() < skill.chance) { thisHitDamage *= skill.multiplier; isCrit = true; skillTriggered = { type: 'crit', text: '爆裂!' }; }
                 } else if (skill.type === 'global_speed_buff') {
@@ -545,8 +557,8 @@ function getSkillScalingInfo(sk, merc) {
             lines.push({ label: '效果', value: '升级攻击力/攻速时另一项也提升', growth: '被动效果，无需升级' });
             break;
         case 'stacking_buff':
-            lines.push({ label: '触发概率', value: `${(sk.chance * 100).toFixed(0)}%`, growth: '每+10级 → 概率+1%' });
-            lines.push({ label: '效果', value: '每次触发永久+1%攻击力', growth: '固定值' });
+            lines.push({ label: '触发概率', value: `${(sk.chance * 100).toFixed(1)}%`, growth: '每+10级 → +0.5%（上限5%）' });
+            lines.push({ label: '效果', value: '每次触发永久+当前攻击力×1%', growth: '随攻击力增长' });
             break;
         case 'crit':
             if (sk.id === 'shadow_crit') {
@@ -725,12 +737,54 @@ function updateBattleUI() {
     }
 }
 
+// Lightweight in-place stats update (no DOM rebuild) — used while mouse is hovering to avoid button flash
+function _patchMercStats(container, prestigeBonus) {
+    const recruited = G.mercenaries.filter(m => m.recruited);
+    recruited.forEach(merc => {
+        const dmgInfo = gameEngine.getDamageDisplayInfo(merc, prestigeBonus.damage);
+        let currentInterval = gameEngine.calculateUpgradedInterval(merc);
+        if (_globalSpeedBuff) currentInterval /= (1 + _globalSpeedBuff);
+        if (_ultimateAura && _ultimateAura.speed) currentInterval /= (1 + _ultimateAura.speed);
+        currentInterval = Math.max(0.05, currentInterval);
+        // Header stats
+        const dmgEl = container.querySelector(`[data-stat-dmg="${merc.id}"]`);
+        if (dmgEl) dmgEl.textContent = `攻击力　${gameEngine.formatNumber(dmgInfo.final)}`;
+        const intEl = container.querySelector(`[data-stat-int="${merc.id}"]`);
+        if (intEl) intEl.textContent = `攻击间隔　${currentInterval.toFixed(4)}秒`;
+        // Upgrade costs / affordability
+        const upgradeCost = gameEngine.calculateMercenaryUpgradeCost(merc, prestigeBonus.costReduction);
+        const canAfford = G.player.gold >= upgradeCost;
+        const costText = `花费　💰 ${gameEngine.formatNumber(upgradeCost)}`;
+        const costDmgEl = container.querySelector(`[data-cost-dmg="${merc.id}"]`);
+        if (costDmgEl) { costDmgEl.textContent = costText; costDmgEl.className = `upgrade-cost ${canAfford ? '' : 'disabled'}`; }
+        const costIntEl = container.querySelector(`[data-cost-int="${merc.id}"]`);
+        if (costIntEl) { costIntEl.textContent = costText; costIntEl.className = `upgrade-cost ${canAfford ? '' : 'disabled'}`; }
+        // Upgrade effects
+        const tempDmg = { ...merc, damageLevel: (merc.damageLevel || 0) + 1 };
+        const nextDmgInfo = gameEngine.getDamageDisplayInfo(tempDmg, prestigeBonus.damage);
+        let damageGain = nextDmgInfo.final - dmgInfo.final;
+        if (gameEngine.hasSkillOfType(merc, 'extreme_focus')) damageGain = Math.floor(damageGain / 2.2);
+        const effDmgEl = container.querySelector(`[data-eff-dmg="${merc.id}"]`);
+        if (effDmgEl) effDmgEl.textContent = `攻击力 +${gameEngine.formatNumber(damageGain)}`;
+        const tempInt = { ...merc, intervalLevel: (merc.intervalLevel || 0) + 1 };
+        let nextInterval = gameEngine.calculateUpgradedInterval(tempInt);
+        if (_globalSpeedBuff) nextInterval /= (1 + _globalSpeedBuff);
+        if (_ultimateAura && _ultimateAura.speed) nextInterval /= (1 + _ultimateAura.speed);
+        nextInterval = Math.max(0.05, nextInterval);
+        const effIntEl = container.querySelector(`[data-eff-int="${merc.id}"]`);
+        if (effIntEl) effIntEl.textContent = `攻击间隔 -${(currentInterval - nextInterval).toFixed(4)}秒`;
+    });
+}
+
 function updateBattleMercList(force) {
     const container = document.getElementById('battle-merc-list');
     if (!container) return;
-    // Skip timer-triggered re-render while mouse is hovering to prevent button flash
-    if (!force && _battleMercListHovered) return;
     const prestigeBonus = gameEngine.calculatePrestigeBonus(G.player);
+    // When hovered but not forced, do lightweight stats-only patch (no DOM rebuild)
+    if (!force && _battleMercListHovered) {
+        _patchMercStats(container, prestigeBonus);
+        return;
+    }
 
     const recruited = G.mercenaries.filter(m => m.recruited);
     let html = '';
@@ -802,8 +856,8 @@ function updateBattleMercList(force) {
                         <span class="merc-category" style="color:${catInfo.color}">${catInfo.icon}${catInfo.name}</span>
                         <span class="merc-level">Lv.${totalLevel}</span>
                     </div>
-                    <div class="merc-stats-row"><span class="merc-stat">攻击力　${gameEngine.formatNumber(dmgInfo.final)}</span></div>
-                    <div class="merc-stats-row"><span class="merc-stat">攻击间隔　${currentInterval.toFixed(4)}秒</span></div>
+                    <div class="merc-stats-row"><span class="merc-stat" data-stat-dmg="${merc.id}">攻击力　${gameEngine.formatNumber(dmgInfo.final)}</span></div>
+                    <div class="merc-stats-row"><span class="merc-stat" data-stat-int="${merc.id}">攻击间隔　${currentInterval.toFixed(4)}秒</span></div>
                     ${skillInfo ? `<div class="merc-skill-tag">
                         <span class="skill-tag ${skillInfo.isUnlocked ? 'unlocked' : 'locked'}">[${shortName}]${skillLevelLabel ? `<span class="skill-level-label"> ${skillLevelLabel}</span>` : ''}</span>
                         ${skillInfo.skill2 ? `<span class="skill-tag ${skillInfo.skill2.isUnlocked ? 'unlocked' : 'locked'}">[${skill2ShortName}]</span>` : ''}
@@ -814,12 +868,12 @@ function updateBattleMercList(force) {
             </div>
             <div class="merc-expand-content">
                 <div class="upgrade-box" data-upgrade-dmg="${merc.id}">
-                    <div class="upgrade-info"><span class="upgrade-title">当前攻击力等级${merc.damageLevel||0}　升级攻击力</span><span class="upgrade-effect">攻击力 +${damageUpgradeEffect}</span></div>
-                    <div class="upgrade-cost ${canAffordUpgrade ? '' : 'disabled'}">花费　💰 ${gameEngine.formatNumber(upgradeCost)}</div>
+                    <div class="upgrade-info"><span class="upgrade-title">当前攻击力等级${merc.damageLevel||0}　升级攻击力</span><span class="upgrade-effect" data-eff-dmg="${merc.id}">攻击力 +${damageUpgradeEffect}</span></div>
+                    <div class="upgrade-cost ${canAffordUpgrade ? '' : 'disabled'}" data-cost-dmg="${merc.id}">花费　💰 ${gameEngine.formatNumber(upgradeCost)}</div>
                 </div>
                 <div class="upgrade-box" data-upgrade-int="${merc.id}">
-                    <div class="upgrade-info"><span class="upgrade-title">当前攻速等级${merc.intervalLevel||0}　升级攻击速度</span><span class="upgrade-effect">攻击间隔 -${intervalUpgradeEffect}秒</span></div>
-                    <div class="upgrade-cost ${canAffordUpgrade ? '' : 'disabled'}">花费　💰 ${gameEngine.formatNumber(upgradeCost)}</div>
+                    <div class="upgrade-info"><span class="upgrade-title">当前攻速等级${merc.intervalLevel||0}　升级攻击速度</span><span class="upgrade-effect" data-eff-int="${merc.id}">攻击间隔 -${intervalUpgradeEffect}秒</span></div>
+                    <div class="upgrade-cost ${canAffordUpgrade ? '' : 'disabled'}" data-cost-int="${merc.id}">花费　💰 ${gameEngine.formatNumber(upgradeCost)}</div>
                 </div>
                 <div class="merc-description">${merc.description}</div>
                 ${totalLevel >= 50 ? `<div class="milestone-status">
