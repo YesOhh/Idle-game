@@ -1420,6 +1420,7 @@ function upgradeMerc(mercId, type) {
     if (G.player.gold < cost) { showToast('金币不足!'); return; }
     G.player.gold -= cost;
     const oldDisplayLevel = (merc.damageLevel || 0) + (merc.intervalLevel || 0) + 1;
+    const oldDamageValue = gameEngine.calculateUpgradedDamage(merc, prestigeBonus.damage);
     if (type === 'damage') {
         merc.damageLevel++;
         // 里程碑攻击力检查（跨越50/100级时一次性翻倍）
@@ -1433,6 +1434,16 @@ function upgradeMerc(mercId, type) {
             const heavyBonus = dmgLv * dmgLv * totalLv;
             merc._knightHeavyBonus = (merc._knightHeavyBonus || 0) + heavyBonus;
             if (_showSkillNumbers) showMercSkillText(merc.id, `🛡️重装 +${gameEngine.formatNumber(heavyBonus)}`, 'skill-iron');
+        }
+        // 「极」技能：升级攻击力飘字显示额外加成和攻速惩罚
+        if (gameEngine.hasSkillOfType(merc, 'extreme_focus') && _showSkillNumbers) {
+            const newDmg = gameEngine.calculateUpgradedDamage(merc, prestigeBonus.damage);
+            // 计算此次升级的总增量和无极额外贡献
+            const totalGain = newDmg - oldDamageValue;
+            // 无极额外 = 总增量的 (1 - 1/2.2) ≈ 54.5%
+            const extremeExtra = Math.floor(totalGain * (1 - 1 / 2.2));
+            const spdPenalty = ((Math.pow(1.005, merc.damageLevel) - Math.pow(1.005, merc.damageLevel - 1)) * 100).toFixed(1);
+            showMercSkillText(merc.id, `⚡极 +${gameEngine.formatNumber(extremeExtra)} | 攻速-${spdPenalty}%`, 'skill-ultimate');
         }
         merc.currentDamage = gameEngine.calculateUpgradedDamage(merc, prestigeBonus.damage);
         if (merc.id === 'player') {

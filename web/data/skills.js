@@ -301,7 +301,7 @@ export const DEFAULT_UNIT_SKILLS = {
     'phoenix': 'periodic_burst',
     'legend': 'legend_dual_growth',
     'chaos_emperor': 'chaos_stack',
-    'sacred_dragon': 'ultimate'
+    'sacred_dragon': 'extreme_focus'
 };
 
 export function getSkillDefinition(skillId) {
@@ -316,6 +316,15 @@ export function getUnitSkill(mercenary) {
     if (!skillDef) return null;
     if (totalLevel < skillDef.baseUnlockLevel) return null;
     if (skillDef.type === 'sync_click_damage' && !mercenary.recruited) return null;
+    // 无极：极是被动技能，战斗处理返回万物终结（Lv.50解锁）
+    if (skillDef.id === 'extreme_focus' && mercenary.id === 'sacred_dragon') {
+        const ultimateDef = SKILL_LIBRARY['ultimate'];
+        if (totalLevel >= ultimateDef.baseUnlockLevel) {
+            const params = ultimateDef.getParams(totalLevel);
+            return { ...params, id: ultimateDef.id, type: ultimateDef.type, name: ultimateDef.name, icon: ultimateDef.icon, desc: ultimateDef.getDescription(totalLevel) };
+        }
+        return null; // 极无需战斗处理
+    }
     const params = skillDef.getParams(totalLevel);
     return { ...params, id: skillDef.id, type: skillDef.type, name: skillDef.name, icon: skillDef.icon, desc: skillDef.getDescription(totalLevel) };
 }
@@ -360,6 +369,15 @@ export function getUnitSkillDisplay(mercenary) {
             name: '【重装】', isUnlocked: true, desc: '升级攻击力时额外增加（攻击力等级²×等级）点攻击力',
             baseDesc: skillDef.baseDescription, unlockCondition: '雇佣即解锁', icon: skillDef.icon,
             skill2: { name: '【稳固】', isUnlocked: true, desc: '每隔8秒，造成等同攻击力的额外伤害', baseDesc: '每隔8秒，造成等同攻击力的伤害', unlockCondition: '雇佣即解锁' }
+        };
+    }
+    if (skillDef.id === 'extreme_focus' && mercenary.id === 'sacred_dragon') {
+        const ultimateDef = SKILL_LIBRARY['ultimate'];
+        const ultimateUnlocked = totalLevel >= ultimateDef.baseUnlockLevel;
+        return {
+            name: '【极】', isUnlocked: true, desc: '升级攻击力时，提升的攻击力额外+120%，攻速每级-0.5%',
+            baseDesc: skillDef.baseDescription, unlockCondition: '雇佣即解锁', icon: skillDef.icon,
+            skill2: { name: '【万物终结】', isUnlocked: ultimateUnlocked, desc: ultimateUnlocked ? ultimateDef.getDescription(totalLevel) : ultimateDef.baseDescription, baseDesc: ultimateDef.baseDescription, unlockCondition: `Lv.${ultimateDef.baseUnlockLevel}解锁` }
         };
     }
     if (skillDef.id === 'berserker_combo') {
@@ -411,7 +429,7 @@ export function getEvolvedUnitSkillDisplay(mercenary) {
 }
 
 export function getEvolvableSkills(mercId) {
-    const excludeIds = ['sync_click_damage', 'legend_sword', 'meta_legend_sword', 'knight_heavy_armor', 'knight_fortify', 'experience_growth', 'team_damage_buff', 'extreme_focus'];
+    const excludeIds = ['sync_click_damage', 'legend_sword', 'meta_legend_sword', 'knight_heavy_armor', 'knight_fortify', 'experience_growth', 'team_damage_buff'];
     return Object.values(SKILL_LIBRARY)
         .filter(skill => !excludeIds.includes(skill.id))
         .map(skill => ({ id: skill.id, name: skill.name, icon: skill.icon, baseDescription: skill.baseDescription, baseUnlockLevel: skill.baseUnlockLevel }));

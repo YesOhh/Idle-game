@@ -117,6 +117,10 @@ export function getDamageDisplayInfo(mercenary, prestigeDamageMult = 1) {
     return { base: Math.floor(base), bonus, final, text: bonus > 0 ? `${formatNumber(Math.floor(base))} (+${formatNumber(bonus)})` : `${formatNumber(Math.floor(base))}` };
 }
 
+export function hasSkillOfType(mercenary, skillType) {
+    return hasSkillType(mercenary, skillType);
+}
+
 export function calculateUpgradedInterval(mercenary) {
     let effectiveLevel = mercenary.intervalLevel || 0;
     const dualCount = countSkillType(mercenary, 'legend_dual_growth');
