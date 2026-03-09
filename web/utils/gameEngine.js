@@ -228,6 +228,19 @@ export function getMercenarySkill(mercenary) {
     return getUnitSkill(mercenary);
 }
 
+// Returns the primary skill matching skill1 panel (no battle-time override)
+export function getDisplaySkill(mercenary) {
+    const totalLevel = (mercenary.damageLevel || 0) + (mercenary.intervalLevel || 0) + 1;
+    const skillId = DEFAULT_UNIT_SKILLS[mercenary.id];
+    if (!skillId) return null;
+    const skillDef = SKILL_LIBRARY[skillId];
+    if (!skillDef) return null;
+    if (totalLevel < skillDef.baseUnlockLevel) return null;
+    if (skillDef.type === 'sync_click_damage' && !mercenary.recruited) return null;
+    const params = skillDef.getParams(totalLevel);
+    return { ...params, id: skillDef.id, type: skillDef.type, name: skillDef.name, icon: skillDef.icon, desc: skillDef.getDescription(totalLevel) };
+}
+
 export function getMercenarySkillDisplay(mercenary) {
     return getUnitSkillDisplay(mercenary);
 }

@@ -628,7 +628,7 @@ function getSkillScalingInfo(sk, merc) {
             lines.push({ label: '伤害倍率', value: `全队攻击力总和×${(sk.ratio * 100).toFixed(0)}%`, growth: '每+10级 → +10%（无上限）' });
             break;
         case 'periodic_burst':
-            lines.push({ label: '伤害倍率', value: `${sk.multiplier}x`, growth: '每+10级 → +20x' });
+            lines.push({ label: '伤害倍率', value: `${sk.multiplier}x`, growth: '每+10级 → +2x' });
             lines.push({ label: '冷却', value: '60秒', growth: '固定' });
             break;
         case 'chaos_stack':
@@ -896,7 +896,7 @@ function updateBattleMercList(force) {
                     </div>
                     <div class="skill-detail-desc">${skillInfo.desc}</div>
                     ${skillInfo.isUnlocked ? (() => {
-                        const sk = gameEngine.getMercenarySkill(merc);
+                        const sk = gameEngine.getDisplaySkill(merc);
                         if (!sk) return '';
                         const scalingLines = getSkillScalingInfo(sk, merc);
                         if (scalingLines.length === 0) return '';
@@ -917,17 +917,15 @@ function updateBattleMercList(force) {
                     <div class="skill-detail-desc">${skillInfo.skill2.desc}</div>
                     ${skillInfo.skill2.isUnlocked ? (() => {
                         const sk2 = gameEngine.getMercenarySkill(merc);
-                        if (!sk2 || sk2.type !== 'berserker_combo' || !sk2.comboUnlocked) return '';
-                        if (!G.boss) return '';
-                        const hpPct = G.boss.currentHp / G.boss.maxHp;
-                        let curCombo = 0;
-                        for (const t of sk2.thresholds) { if (hpPct < t.hpPercent) { curCombo = t.comboChance; } }
+                        if (!sk2) return '';
+                        const s2Lines = getSkillScalingInfo(sk2, merc);
+                        if (s2Lines.length === 0) return '';
                         return `<div class="skill-scaling-table">
-                            <div class="skill-scaling-row">
-                                <span class="scaling-label">当前连击</span>
-                                <span class="scaling-value">${(curCombo * 100).toFixed(0)}%概率</span>
-                                <span class="scaling-growth">Boss血量${(hpPct * 100).toFixed(1)}%</span>
-                            </div>
+                            ${s2Lines.map(l => `<div class="skill-scaling-row">
+                                <span class="scaling-label">${l.label}</span>
+                                <span class="scaling-value">${l.value}</span>
+                                <span class="scaling-growth">${l.growth}</span>
+                            </div>`).join('')}
                         </div>`;
                     })() : ''}
                 </div>` : ''}
@@ -1047,7 +1045,7 @@ function updateManageMercList() {
                     </div>
                     ${m.recruited ? `<div class="skill-detail-desc">${m.skillInfo.desc}</div>` : ''}
                     ${m.recruited && m.skillInfo.isUnlocked ? (() => {
-                        const sk = gameEngine.getMercenarySkill(m);
+                        const sk = gameEngine.getDisplaySkill(m);
                         if (!sk) return '';
                         const scalingLines = getSkillScalingInfo(sk, m);
                         if (scalingLines.length === 0) return '';
@@ -1068,17 +1066,15 @@ function updateManageMercList() {
                     ${m.recruited ? `<div class="skill-detail-desc">${m.skillInfo.skill2.desc}</div>` : ''}
                     ${m.recruited && m.skillInfo.skill2.isUnlocked ? (() => {
                         const sk2 = gameEngine.getMercenarySkill(m);
-                        if (!sk2 || sk2.type !== 'berserker_combo' || !sk2.comboUnlocked) return '';
-                        if (!G.boss) return '';
-                        const hpPct = G.boss.currentHp / G.boss.maxHp;
-                        let curCombo = 0;
-                        for (const t of sk2.thresholds) { if (hpPct < t.hpPercent) { curCombo = t.comboChance; } }
+                        if (!sk2) return '';
+                        const s2Lines = getSkillScalingInfo(sk2, m);
+                        if (s2Lines.length === 0) return '';
                         return `<div class="skill-scaling-table">
-                            <div class="skill-scaling-row">
-                                <span class="scaling-label">当前连击</span>
-                                <span class="scaling-value">${(curCombo * 100).toFixed(0)}%概率</span>
-                                <span class="scaling-growth">Boss血量${(hpPct * 100).toFixed(1)}%</span>
-                            </div>
+                            ${s2Lines.map(l => `<div class="skill-scaling-row">
+                                <span class="scaling-label">${l.label}</span>
+                                <span class="scaling-value">${l.value}</span>
+                                <span class="scaling-growth">${l.growth}</span>
+                            </div>`).join('')}
                         </div>`;
                     })() : ''}
                 </div>` : ''}
