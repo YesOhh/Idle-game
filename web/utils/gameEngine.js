@@ -1,6 +1,6 @@
 // utils/gameEngine.js - 核心游戏引擎 (ES Module version)
 import { BOSS_DATA } from '../data/bosses.js';
-import { getUnitSkill, getUnitSkillDisplay, getEvolvedUnitSkill, getEvolvedUnitSkillDisplay, getEvolvableSkills, DEFAULT_UNIT_SKILLS, SKILL_LIBRARY } from '../data/skills.js';
+import { getUnitSkill, getSecondaryUnitSkill, getUnitSkillDisplay, getEvolvedUnitSkill, getEvolvedUnitSkillDisplay, getEvolvableSkills, DEFAULT_UNIT_SKILLS, SECONDARY_UNIT_SKILLS, SKILL_LIBRARY } from '../data/skills.js';
 
 export function formatNumber(num) {
     if (num < 1) return parseFloat(num.toFixed(2)).toString();
@@ -18,23 +18,28 @@ function getUpgradeTier(upgradeCount) {
     return Math.floor((upgradeCount - 5) / 5) + 1;
 }
 
-// 查询佣兵是否拥有指定类型的技能（检查默认技能和进化技能）
+// 查询佣兵是否拥有指定类型的技能（检查默认技能、副技能和进化技能）
 function hasSkillType(mercenary, skillType) {
     const defaultSkillId = DEFAULT_UNIT_SKILLS[mercenary.id];
+    const secondarySkillId = SECONDARY_UNIT_SKILLS[mercenary.id];
     const evolvedSkillId = mercenary.evolvedSkillId;
     const defaultDef = defaultSkillId ? SKILL_LIBRARY[defaultSkillId] : null;
+    const secondaryDef = secondarySkillId ? SKILL_LIBRARY[secondarySkillId] : null;
     const evolvedDef = evolvedSkillId ? SKILL_LIBRARY[evolvedSkillId] : null;
-    return (defaultDef && defaultDef.type === skillType) || (evolvedDef && evolvedDef.type === skillType);
+    return (defaultDef && defaultDef.type === skillType) || (secondaryDef && secondaryDef.type === skillType) || (evolvedDef && evolvedDef.type === skillType);
 }
 
-// 统计佣兵拥有指定类型技能的数量（0/1/2）
+// 统计佣兵拥有指定类型技能的数量（0/1/2/3）
 function countSkillType(mercenary, skillType) {
     let count = 0;
     const defaultSkillId = DEFAULT_UNIT_SKILLS[mercenary.id];
+    const secondarySkillId = SECONDARY_UNIT_SKILLS[mercenary.id];
     const evolvedSkillId = mercenary.evolvedSkillId;
     const defaultDef = defaultSkillId ? SKILL_LIBRARY[defaultSkillId] : null;
+    const secondaryDef = secondarySkillId ? SKILL_LIBRARY[secondarySkillId] : null;
     const evolvedDef = evolvedSkillId ? SKILL_LIBRARY[evolvedSkillId] : null;
     if (defaultDef && defaultDef.type === skillType) count++;
+    if (secondaryDef && secondaryDef.type === skillType) count++;
     if (evolvedDef && evolvedDef.type === skillType) count++;
     return count;
 }
@@ -226,6 +231,10 @@ export function calculateOfflineProgress(mercenaries, offlineSeconds, bossLevel,
 
 export function getMercenarySkill(mercenary) {
     return getUnitSkill(mercenary);
+}
+
+export function getSecondaryMercSkill(mercenary) {
+    return getSecondaryUnitSkill(mercenary);
 }
 
 // Returns the primary skill matching skill1 panel (no battle-time override)

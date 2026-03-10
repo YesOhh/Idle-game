@@ -68,6 +68,10 @@ function boot() {
         G.player = savedData.player;
         G.boss = savedData.boss;
         G.mercenaries = savedData.mercenaries || [];
+        // Migrate: berserker_combo → berserker_rage (combo_strike is now a separate skill)
+        for (const merc of G.mercenaries) {
+            if (merc.evolvedSkillId === 'berserker_combo') merc.evolvedSkillId = 'berserker_rage';
+        }
         G.stats = savedData.stats;
         G.offlineSeconds = savedData.offlineSeconds || 0;
         // Restore boss kill stats
@@ -247,8 +251,9 @@ function processBattleTick() {
         if (merc._attackTimer >= interval) {
             let damage = gameEngine.calculateUpgradedDamage(merc, prestigeBonus.damage);
             const defaultSkill = gameEngine.getMercenarySkill(merc);
+            const secondarySkill = gameEngine.getSecondaryMercSkill(merc);
             const evolvedSkill = gameEngine.getEvolvedMercSkill(merc);
-            const skillsToProcess = [defaultSkill, evolvedSkill].filter(Boolean);
+            const skillsToProcess = [defaultSkill, secondarySkill, evolvedSkill].filter(Boolean);
             let isCrit = false;
             let thisHitDamage = damage;
             let skillTriggered = null;
@@ -300,14 +305,18 @@ function processBattleTick() {
                         skillTriggered = { type: 'chaos', text: `混沌x${Math.round((merc._chaosAtkBuff || 0) / skill.atkBonus)}` };
                     }
                     if (merc._chaosAtkBuff) thisHitDamage *= (1 + merc._chaosAtkBuff);
-                } else if (skill.type === 'berserker_combo') {
+                } else if (skill.type === 'berserker_rage') {
                     const hpPercent = G.boss.currentHp / G.boss.maxHp;
-                    let bonusPercent = 0, comboChance = 0;
-                    for (const t of skill.thresholds) { if (hpPercent < t.hpPercent) { bonusPercent = t.bonusPercent; comboChance = t.comboChance; } }
+                    let bonusPercent = 0;
+                    for (const t of skill.thresholds) { if (hpPercent < t.hpPercent) { bonusPercent = t.bonusPercent; } }
                     if (bonusPercent > 0) thisHitDamage *= (1 + skill.maxBonus * bonusPercent);
-                    if (skill.comboUnlocked && comboChance > 0) {
+                } else if (skill.type === 'combo_strike') {
+                    const hpPercent = G.boss.currentHp / G.boss.maxHp;
+                    let comboChance = 0;
+                    for (const t of skill.thresholds) { if (hpPercent < t.hpPercent) { comboChance = t.comboChance; } }
+                    if (comboChance > 0) {
                         let comboCount = 0, comboDamage = 0;
-                        while (Math.random() < comboChance) { comboCount++; let ed = damage; if (bonusPercent > 0) ed *= (1 + skill.maxBonus * bonusPercent); comboDamage += ed; }
+                        while (Math.random() < comboChance) { comboCount++; comboDamage += damage; }
                         if (comboCount > 0) { thisHitDamage += comboDamage; skillTriggered = { type: 'combo', text: `连击x${comboCount}!` }; }
                     }
                 } else if (skill.type === 'time_burst') {
@@ -521,7 +530,8 @@ function getSkillLevelLabel(sk, merc, boss) {
         case 'crit': return '';
         case 'gold_on_attack': return '';
         case 'iron_fist': return '';
-        case 'berserker_combo': return '';
+        case 'berserker_rage': return '';
+        case 'combo_strike': return '';
         case 'global_speed_buff': return '';
         case 'boss_debuff': return '';
         case 'soul_devour': return '';
@@ -576,7 +586,7 @@ function getSkillScalingInfo(sk, merc) {
             lines.push({ label: '触发概率', value: '10%', growth: '固定10%' });
             lines.push({ label: '伤害倍率', value: `钢铁系总攻${(sk.multiplier * 100).toFixed(0)}%`, growth: '每+10级 → +15%' });
             break;
-        case 'berserker_combo': {
+        case 'berserker_rage': {
             lines.push({ label: '最高加成', value: `+${(sk.maxBonus * 100).toFixed(0)}%`, growth: '每+10级 → +30%' });
             lines.push({ label: '阶段触发', value: 'Boss血量<85%/60%/35%/10%', growth: '按阶段递增' });
             // Current bonus based on Boss HP
@@ -586,6 +596,17 @@ function getSkillScalingInfo(sk, merc) {
                 for (const t of sk.thresholds) { if (hpPct < t.hpPercent) { curBonus = t.bonusPercent; } }
                 const dmgBonusVal = curBonus > 0 ? (sk.maxBonus * curBonus * 100).toFixed(0) : '0';
                 lines.push({ label: '当前狂暴', value: `+${dmgBonusVal}%伤害`, growth: `Boss血量${(hpPct * 100).toFixed(1)}%` });
+            }
+            break;
+        }
+        case 'combo_strike': {
+            lines.push({ label: '连击阈值', value: 'Boss血量<85%/60%/35%/10%', growth: '按阶段递增' });
+            lines.push({ label: '连击概率', value: '15%/30%/45%/60%', growth: '固定' });
+            if (G.boss) {
+                const hpPct = G.boss.currentHp / G.boss.maxHp;
+                let curCombo = 0;
+                for (const t of sk.thresholds) { if (hpPct < t.hpPercent) { curCombo = t.comboChance; } }
+                lines.push({ label: '当前连击', value: `${(curCombo * 100).toFixed(0)}%`, growth: `Boss血量${(hpPct * 100).toFixed(1)}%` });
             }
             break;
         }
@@ -659,7 +680,7 @@ function getSkillScalingInfo(sk, merc) {
 }
 
 function getSkillClass(skillType) {
-    const map = { stacking_buff: 'skill', crit: 'skill-crit', speed_buff: 'skill-mage', damage_buff: 'skill-dragon', combo: 'skill-combo', burn: 'skill-burn', chaos: 'skill-chaos', time_burst: 'skill-time', gold: 'skill-gold', team_buff: 'skill-royal', teaching: 'skill-royal', iron_fist: 'skill-iron', freeze: 'skill-freeze', summon: 'skill-summon', holy: 'skill-holy', void: 'skill-void', phoenix: 'skill-phoenix', ultimate: 'skill-ultimate', knight_fortify: 'skill-iron', legend_sword: 'skill-legend-sword' };
+    const map = { stacking_buff: 'skill', crit: 'skill-crit', speed_buff: 'skill-mage', damage_buff: 'skill-dragon', combo: 'skill-combo', berserker_rage: 'skill-combo', combo_strike: 'skill-combo', burn: 'skill-burn', chaos: 'skill-chaos', time_burst: 'skill-time', gold: 'skill-gold', team_buff: 'skill-royal', teaching: 'skill-royal', iron_fist: 'skill-iron', freeze: 'skill-freeze', summon: 'skill-summon', holy: 'skill-holy', void: 'skill-void', phoenix: 'skill-phoenix', ultimate: 'skill-ultimate', knight_fortify: 'skill-iron', legend_sword: 'skill-legend-sword' };
     return map[skillType] || 'skill';
 }
 
@@ -916,7 +937,7 @@ function updateBattleMercList(force) {
                     </div>
                     <div class="skill-detail-desc">${skillInfo.skill2.desc}</div>
                     ${skillInfo.skill2.isUnlocked ? (() => {
-                        const sk2 = gameEngine.getMercenarySkill(merc);
+                        const sk2 = gameEngine.getSecondaryMercSkill(merc) || gameEngine.getMercenarySkill(merc);
                         if (!sk2) return '';
                         const s2Lines = getSkillScalingInfo(sk2, merc);
                         if (s2Lines.length === 0) return '';
@@ -1065,7 +1086,7 @@ function updateManageMercList() {
                     </div>
                     ${m.recruited ? `<div class="skill-detail-desc">${m.skillInfo.skill2.desc}</div>` : ''}
                     ${m.recruited && m.skillInfo.skill2.isUnlocked ? (() => {
-                        const sk2 = gameEngine.getMercenarySkill(m);
+                        const sk2 = gameEngine.getSecondaryMercSkill(m) || gameEngine.getMercenarySkill(m);
                         if (!sk2) return '';
                         const s2Lines = getSkillScalingInfo(sk2, m);
                         if (s2Lines.length === 0) return '';

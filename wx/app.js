@@ -11,6 +11,12 @@ App({
     const savedData = saveManager.loadGame();
     if (savedData) {
       this.globalData = savedData;
+      // Migrate: berserker_combo → berserker_rage
+      if (this.globalData.mercenaries) {
+        for (const merc of this.globalData.mercenaries) {
+          if (merc.evolvedSkillId === 'berserker_combo') merc.evolvedSkillId = 'berserker_rage';
+        }
+      }
       // 里程碑迁移：补算旧存档的一次性翻倍奖励
       gameEngine.migrateMilestoneDamageBonus(this.globalData.mercenaries);
       console.log('加载已保存的游戏数据');
@@ -362,37 +368,35 @@ App({
               if (merc._chaosAtkBuff) {
                 thisHitDamage *= (1 + merc._chaosAtkBuff);
               }
-            } else if (skill.type === 'berserker_combo') {
-              // 狂战士技能：狂暴 + 连击
+            } else if (skill.type === 'berserker_rage') {
+              // 狂暴：Boss血量越低伤害越高
               const boss = this.globalData.boss;
               const hpPercent = boss.currentHp / boss.maxHp;
               let bonusPercent = 0;
-              let comboChance = 0;
-              // 从高阈值到低阈值检查，找到符合条件的加成和连击几率
               for (const threshold of skill.thresholds) {
                 if (hpPercent < threshold.hpPercent) {
                   bonusPercent = threshold.bonusPercent;
+                }
+              }
+              if (bonusPercent > 0) {
+                thisHitDamage *= (1 + skill.maxBonus * bonusPercent);
+              }
+            } else if (skill.type === 'combo_strike') {
+              // 连击：Boss血量越低连击概率越高
+              const boss = this.globalData.boss;
+              const hpPercent = boss.currentHp / boss.maxHp;
+              let comboChance = 0;
+              for (const threshold of skill.thresholds) {
+                if (hpPercent < threshold.hpPercent) {
                   comboChance = threshold.comboChance;
                 }
               }
-              // 应用狂暴伤害加成
-              if (bonusPercent > 0) {
-                const actualBonus = skill.maxBonus * bonusPercent;
-                thisHitDamage *= (1 + actualBonus);
-              }
-              // 连击判定（50级解锁）
-              if (skill.comboUnlocked && comboChance > 0) {
+              if (comboChance > 0) {
                 let comboCount = 0;
                 let comboDamage = 0;
-                // 循环判定连击，每次连击都可以触发下一次连击
                 while (Math.random() < comboChance) {
                   comboCount++;
-                  // 连击伤害也享受狂暴加成
-                  let extraDamage = damage;
-                  if (bonusPercent > 0) {
-                    extraDamage *= (1 + skill.maxBonus * bonusPercent);
-                  }
-                  comboDamage += extraDamage;
+                  comboDamage += damage;
                 }
                 if (comboCount > 0) {
                   thisHitDamage += comboDamage;
@@ -528,6 +532,33 @@ App({
                 const fortifyDmg = gameEngine.calculateUpgradedDamage(merc, prestigeBonus.damage);
                 thisHitDamage += fortifyDmg;
                 skillTriggered = { type: 'knight_fortify', text: `稳固 +${gameEngine.formatNumber(fortifyDmg)}!` };
+              }
+            }
+          }
+
+          // 处理副技能（如狂战士的连击）
+          const secondarySkill = gameEngine.getSecondaryMercSkill(merc);
+          if (secondarySkill) {
+            if (secondarySkill.type === 'combo_strike') {
+              const boss = this.globalData.boss;
+              const hpPercent = boss.currentHp / boss.maxHp;
+              let comboChance = 0;
+              for (const threshold of secondarySkill.thresholds) {
+                if (hpPercent < threshold.hpPercent) {
+                  comboChance = threshold.comboChance;
+                }
+              }
+              if (comboChance > 0) {
+                let comboCount = 0;
+                let comboDamage = 0;
+                while (Math.random() < comboChance) {
+                  comboCount++;
+                  comboDamage += damage;
+                }
+                if (comboCount > 0) {
+                  thisHitDamage += comboDamage;
+                  skillTriggered = { type: 'combo', text: `连击x${comboCount}!` };
+                }
               }
             }
           }

@@ -72,25 +72,41 @@ export const SKILL_LIBRARY = {
             return `攻击时10%几率造成钢铁系总攻击力${(params.multiplier * 100).toFixed(0)}%伤害`;
         }
     },
-    berserker_combo: {
-        id: 'berserker_combo', name: '狂暴', type: 'berserker_combo', icon: '🔥',
-        baseUnlockLevel: 35, comboUnlockLevel: 50, baseDescription: 'Boss血量越低，伤害越高',
+    berserker_rage: {
+        id: 'berserker_rage', name: '狂暴', type: 'berserker_rage', icon: '🔥',
+        baseUnlockLevel: 35, baseDescription: 'Boss血量越低，伤害越高',
         getParams: (level) => {
             const baseBonus = 1.0 + Math.floor((level - 35) / 10) * 0.3;
             return {
                 maxBonus: Math.max(1.0, baseBonus),
                 thresholds: [
-                    { hpPercent: 0.85, bonusPercent: 0.25, comboChance: 0.15 },
-                    { hpPercent: 0.60, bonusPercent: 0.50, comboChance: 0.30 },
-                    { hpPercent: 0.35, bonusPercent: 0.75, comboChance: 0.45 },
-                    { hpPercent: 0.10, bonusPercent: 1.00, comboChance: 0.60 }
-                ],
-                comboUnlocked: level >= 50
+                    { hpPercent: 0.85, bonusPercent: 0.25 },
+                    { hpPercent: 0.60, bonusPercent: 0.50 },
+                    { hpPercent: 0.35, bonusPercent: 0.75 },
+                    { hpPercent: 0.10, bonusPercent: 1.00 }
+                ]
             };
         },
         getDescription: (level) => {
-            const params = SKILL_LIBRARY.berserker_combo.getParams(level);
+            const params = SKILL_LIBRARY.berserker_rage.getParams(level);
             return `Boss血量越低伤害越高，最高+${(params.maxBonus * 100).toFixed(0)}%`;
+        }
+    },
+    combo_strike: {
+        id: 'combo_strike', name: '连击', type: 'combo_strike', icon: '⚔️',
+        baseUnlockLevel: 50, baseDescription: 'Boss血量越低，越有几率再次攻击',
+        getParams: (level) => {
+            return {
+                thresholds: [
+                    { hpPercent: 0.85, comboChance: 0.15 },
+                    { hpPercent: 0.60, comboChance: 0.30 },
+                    { hpPercent: 0.35, comboChance: 0.45 },
+                    { hpPercent: 0.10, comboChance: 0.60 }
+                ]
+            };
+        },
+        getDescription: (level) => {
+            return `Boss血量越低连击概率越高，最高60%`;
         }
     },
     global_speed_buff: {
@@ -288,7 +304,7 @@ export const DEFAULT_UNIT_SKILLS = {
     'royal_guard': 'experience_growth',
     'iron_soldier': 'iron_fist',
     'knight': 'knight_heavy_armor',
-    'berserker': 'berserker_combo',
+    'berserker': 'berserker_rage',
     'mage': 'global_speed_buff',
     'night_swordsman': 'shadow_crit',
     'ice_daughter': 'boss_debuff',
@@ -302,6 +318,10 @@ export const DEFAULT_UNIT_SKILLS = {
     'legend': 'legend_dual_growth',
     'chaos_emperor': 'chaos_stack',
     'sacred_dragon': 'extreme_focus'
+};
+
+export const SECONDARY_UNIT_SKILLS = {
+    'berserker': 'combo_strike'
 };
 
 export function getSkillDefinition(skillId) {
@@ -325,6 +345,17 @@ export function getUnitSkill(mercenary) {
         }
         return null; // 极无需战斗处理
     }
+    const params = skillDef.getParams(totalLevel);
+    return { ...params, id: skillDef.id, type: skillDef.type, name: skillDef.name, icon: skillDef.icon, desc: skillDef.getDescription(totalLevel) };
+}
+
+export function getSecondaryUnitSkill(mercenary) {
+    const totalLevel = (mercenary.damageLevel || 0) + (mercenary.intervalLevel || 0) + 1;
+    const skillId = SECONDARY_UNIT_SKILLS[mercenary.id];
+    if (!skillId) return null;
+    const skillDef = SKILL_LIBRARY[skillId];
+    if (!skillDef) return null;
+    if (totalLevel < skillDef.baseUnlockLevel) return null;
     const params = skillDef.getParams(totalLevel);
     return { ...params, id: skillDef.id, type: skillDef.type, name: skillDef.name, icon: skillDef.icon, desc: skillDef.getDescription(totalLevel) };
 }
@@ -380,9 +411,10 @@ export function getUnitSkillDisplay(mercenary) {
             skill2: { name: '【万物终结】', isUnlocked: ultimateUnlocked, desc: ultimateUnlocked ? ultimateDef.getDescription(totalLevel) : ultimateDef.baseDescription, baseDesc: ultimateDef.baseDescription, unlockCondition: `Lv.${ultimateDef.baseUnlockLevel}解锁` }
         };
     }
-    if (skillDef.id === 'berserker_combo') {
+    if (skillDef.id === 'berserker_rage') {
         const params = skillDef.getParams(totalLevel);
-        const isComboUnlocked = totalLevel >= 50;
+        const comboDef = SKILL_LIBRARY['combo_strike'];
+        const isComboUnlocked = totalLevel >= comboDef.baseUnlockLevel;
         let skill1Desc = skillDef.baseDescription;
         if (isUnlocked) {
             const b1 = (params.maxBonus * 0.25 * 100).toFixed(0);
@@ -391,13 +423,13 @@ export function getUnitSkillDisplay(mercenary) {
             const b4 = (params.maxBonus * 1.00 * 100).toFixed(0);
             skill1Desc = `血量<85%/60%/35%/10%时，伤害+${b1}%/${b2}%/${b3}%/${b4}%`;
         }
-        let skill2Desc = '血量越低，越有几率再次攻击';
+        let skill2Desc = comboDef.baseDescription;
         if (isComboUnlocked) {
-            skill2Desc = `血量<85%/60%/35%/10%时，15%/30%/45%/60%几率连击`;
+            skill2Desc = comboDef.getDescription(totalLevel);
         }
         return {
             name: '【狂暴】', isUnlocked, desc: skill1Desc, baseDesc: skillDef.baseDescription, unlockCondition: `Lv.${skillDef.baseUnlockLevel}解锁`, icon: skillDef.icon,
-            skill2: { name: '【连击】', isUnlocked: isComboUnlocked, desc: skill2Desc, baseDesc: '血量越低，越有几率再次攻击', unlockCondition: 'Lv.50解锁' }
+            skill2: { name: '【连击】', isUnlocked: isComboUnlocked, desc: skill2Desc, baseDesc: comboDef.baseDescription, unlockCondition: `Lv.${comboDef.baseUnlockLevel}解锁` }
         };
     }
     return { name: `【${skillDef.name}】`, isUnlocked, desc: isUnlocked ? skillDef.getDescription(totalLevel) : skillDef.baseDescription, baseDesc: skillDef.baseDescription, unlockCondition: skillDef.baseUnlockLevel === 0 ? '雇佣即解锁' : `Lv.${skillDef.baseUnlockLevel}解锁`, icon: skillDef.icon };

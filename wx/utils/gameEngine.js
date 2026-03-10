@@ -435,6 +435,15 @@ function getMercenarySkill(mercenary) {
 }
 
 /**
+ * 获取佣兵副技能信息
+ * @param {Object} mercenary - 佣兵对象
+ * @returns {Object|null} - 技能配置或null
+ */
+function getSecondaryMercSkill(mercenary) {
+    return skillSystem.getSecondaryUnitSkill(mercenary);
+}
+
+/**
  * 获取佣兵技能显示信息（使用技能库）
  * @param {Object} mercenary - 佣兵对象
  * @returns {Object|null} - UI显示用的技能信息
@@ -477,6 +486,7 @@ module.exports = {
     calculateOfflineProgress,
     formatNumber,
     getMercenarySkill,
+    getSecondaryMercSkill,
     getMercenarySkillDisplay,
     calculatePrestigeBonus,
     getRandomRelicChoices,
