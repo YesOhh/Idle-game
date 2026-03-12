@@ -247,6 +247,7 @@ function processBattleTick() {
         if (merc.category && prestigeBonus.catSpeed && prestigeBonus.catSpeed[merc.category]) {
             interval /= (1 + prestigeBonus.catSpeed[merc.category]);
         }
+        interval = Math.max(gameEngine.MIN_INTERVAL, interval);
 
         if (merc._attackTimer >= interval) {
             let damage = gameEngine.calculateUpgradedDamage(merc, prestigeBonus.damage);
@@ -397,13 +398,15 @@ function processBattleTick() {
                 } else if (skill.type === 'ultimate') {
                     _ultimateAura = { damage: skill.teamDamageBonus, speed: skill.teamSpeedBonus, critChance: skill.critChance, critMult: skill.critMult };
                 } else if (skill.type === 'legend_dual_growth') {
+                    // 全能是纯被动技能，战斗时无需处理
+                } else if (skill.type === 'legend_sword') {
                     // 传说之剑: 1%概率挥出传说之剑
                     const lTotalLevel = (merc.damageLevel || 0) + (merc.intervalLevel || 0) + 1;
-                    if (lTotalLevel >= 35 && Math.random() < 0.01) {
+                    if (Math.random() < 0.01) {
                         const dmgLv = (merc.damageLevel || 0) + 1;
                         let swordDmg = 9999999999 * dmgLv;
                         let metaActive = false;
-                        // 元传说之剑: 额外增加全军攻击力×(攻击力等级+1)/10
+                        // 元传说之剑: Lv.75额外增加全军攻击力×(攻击力等级+1)/10
                         if (lTotalLevel >= 75) {
                             let tt = 0;
                             G.mercenaries.forEach(m => { if (m.recruited) tt += gameEngine.calculateUpgradedDamage(m, prestigeBonus.damage); });
@@ -546,7 +549,8 @@ function getSkillLevelLabel(sk, merc, boss) {
         case 'ultimate': return '';
         case 'knight_heavy_armor': return '';
         case 'knight_fortify': return '';
-        case 'legend_dual_growth': {
+        case 'legend_dual_growth': return '';
+        case 'legend_sword': {
             const tl = (merc.damageLevel || 0) + (merc.intervalLevel || 0) + 1;
             if (tl >= 75) return '⚔️元';
             if (tl >= 35) return '⚔️';
@@ -566,6 +570,15 @@ function getSkillScalingInfo(sk, merc) {
         case 'legend_dual_growth':
             lines.push({ label: '效果', value: '升级攻击力/攻速时另一项也提升', growth: '被动效果，无需升级' });
             break;
+        case 'legend_sword': {
+            const dmgLv = (merc.damageLevel || 0) + 1;
+            lines.push({ label: '触发概率', value: '1%', growth: '固定1%' });
+            lines.push({ label: '基础伤害', value: `${gameEngine.formatNumber(9999999999 * dmgLv)}`, growth: '9999999999×(攻击力等级+1)' });
+            if (totalLevel >= 75) {
+                lines.push({ label: '元传说之剑', value: '已激活', growth: 'Lv.75激活，额外+全军攻击力×(攻击力等级+1)/10' });
+            }
+            break;
+        }
         case 'stacking_buff':
             lines.push({ label: '触发概率', value: `${(sk.chance * 100).toFixed(1)}%`, growth: '每+10级 → +0.5%（上限5%）' });
             lines.push({ label: '效果', value: '每次触发永久+当前攻击力×1%', growth: '随攻击力增长' });
@@ -774,7 +787,7 @@ function _patchMercStats(container, prestigeBonus) {
         let currentInterval = gameEngine.calculateUpgradedInterval(merc);
         if (_globalSpeedBuff) currentInterval /= (1 + _globalSpeedBuff);
         if (_ultimateAura && _ultimateAura.speed) currentInterval /= (1 + _ultimateAura.speed);
-        currentInterval = Math.max(0.05, currentInterval);
+        currentInterval = Math.max(gameEngine.MIN_INTERVAL, currentInterval);
         // Header stats
         const dmgEl = container.querySelector(`[data-stat-dmg="${merc.id}"]`);
         if (dmgEl) dmgEl.textContent = `攻击力　${gameEngine.formatNumber(dmgInfo.final)}`;
@@ -799,9 +812,10 @@ function _patchMercStats(container, prestigeBonus) {
         let nextInterval = gameEngine.calculateUpgradedInterval(tempInt);
         if (_globalSpeedBuff) nextInterval /= (1 + _globalSpeedBuff);
         if (_ultimateAura && _ultimateAura.speed) nextInterval /= (1 + _ultimateAura.speed);
-        nextInterval = Math.max(0.05, nextInterval);
+        nextInterval = Math.max(gameEngine.MIN_INTERVAL, nextInterval);
         const effIntEl = container.querySelector(`[data-eff-int="${merc.id}"]`);
-        if (effIntEl) effIntEl.textContent = `攻击间隔 -${(currentInterval - nextInterval).toFixed(4)}秒`;
+        const intReduction = currentInterval - nextInterval;
+        if (effIntEl) effIntEl.textContent = intReduction > 0.00005 ? `攻击间隔 -${intReduction.toFixed(4)}秒` : '攻击间隔 已达下限';
     });
 }
 
@@ -823,7 +837,7 @@ function updateBattleMercList(force) {
         // Apply active speed buffs to display
         if (_globalSpeedBuff) currentInterval /= (1 + _globalSpeedBuff);
         if (_ultimateAura && _ultimateAura.speed) currentInterval /= (1 + _ultimateAura.speed);
-        currentInterval = Math.max(0.05, currentInterval);
+        currentInterval = Math.max(gameEngine.MIN_INTERVAL, currentInterval);
         const upgradeCost = gameEngine.calculateMercenaryUpgradeCost(merc, prestigeBonus.costReduction);
         const canAffordUpgrade = G.player.gold >= upgradeCost;
         const totalLevel = (merc.damageLevel || 0) + (merc.intervalLevel || 0) + 1;
@@ -873,8 +887,9 @@ function updateBattleMercList(force) {
         let nextInterval = gameEngine.calculateUpgradedInterval(tempMercInt);
         if (_globalSpeedBuff) nextInterval /= (1 + _globalSpeedBuff);
         if (_ultimateAura && _ultimateAura.speed) nextInterval /= (1 + _ultimateAura.speed);
-        nextInterval = Math.max(0.05, nextInterval);
-        const intervalUpgradeEffect = (currentInterval - nextInterval).toFixed(4);
+        nextInterval = Math.max(gameEngine.MIN_INTERVAL, nextInterval);
+        const intervalReduction = currentInterval - nextInterval;
+        const intervalUpgradeEffect = intervalReduction > 0.00005 ? `-${intervalReduction.toFixed(4)}秒` : '已达下限';
 
         html += `<div class="merc-item-card ${expanded ? 'expanded' : ''}" data-merc-id="${merc.id}">
             <div class="merc-card-header" data-toggle="${merc.id}">
@@ -901,7 +916,7 @@ function updateBattleMercList(force) {
                     <div class="upgrade-cost ${canAffordUpgrade ? '' : 'disabled'}" data-cost-dmg="${merc.id}">花费　💰 ${gameEngine.formatNumber(upgradeCost)}</div>
                 </div>
                 <div class="upgrade-box" data-upgrade-int="${merc.id}">
-                    <div class="upgrade-info"><span class="upgrade-title">当前攻速等级${merc.intervalLevel||0}　升级攻击速度</span><span class="upgrade-effect" data-eff-int="${merc.id}">攻击间隔 -${intervalUpgradeEffect}秒</span></div>
+                    <div class="upgrade-info"><span class="upgrade-title">当前攻速等级${merc.intervalLevel||0}　升级攻击速度</span><span class="upgrade-effect" data-eff-int="${merc.id}">攻击间隔 ${intervalUpgradeEffect}</span></div>
                     <div class="upgrade-cost ${canAffordUpgrade ? '' : 'disabled'}" data-cost-int="${merc.id}">花费　💰 ${gameEngine.formatNumber(upgradeCost)}</div>
                 </div>
                 <div class="merc-description">${merc.description}</div>

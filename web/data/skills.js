@@ -321,7 +321,8 @@ export const DEFAULT_UNIT_SKILLS = {
 };
 
 export const SECONDARY_UNIT_SKILLS = {
-    'berserker': 'combo_strike'
+    'berserker': 'combo_strike',
+    'legend': 'legend_sword'
 };
 
 export function getSkillDefinition(skillId) {
@@ -381,6 +382,16 @@ export function getUnitSkillDisplay(mercenary) {
             name: `【${skillDef.name}】`, isUnlocked: mercenary.recruited, desc: mercenary.recruited ? skillDef.getDescription(totalLevel) : '（招募后解锁）', baseDesc: skillDef.baseDescription, unlockCondition: '招募后解锁', icon: skillDef.icon,
             skill2: { name: '【传说之剑】', isUnlocked: swordUnlocked, desc: swordDesc, baseDesc: swordDef.baseDescription, unlockCondition: `Lv.${swordDef.baseUnlockLevel}解锁` },
             skill3: { name: '【元传说之剑】', isUnlocked: metaUnlocked, desc: metaDesc, baseDesc: metaDef.baseDescription, unlockCondition: `Lv.${metaDef.baseUnlockLevel}解锁` }
+        };
+    }
+    if (skillDef.type === 'legend_sword') {
+        const metaDef = SKILL_LIBRARY['meta_legend_sword'];
+        const metaUnlocked = totalLevel >= metaDef.baseUnlockLevel;
+        let metaDesc = metaDef.baseDescription;
+        if (metaUnlocked) metaDesc = metaDef.getDescription(totalLevel);
+        return {
+            name: `【${skillDef.name}】`, isUnlocked, desc: isUnlocked ? skillDef.getDescription(totalLevel) : skillDef.baseDescription, baseDesc: skillDef.baseDescription, unlockCondition: `Lv.${skillDef.baseUnlockLevel}解锁`, icon: skillDef.icon,
+            skill2: { name: '【元传说之剑】', isUnlocked: metaUnlocked, desc: metaDesc, baseDesc: metaDef.baseDescription, unlockCondition: `Lv.${metaDef.baseUnlockLevel}解锁` }
         };
     }
     if (skillDef.type === 'sync_click_damage') {
@@ -461,7 +472,7 @@ export function getEvolvedUnitSkillDisplay(mercenary) {
 }
 
 export function getEvolvableSkills(mercId) {
-    const excludeIds = ['sync_click_damage', 'legend_sword', 'meta_legend_sword', 'knight_heavy_armor', 'knight_fortify', 'experience_growth', 'team_damage_buff'];
+    const excludeIds = ['sync_click_damage', 'meta_legend_sword', 'knight_heavy_armor', 'knight_fortify', 'experience_growth', 'team_damage_buff'];
     return Object.values(SKILL_LIBRARY)
         .filter(skill => !excludeIds.includes(skill.id))
         .map(skill => ({ id: skill.id, name: skill.name, icon: skill.icon, baseDescription: skill.baseDescription, baseUnlockLevel: skill.baseUnlockLevel }));

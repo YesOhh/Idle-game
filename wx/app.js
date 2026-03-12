@@ -523,6 +523,26 @@ App({
                 isCrit = true;
                 skillTriggered = { type: 'ultimate', text: `万物终结 x${skill.critMult}!` };
               }
+            } else if (skill.type === 'legend_dual_growth') {
+              // 全能是纯被动技能，战斗时无需处理
+            } else if (skill.type === 'legend_sword') {
+              // 传说之剑: 1%概率挥出传说之剑
+              const lTotalLevel = (merc.damageLevel || 0) + (merc.intervalLevel || 0) + 1;
+              if (Math.random() < 0.01) {
+                const dmgLv = (merc.damageLevel || 0) + 1;
+                let swordDmg = 9999999999 * dmgLv;
+                let metaActive = false;
+                // 元传说之剑: Lv.75额外增加全军攻击力×(攻击力等级+1)/10
+                if (lTotalLevel >= 75) {
+                  let tt = 0;
+                  globalData.mercenaries.forEach(m => { if (m.recruited) tt += gameEngine.calculateUpgradedDamage(m, prestigeBonus.damage); });
+                  swordDmg += Math.floor(tt * dmgLv / 10);
+                  metaActive = true;
+                }
+                thisHitDamage += swordDmg; isCrit = true;
+                const tag = metaActive ? '元传说之剑' : '传说之剑';
+                skillTriggered = { type: 'legend_sword', text: `⚔️${tag} +${gameEngine.formatNumber(swordDmg)}!` };
+              }
             } else if (skill.type === 'knight_heavy_armor') {
               // 「稳固」技能：每隔8秒造成等同攻击力的额外伤害
               if (typeof merc._fortifyTimer === 'undefined') merc._fortifyTimer = 0;
@@ -559,6 +579,23 @@ App({
                   thisHitDamage += comboDamage;
                   skillTriggered = { type: 'combo', text: `连击x${comboCount}!` };
                 }
+              }
+            } else if (secondarySkill.type === 'legend_sword') {
+              // 传说之剑（副技能）: 1%概率挥出传说之剑
+              const lTotalLevel = (merc.damageLevel || 0) + (merc.intervalLevel || 0) + 1;
+              if (Math.random() < 0.01) {
+                const dmgLv = (merc.damageLevel || 0) + 1;
+                let swordDmg = 9999999999 * dmgLv;
+                let metaActive = false;
+                if (lTotalLevel >= 75) {
+                  let tt = 0;
+                  globalData.mercenaries.forEach(m => { if (m.recruited) tt += gameEngine.calculateUpgradedDamage(m, prestigeBonus.damage); });
+                  swordDmg += Math.floor(tt * dmgLv / 10);
+                  metaActive = true;
+                }
+                thisHitDamage += swordDmg; isCrit = true;
+                const tag = metaActive ? '元传说之剑' : '传说之剑';
+                skillTriggered = { type: 'legend_sword', text: `⚔️${tag} +${gameEngine.formatNumber(swordDmg)}!` };
               }
             }
           }

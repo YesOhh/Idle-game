@@ -2,6 +2,8 @@
 import { BOSS_DATA } from '../data/bosses.js';
 import { getUnitSkill, getSecondaryUnitSkill, getUnitSkillDisplay, getEvolvedUnitSkill, getEvolvedUnitSkillDisplay, getEvolvableSkills, DEFAULT_UNIT_SKILLS, SECONDARY_UNIT_SKILLS, SKILL_LIBRARY } from '../data/skills.js';
 
+export const MIN_INTERVAL = 0.05;
+
 export function formatNumber(num) {
     if (num < 1) return parseFloat(num.toFixed(2)).toString();
     return Math.floor(num).toLocaleString('en-US');
@@ -146,7 +148,7 @@ export function calculateUpgradedInterval(mercenary) {
         const dmgLvl = mercenary.damageLevel || 0;
         if (dmgLvl > 0) interval *= Math.pow(1.005, dmgLvl);
     }
-    return Math.max(0.1, Number(interval.toFixed(4)));
+    return Math.max(MIN_INTERVAL, Number(interval.toFixed(4)));
 }
 
 export function calculatePrestigeBonus(player) {
