@@ -4,13 +4,33 @@ import { getUnitSkill, getSecondaryUnitSkill, getUnitSkillDisplay, getEvolvedUni
 
 export const MIN_INTERVAL = 0.05;
 
+// BigInt arithmetic helpers
+export function toBigInt(val) {
+    if (typeof val === 'bigint') return val;
+    if (typeof val === 'number') return BigInt(Math.floor(val));
+    if (typeof val === 'string') { try { return BigInt(val); } catch { return 0n; } }
+    return 0n;
+}
+
+export function bigMul(val, multiplier) {
+    if (typeof val !== 'bigint') val = toBigInt(val);
+    if (multiplier === 1) return val;
+    if (multiplier === 0) return 0n;
+    const PRECISION = 1000000n;
+    return val * BigInt(Math.round(multiplier * 1000000)) / PRECISION;
+}
+
 export function formatNumber(num) {
+    if (typeof num === 'bigint') {
+        if (num <= 0n) return '0';
+        return num.toLocaleString('en-US');
+    }
     if (num < 1) return parseFloat(num.toFixed(2)).toString();
     return Math.floor(num).toLocaleString('en-US');
 }
 
 export function calculateBossMaxHp(level) {
-    return Math.floor(30000 * Math.pow(135, level - 1));
+    return 30000n * (135n ** BigInt(level - 1));
 }
 
 const ADD_VALUE_TABLE = [2, 3, 4, 6, 9, 13, 19, 28, 42, 63, 95, 142, 212];
@@ -54,15 +74,28 @@ export function calculateRawUpgradeDamage(mercenary) {
         effectiveLevel = (mercenary.damageLevel || 0) + (mercenary.intervalLevel || 0) * dualCount;
     }
     const baseAtk = mercenary.damage;
-    const scale = baseAtk / 4;
+    const scaleNumer = BigInt(baseAtk);
+    const scaleDenom = 4n;
     const hasExtreme = hasSkillType(mercenary, 'extreme_focus');
-    let damage = baseAtk;
+    let damage = BigInt(baseAtk);
+    let currentTier = -1;
+    let baseAddBig = 0n;
     for (let upgrade = 1; upgrade <= effectiveLevel; upgrade++) {
-        const tier = getUpgradeTier(upgrade);
-        let baseAdd = tier < ADD_VALUE_TABLE.length ? ADD_VALUE_TABLE[tier] : Math.floor(ADD_VALUE_TABLE[12] * Math.pow(1.5, tier - 12));
-        let addValue = Math.floor(baseAdd * scale);
-        if (hasExtreme) addValue = Math.floor(addValue * 2.2);
-        damage += Math.max(1, addValue);
+        const newTier = getUpgradeTier(upgrade);
+        if (newTier !== currentTier) {
+            if (newTier < ADD_VALUE_TABLE.length) {
+                baseAddBig = BigInt(ADD_VALUE_TABLE[newTier]);
+            } else if (currentTier < ADD_VALUE_TABLE.length) {
+                baseAddBig = BigInt(ADD_VALUE_TABLE[ADD_VALUE_TABLE.length - 1]);
+                for (let t = ADD_VALUE_TABLE.length; t <= newTier; t++) baseAddBig = baseAddBig * 3n / 2n;
+            } else {
+                for (let t = currentTier + 1; t <= newTier; t++) baseAddBig = baseAddBig * 3n / 2n;
+            }
+            currentTier = newTier;
+        }
+        let addValue = baseAddBig * scaleNumer / scaleDenom;
+        if (hasExtreme) addValue = addValue * 11n / 5n;
+        damage += addValue > 0n ? addValue : 1n;
     }
     return damage;
 }
@@ -70,25 +103,25 @@ export function calculateRawUpgradeDamage(mercenary) {
 export function calculateMercenaryBaseDamage(mercenary) {
     let damage = calculateRawUpgradeDamage(mercenary);
     // 里程碑奖励（一次性翻倍，存储在 _milestoneDamageBonus 中）
-    if (mercenary._milestoneDamageBonus) damage += mercenary._milestoneDamageBonus;
-    if (mercenary._knightHeavyBonus) damage += mercenary._knightHeavyBonus;
-    if (mercenary._experienceBonus) damage += mercenary._experienceBonus;
-    return Math.floor(damage);
+    if (mercenary._milestoneDamageBonus) damage += toBigInt(mercenary._milestoneDamageBonus);
+    if (mercenary._knightHeavyBonus) damage += toBigInt(mercenary._knightHeavyBonus);
+    if (mercenary._experienceBonus) damage += toBigInt(mercenary._experienceBonus);
+    return damage;
 }
 
 // 里程碑攻击力检查：跨越50/100级时一次性翻倍当前攻击力（含传授加成）
 export function applyMilestoneDamageCheck(merc, oldDisplayLevel, newDisplayLevel) {
     if (oldDisplayLevel < 50 && newDisplayLevel >= 50) {
         const rawDmg = calculateRawUpgradeDamage(merc);
-        const existing = merc._milestoneDamageBonus || 0;
-        const teachingBonus = merc._teachingBonus || 0;
-        merc._milestoneDamageBonus = rawDmg + teachingBonus + 2 * existing;
+        const existing = toBigInt(merc._milestoneDamageBonus || 0);
+        const teachingBonus = toBigInt(merc._teachingBonus || 0);
+        merc._milestoneDamageBonus = rawDmg + teachingBonus + 2n * existing;
     }
     if (oldDisplayLevel < 100 && newDisplayLevel >= 100) {
         const rawDmg = calculateRawUpgradeDamage(merc);
-        const existing = merc._milestoneDamageBonus || 0;
-        const teachingBonus = merc._teachingBonus || 0;
-        merc._milestoneDamageBonus = rawDmg + teachingBonus + 2 * existing;
+        const existing = toBigInt(merc._milestoneDamageBonus || 0);
+        const teachingBonus = toBigInt(merc._teachingBonus || 0);
+        merc._milestoneDamageBonus = rawDmg + teachingBonus + 2n * existing;
     }
 }
 
@@ -99,9 +132,9 @@ export function migrateMilestoneDamageBonus(mercenaries) {
         if (merc._milestoneDamageBonus === undefined || merc._milestoneDamageBonus === null) {
             const displayLevel = (merc.damageLevel || 0) + (merc.intervalLevel || 0) + 1;
             const rawDmg = calculateRawUpgradeDamage(merc);
-            const teachingBonus = merc._teachingBonus || 0;
+            const teachingBonus = toBigInt(merc._teachingBonus || 0);
             if (displayLevel >= 100) {
-                merc._milestoneDamageBonus = 3 * rawDmg + 3 * teachingBonus;
+                merc._milestoneDamageBonus = 3n * rawDmg + 3n * teachingBonus;
             } else if (displayLevel >= 50) {
                 merc._milestoneDamageBonus = rawDmg + teachingBonus;
             }
@@ -111,19 +144,19 @@ export function migrateMilestoneDamageBonus(mercenaries) {
 
 export function calculateUpgradedDamage(mercenary, prestigeDamageMult = 1) {
     let baseDamage = calculateMercenaryBaseDamage(mercenary);
-    if (mercenary._teachingBonus) baseDamage += mercenary._teachingBonus;
+    if (mercenary._teachingBonus) baseDamage += toBigInt(mercenary._teachingBonus);
     // 熟练Buff：永久固定加成，每次触发时 += 当前攻击力×1%
-    if (mercenary._stackingBuff) baseDamage += mercenary._stackingBuff;
-    return Math.floor(baseDamage * prestigeDamageMult);
+    if (mercenary._stackingBuff) baseDamage += toBigInt(mercenary._stackingBuff);
+    return bigMul(baseDamage, prestigeDamageMult);
 }
 
 export function getDamageDisplayInfo(mercenary, prestigeDamageMult = 1) {
     let base = calculateMercenaryBaseDamage(mercenary);
-    if (mercenary._teachingBonus) base += mercenary._teachingBonus;
-    if (mercenary._stackingBuff) base += mercenary._stackingBuff;
-    const final = Math.floor(base * prestigeDamageMult);
-    const bonus = final - Math.floor(base);
-    return { base: Math.floor(base), bonus, final, text: bonus > 0 ? `${formatNumber(Math.floor(base))} (+${formatNumber(bonus)})` : `${formatNumber(Math.floor(base))}` };
+    if (mercenary._teachingBonus) base += toBigInt(mercenary._teachingBonus);
+    if (mercenary._stackingBuff) base += toBigInt(mercenary._stackingBuff);
+    const final = bigMul(base, prestigeDamageMult);
+    const bonus = final - base;
+    return { base, bonus, final, text: bonus > 0n ? `${formatNumber(base)} (+${formatNumber(bonus)})` : `${formatNumber(base)}` };
 }
 
 export function hasSkillOfType(mercenary, skillType) {
@@ -178,18 +211,21 @@ export function calculatePrestigeBonus(player) {
 export function calculateMercenaryUpgradeCost(mercenary, costReduction = 1) {
     const totalLevel = mercenary.damageLevel + mercenary.intervalLevel;
     const baseUpgradeCost = mercenary.baseCost > 0 ? mercenary.baseCost / 2 : 15;
-    let cost = Math.floor(baseUpgradeCost * Math.pow(1.15, totalLevel));
-    return Math.floor(cost * costReduction);
+    let cost = baseUpgradeCost * Math.pow(1.15, totalLevel);
+    cost = Math.floor(cost * costReduction);
+    return isFinite(cost) ? toBigInt(cost) : toBigInt(Number.MAX_SAFE_INTEGER);
 }
 
 export function calculateRecruitCost(mercenary) {
-    return mercenary.baseCost;
+    return toBigInt(mercenary.baseCost);
 }
 
 export function dealDamageToBoss(boss, damage, prestigeGoldMult = 1) {
-    if (boss.currentHp <= 0) return { boss, defeated: false, goldEarned: 0 };
-    boss.currentHp = Math.max(0, boss.currentHp - damage);
-    return { boss, defeated: boss.currentHp === 0, goldEarned: Math.floor(damage * prestigeGoldMult) };
+    if (boss.currentHp <= 0n) return { boss, defeated: false, goldEarned: 0n };
+    const dmg = toBigInt(damage);
+    boss.currentHp = boss.currentHp - dmg;
+    if (boss.currentHp < 0n) boss.currentHp = 0n;
+    return { boss, defeated: boss.currentHp === 0n, goldEarned: bigMul(dmg, prestigeGoldMult) };
 }
 
 export function nextBoss(currentLevel) {
@@ -202,32 +238,30 @@ export function nextBoss(currentLevel) {
 export function calculateOfflineProgress(mercenaries, offlineSeconds, bossLevel, currentBossHp, prestigeBonus) {
     const maxOfflineTime = 8 * 60 * 60;
     const actualOfflineTime = Math.min(offlineSeconds, maxOfflineTime);
-    // Per-merc: floor(offlineTime / interval) * damage, no skills
-    let totalDamage = 0;
+    let totalDamage = 0n;
     mercenaries.forEach(merc => {
         if (!merc.recruited) return;
         const interval = calculateUpgradedInterval(merc);
         let damage = calculateUpgradedDamage(merc, prestigeBonus.damage);
-        // Category damage bonus from relics
         if (merc.category && prestigeBonus.catDamage && prestigeBonus.catDamage[merc.category]) {
-            damage = Math.floor(damage * (1 + prestigeBonus.catDamage[merc.category]));
+            damage = bigMul(damage, 1 + prestigeBonus.catDamage[merc.category]);
         }
         let effectiveInterval = interval;
-        // Category speed bonus from relics
         if (merc.category && prestigeBonus.catSpeed && prestigeBonus.catSpeed[merc.category]) {
             effectiveInterval /= (1 + prestigeBonus.catSpeed[merc.category]);
         }
         effectiveInterval = Math.max(0.1, effectiveInterval);
-        const hits = Math.floor(actualOfflineTime / effectiveInterval);
+        const hits = BigInt(Math.floor(actualOfflineTime / effectiveInterval));
         totalDamage += hits * damage;
     });
-    // Simulate boss kills
-    let bossesDefeated = 0, currentLevel = bossLevel, tempDamage = totalDamage, firstBossHp = currentBossHp;
-    while (tempDamage > 0 && currentLevel <= 12) {
+    let bossesDefeated = 0, currentLevel = bossLevel;
+    let tempDamage = totalDamage;
+    let firstBossHp = toBigInt(currentBossHp);
+    while (tempDamage > 0n && currentLevel <= 12) {
         const bossHp = (bossesDefeated === 0) ? firstBossHp : calculateBossMaxHp(currentLevel);
         if (tempDamage >= bossHp) { tempDamage -= bossHp; bossesDefeated++; if (currentLevel < 12) currentLevel++; else break; } else break;
     }
-    const goldEarned = Math.floor(totalDamage * prestigeBonus.gold);
+    const goldEarned = bigMul(totalDamage, prestigeBonus.gold);
     return { totalDamage, gold: goldEarned, bossesDefeated, newLevel: currentLevel, remainingDamage: tempDamage, timeProcessed: actualOfflineTime };
 }
 

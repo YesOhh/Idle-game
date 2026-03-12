@@ -19,7 +19,9 @@ export function saveGame(gameData) {
             }) : [],
             stats: { ...gameData.stats, lastSaveTime: Date.now() }
         };
-        localStorage.setItem(SAVE_KEY, JSON.stringify(saveData));
+        localStorage.setItem(SAVE_KEY, JSON.stringify(saveData, (key, value) =>
+            typeof value === 'bigint' ? { __bigint: value.toString() } : value
+        ));
         return true;
     } catch (error) {
         console.error('保存游戏失败:', error);
@@ -31,7 +33,12 @@ export function loadGame() {
     try {
         const raw = localStorage.getItem(SAVE_KEY);
         if (raw) {
-            const saveData = JSON.parse(raw);
+            const saveData = JSON.parse(raw, (key, value) => {
+                if (value && typeof value === 'object' && '__bigint' in value) {
+                    return BigInt(value.__bigint);
+                }
+                return value;
+            });
             const now = Date.now();
             const lastSaveTime = saveData.stats.lastSaveTime || now;
             const offlineSeconds = Math.floor((now - lastSaveTime) / 1000);
