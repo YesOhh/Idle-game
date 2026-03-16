@@ -764,7 +764,7 @@ function getUnitSkillDisplay(mercenary) {
  */
 function getEvolvableSkills() {
     // 排除一些特殊技能（玩家专属、传说专属等）
-    const excludeIds = ['sync_click_damage', 'meta_legend_sword', 'knight_heavy_armor', 'knight_fortify', 'experience_growth'];
+    const excludeIds = ['sync_click_damage', 'meta_legend_sword', 'knight_heavy_armor', 'knight_fortify', 'experience_growth', 'damage_aura', 'ultimate', 'global_speed_buff', 'boss_debuff'];
 
     return Object.values(SKILL_LIBRARY)
         .filter(skill => !excludeIds.includes(skill.id))

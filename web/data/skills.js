@@ -472,7 +472,7 @@ export function getEvolvedUnitSkillDisplay(mercenary) {
 }
 
 export function getEvolvableSkills(mercId) {
-    const excludeIds = ['sync_click_damage', 'meta_legend_sword', 'knight_heavy_armor', 'knight_fortify', 'experience_growth', 'team_damage_buff'];
+    const excludeIds = ['sync_click_damage', 'meta_legend_sword', 'knight_heavy_armor', 'knight_fortify', 'experience_growth', 'team_damage_buff', 'damage_aura', 'ultimate', 'global_speed_buff', 'boss_debuff'];
     return Object.values(SKILL_LIBRARY)
         .filter(skill => !excludeIds.includes(skill.id))
         .map(skill => ({ id: skill.id, name: skill.name, icon: skill.icon, baseDescription: skill.baseDescription, baseUnlockLevel: skill.baseUnlockLevel }));

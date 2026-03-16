@@ -527,13 +527,13 @@ App({
               // 全能是纯被动技能，战斗时无需处理
             } else if (skill.type === 'legend_sword') {
               // 传说之剑: 1%概率挥出传说之剑
-              const lTotalLevel = (merc.damageLevel || 0) + (merc.intervalLevel || 0) + 1;
               if (Math.random() < 0.01) {
                 const dmgLv = (merc.damageLevel || 0) + 1;
                 let swordDmg = 9999999999 * dmgLv;
                 let metaActive = false;
-                // 元传说之剑: Lv.75额外增加全军攻击力×(攻击力等级+1)/10
-                if (lTotalLevel >= 75) {
+                // 元传说之剑: 仅当此单位同时拥有 meta_legend_sword 技能且等级≥75时
+                const lTotalLevel = (merc.damageLevel || 0) + (merc.intervalLevel || 0) + 1;
+                if (lTotalLevel >= 75 && gameEngine.hasSkillOfType(merc, 'meta_legend_sword')) {
                   let tt = 0;
                   globalData.mercenaries.forEach(m => { if (m.recruited) tt += gameEngine.calculateUpgradedDamage(m, prestigeBonus.damage); });
                   swordDmg += Math.floor(tt * dmgLv / 10);
@@ -582,12 +582,12 @@ App({
               }
             } else if (secondarySkill.type === 'legend_sword') {
               // 传说之剑（副技能）: 1%概率挥出传说之剑
-              const lTotalLevel = (merc.damageLevel || 0) + (merc.intervalLevel || 0) + 1;
               if (Math.random() < 0.01) {
                 const dmgLv = (merc.damageLevel || 0) + 1;
                 let swordDmg = 9999999999 * dmgLv;
                 let metaActive = false;
-                if (lTotalLevel >= 75) {
+                const lTotalLevel = (merc.damageLevel || 0) + (merc.intervalLevel || 0) + 1;
+                if (lTotalLevel >= 75 && gameEngine.hasSkillOfType(merc, 'meta_legend_sword')) {
                   let tt = 0;
                   globalData.mercenaries.forEach(m => { if (m.recruited) tt += gameEngine.calculateUpgradedDamage(m, prestigeBonus.damage); });
                   swordDmg += Math.floor(tt * dmgLv / 10);
