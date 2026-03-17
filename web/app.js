@@ -287,17 +287,21 @@ function processBattleTick() {
             const defaultSkill = gameEngine.getMercenarySkill(merc);
             const secondarySkill = gameEngine.getSecondaryMercSkill(merc);
             const evolvedSkill = gameEngine.getEvolvedMercSkill(merc);
+            if (defaultSkill) defaultSkill._slot = 'default';
+            if (secondarySkill) secondarySkill._slot = 'secondary';
+            if (evolvedSkill) evolvedSkill._slot = 'evolved';
             const skillsToProcess = [defaultSkill, secondarySkill, evolvedSkill].filter(Boolean);
             let isCrit = false;
             let thisHitDamage = damage;
             let skillTriggered = null;
             let bonusGold = 0n;
             let skipNormalHit = false;
+            let _chaosBuffApplied = false;
 
             for (const skill of skillsToProcess) {
                 // Skill processing — same logic as wx version
                 if (skill.type === 'gold_on_attack') {
-                    bonusGold = gameEngine.bigMul(damage, skill.multiplier);
+                    bonusGold += gameEngine.bigMul(damage, skill.multiplier);
                     skillTriggered = { type: 'gold', text: `+${gameEngine.formatNumber(bonusGold)}💰` };
                 } else if (skill.type === 'stacking_buff') {
                     if (Math.random() < skill.chance) {
@@ -338,7 +342,7 @@ function processBattleTick() {
                         merc._chaosIntervalPenalty = (merc._chaosIntervalPenalty || 0) + skill.intervalIncrease;
                         skillTriggered = { type: 'chaos', text: `混沌x${Math.round((merc._chaosAtkBuff || 0) / skill.atkBonus)}` };
                     }
-                    if (merc._chaosAtkBuff) thisHitDamage = gameEngine.bigMul(thisHitDamage, 1 + merc._chaosAtkBuff);
+                    if (merc._chaosAtkBuff && !_chaosBuffApplied) { thisHitDamage = gameEngine.bigMul(thisHitDamage, 1 + merc._chaosAtkBuff); _chaosBuffApplied = true; }
                 } else if (skill.type === 'berserker_rage') {
                     const hpPercent = Number(G.boss.currentHp) / Number(G.boss.maxHp);
                     let bonusPercent = 0;
@@ -354,29 +358,135 @@ function processBattleTick() {
                         if (comboCount > 0) { thisHitDamage += comboDamage; skillTriggered = { type: 'combo', text: `连击x${comboCount}!` }; }
                     }
                 } else if (skill.type === 'time_burst') {
-                    if (typeof merc._timeBurstTimer === 'undefined') merc._timeBurstTimer = 0;
-                    merc._timeBurstTimer += interval * 1000;
-                    if (merc._timeBurstTimer >= skill.interval) {
-                        merc._timeBurstTimer = 0;
-                        // Each burst hit is a full independent attack
+                    const _tbKey = `_timeBurstTimer_${skill._slot}`;
+                    if (typeof merc[_tbKey] === 'undefined') merc[_tbKey] = 0;
+                    merc[_tbKey] += interval * 1000;
+                    if (merc[_tbKey] >= skill.interval) {
+                        merc[_tbKey] = 0;
+                        // Each burst hit is a full independent attack that can trigger other skills
                         const burstBaseDmg = gameEngine.bigMul(damage, skill.damageMultiplier);
+                        const _noRecurse = new Set(['time_burst', 'periodic_burst', 'knight_heavy_armor', 'legend_dual_growth']);
+                        const otherSkills = skillsToProcess.filter(s => !_noRecurse.has(s.type));
                         for (let bi = 0; bi < skill.attackCount; bi++) {
                             let burstHit = burstBaseDmg;
-                            // Apply global buffs to each hit independently
+                            let burstCrit = false;
+                            let burstGold = 0n;
+                            let burstChaosApplied = false;
+                            // Process other skills per burst hit
+                            for (const os of otherSkills) {
+                                if (os.type === 'gold_on_attack') {
+                                    burstGold += gameEngine.bigMul(damage, os.multiplier);
+                                } else if (os.type === 'stacking_buff') {
+                                    if (Math.random() < os.chance) {
+                                        const buffInc = gameEngine.bigMul(damage, os.val);
+                                        merc._stackingBuff = gameEngine.toBigInt(merc._stackingBuff || 0) + buffInc;
+                                    }
+                                } else if (os.type === 'crit') {
+                                    if (Math.random() < os.chance) { burstHit = gameEngine.bigMul(burstHit, os.multiplier); burstCrit = true; }
+                                } else if (os.type === 'global_speed_buff') {
+                                    if (Math.random() < os.chance) {
+                                        _globalSpeedBuff = os.val; _speedBuffActive = true;
+                                        if (_globalSpeedTimer) clearTimeout(_globalSpeedTimer);
+                                        _globalSpeedTimer = setTimeout(() => { _globalSpeedBuff = 0; _speedBuffActive = false; removeSpeedBuffEffect(); }, os.duration);
+                                        showSpeedBuffEffect(os.duration);
+                                    }
+                                } else if (os.type === 'dragon_soul') {
+                                    merc._dragonSoulStacks = (merc._dragonSoulStacks || 0) + 1;
+                                    if (merc._dragonSoulStacks >= os.maxStacks) {
+                                        merc._dragonSoulStacks = 0;
+                                        burstHit = gameEngine.bigMul(burstHit, os.burstMultiplier); burstCrit = true;
+                                        const burnPerTick = gameEngine.bigMul(damage, os.burnDamage);
+                                        const burnTicks = os.burnDuration / 1000;
+                                        if (_dragonBurnTimer) clearInterval(_dragonBurnTimer);
+                                        let burnCount = 0;
+                                        _dragonBurnTimer = setInterval(() => {
+                                            burnCount++;
+                                            if (burnCount > burnTicks || G.boss.currentHp <= 0) { clearInterval(_dragonBurnTimer); _dragonBurnTimer = null; return; }
+                                            dealGlobalDamage(burnPerTick);
+                                        }, 1000);
+                                    }
+                                } else if (os.type === 'chaos_stack') {
+                                    if (Math.random() < os.chance) {
+                                        merc._chaosAtkBuff = (merc._chaosAtkBuff || 0) + os.atkBonus;
+                                        merc._chaosIntervalPenalty = (merc._chaosIntervalPenalty || 0) + os.intervalIncrease;
+                                    }
+                                    if (merc._chaosAtkBuff && !burstChaosApplied) { burstHit = gameEngine.bigMul(burstHit, 1 + merc._chaosAtkBuff); burstChaosApplied = true; }
+                                } else if (os.type === 'berserker_rage') {
+                                    const hpPct = Number(G.boss.currentHp) / Number(G.boss.maxHp);
+                                    let bp = 0;
+                                    for (const t of os.thresholds) { if (hpPct < t.hpPercent) bp = t.bonusPercent; }
+                                    if (bp > 0) burstHit = gameEngine.bigMul(burstHit, 1 + os.maxBonus * bp);
+                                } else if (os.type === 'combo_strike') {
+                                    const hpPct = Number(G.boss.currentHp) / Number(G.boss.maxHp);
+                                    let cc = 0;
+                                    for (const t of os.thresholds) { if (hpPct < t.hpPercent) cc = t.comboChance; }
+                                    if (cc > 0) { let cd = 0n; while (Math.random() < cc) { cd += burstBaseDmg; } burstHit += cd; }
+                                } else if (os.type === 'iron_fist') {
+                                    if (Math.random() < os.chance) {
+                                        let ironTotal = 0n;
+                                        G.mercenaries.forEach(m => { if (m.recruited && m.category === 'iron') ironTotal += gameEngine.calculateUpgradedDamage(m, prestigeBonus.damage); });
+                                        burstHit += gameEngine.bigMul(ironTotal, os.multiplier); burstCrit = true;
+                                    }
+                                } else if (os.type === 'boss_debuff') {
+                                    if (Math.random() < os.chance) {
+                                        _bossDebuff = os.val; _bossDebuffActive = true;
+                                        if (_bossDebuffTimer) clearTimeout(_bossDebuffTimer);
+                                        _bossDebuffTimer = setTimeout(() => { _bossDebuff = 0; _bossDebuffActive = false; }, os.duration);
+                                    }
+                                } else if (os.type === 'soul_devour') {
+                                    if (Math.random() < os.chance) { merc._soulCount = Math.min((merc._soulCount || 0) + 1, os.maxSouls); }
+                                    const sc = merc._soulCount || 0;
+                                    if (sc > 0) burstHit += gameEngine.bigMul(damage, os.damageRatio * sc);
+                                } else if (os.type === 'pure_percent_damage') {
+                                    if (Math.random() < os.chance) {
+                                        const dlp1 = (merc.damageLevel || 0) + 1;
+                                        let tt = 0n; G.mercenaries.forEach(m => { if (m.recruited) tt += gameEngine.calculateUpgradedDamage(m, prestigeBonus.damage); });
+                                        const cap = tt * BigInt(dlp1) / 30n;
+                                        const pd = gameEngine.bigMul(G.boss.currentHp, os.percentVal);
+                                        burstHit += (pd < cap ? pd : cap);
+                                    }
+                                } else if (os.type === 'total_team_damage') {
+                                    if (Math.random() < os.chance) {
+                                        let tt = 0n; G.mercenaries.forEach(m => { if (m.recruited) tt += gameEngine.calculateUpgradedDamage(m, prestigeBonus.damage); });
+                                        burstHit += gameEngine.bigMul(tt, os.ratio); burstCrit = true;
+                                    }
+                                } else if (os.type === 'legend_sword') {
+                                    if (Math.random() < 0.01) {
+                                        const dmgLv = BigInt((merc.damageLevel || 0) + 1);
+                                        let swordDmg = 9999999999n * dmgLv;
+                                        const lTotalLevel = (merc.damageLevel || 0) + (merc.intervalLevel || 0) + 1;
+                                        if (lTotalLevel >= 75 && gameEngine.hasSkillOfType(merc, 'meta_legend_sword')) {
+                                            let tt = 0n;
+                                            G.mercenaries.forEach(m => { if (m.recruited) tt += gameEngine.calculateUpgradedDamage(m, prestigeBonus.damage); });
+                                            swordDmg += tt * dmgLv / 10n;
+                                        }
+                                        burstHit += swordDmg; burstCrit = true;
+                                    }
+                                } else if (os.type === 'damage_aura') {
+                                    _damageAura = os.val;
+                                } else if (os.type === 'ultimate') {
+                                    _ultimateAura = { damage: os.teamDamageBonus, speed: os.teamSpeedBonus, critChance: os.critChance, critMult: os.critMult };
+                                }
+                            }
+                            // Apply global buffs
                             if (merc.category && prestigeBonus.catDamage && prestigeBonus.catDamage[merc.category]) {
                                 burstHit = gameEngine.bigMul(burstHit, 1 + prestigeBonus.catDamage[merc.category]);
                             }
                             if (_damageAura) burstHit = gameEngine.bigMul(burstHit, 1 + _damageAura);
                             if (_ultimateAura) burstHit = gameEngine.bigMul(burstHit, 1 + _ultimateAura.damage);
+                            if (_ultimateAura && _ultimateAura.critChance && Math.random() < _ultimateAura.critChance) {
+                                burstHit = gameEngine.bigMul(burstHit, _ultimateAura.critMult); burstCrit = true;
+                            }
                             if (_bossDebuff) burstHit = gameEngine.bigMul(burstHit, 1 + _bossDebuff);
                             dealGlobalDamage(burstHit);
                             merc._totalDamageDealt = gameEngine.toBigInt(merc._totalDamageDealt || 0) + burstHit;
-                            if (_showDamageNumbers) showDamageNumber(burstHit, 'crit');
+                            if (_showDamageNumbers) showDamageNumber(burstHit, burstCrit ? 'crit' : 'normal');
+                            if (burstGold > 0n) G.player.gold += burstGold;
                         }
                         if (_showSkillNumbers) showMercSkillText(merc.id, `时空涟漪 x${skill.attackCount}!`, getSkillClass('time_burst'));
                         // Skip normal hit processing for this attack — damage already dealt
                         skipNormalHit = true;
-                        break;
+                        continue;
                     }
                 } else if (skill.type === 'iron_fist') {
                     if (Math.random() < skill.chance) {
@@ -423,10 +533,11 @@ function processBattleTick() {
                         skillTriggered = { type: 'void', text: `虚空侵蚀 +${gameEngine.formatNumber(voidDmg)}!` };
                     }
                 } else if (skill.type === 'periodic_burst') {
-                    if (typeof merc._periodicBurstTimer === 'undefined') merc._periodicBurstTimer = 0;
-                    merc._periodicBurstTimer += interval * 1000;
-                    if (merc._periodicBurstTimer >= skill.interval) {
-                        merc._periodicBurstTimer = 0; thisHitDamage = gameEngine.bigMul(thisHitDamage, skill.multiplier); isCrit = true;
+                    const _pbKey = `_periodicBurstTimer_${skill._slot}`;
+                    if (typeof merc[_pbKey] === 'undefined') merc[_pbKey] = 0;
+                    merc[_pbKey] += interval * 1000;
+                    if (merc[_pbKey] >= skill.interval) {
+                        merc[_pbKey] = 0; thisHitDamage = gameEngine.bigMul(thisHitDamage, skill.multiplier); isCrit = true;
                         skillTriggered = { type: 'phoenix', text: `浴火重生 x${skill.multiplier}!` };
                     }
                 } else if (skill.type === 'ultimate') {
@@ -453,10 +564,11 @@ function processBattleTick() {
                     }
                 } else if (skill.type === 'knight_heavy_armor') {
                     // 「稳固」技能：每隔8秒造成等同攻击力的额外伤害
-                    if (typeof merc._fortifyTimer === 'undefined') merc._fortifyTimer = 0;
-                    merc._fortifyTimer += interval * 1000;
-                    if (merc._fortifyTimer >= 8000) {
-                        merc._fortifyTimer = 0;
+                    const _ftKey = `_fortifyTimer_${skill._slot}`;
+                    if (typeof merc[_ftKey] === 'undefined') merc[_ftKey] = 0;
+                    merc[_ftKey] += interval * 1000;
+                    if (merc[_ftKey] >= 8000) {
+                        merc[_ftKey] = 0;
                         const fortifyDmg = gameEngine.calculateUpgradedDamage(merc, prestigeBonus.damage);
                         thisHitDamage += fortifyDmg;
                         skillTriggered = { type: 'knight_fortify', text: `稳固 +${gameEngine.formatNumber(fortifyDmg)}!` };
