@@ -142,6 +142,13 @@ function initGameData() {
                 merc._stackingBuff = gameEngine.bigMul(rawDmg, merc._stackingBuff - 1);
                 console.log(`[迁移] ${merc.name}: 熟练Buff乘数 → 固定加成 ${gameEngine.formatNumber(merc._stackingBuff)}`);
             }
+            // 迁移旧版混沌Buff：加法叠加转为乘法叠加
+            if (merc._chaosAtkBuff !== undefined && !merc._chaosAtkMult) {
+                // 旧版 _chaosAtkBuff 是加法百分比（如 12.90 = +1290%），等价乘法 = 1 + _chaosAtkBuff
+                merc._chaosAtkMult = 1 + merc._chaosAtkBuff;
+                delete merc._chaosAtkBuff;
+                console.log(`[迁移] ${merc.name}: 混沌Buff加法 → 乘法 ×${merc._chaosAtkMult.toFixed(4)}`);
+            }
             const prestigeBonus = gameEngine.calculatePrestigeBonus(G.player);
             merc._prestigeSpeedBuff = prestigeBonus.speed;
             merc.currentDamage = gameEngine.calculateUpgradedDamage(merc, prestigeBonus.damage);
@@ -296,7 +303,6 @@ function processBattleTick() {
             let skillTriggered = null;
             let bonusGold = 0n;
             let skipNormalHit = false;
-            let _chaosBuffApplied = false;
 
             for (const skill of skillsToProcess) {
                 // Skill processing — same logic as wx version
@@ -338,11 +344,13 @@ function processBattleTick() {
                     }
                 } else if (skill.type === 'chaos_stack') {
                     if (Math.random() < skill.chance) {
-                        merc._chaosAtkBuff = (merc._chaosAtkBuff || 0) + skill.atkBonus;
+                        const dmgBefore = gameEngine.calculateUpgradedDamage(merc, prestigeBonus.damage);
+                        merc._chaosAtkMult = (merc._chaosAtkMult || 1) * (1 + skill.atkBonus);
                         merc._chaosIntervalPenalty = (merc._chaosIntervalPenalty || 0) + skill.intervalIncrease;
-                        skillTriggered = { type: 'chaos', text: `混沌x${Math.round((merc._chaosAtkBuff || 0) / skill.atkBonus)}` };
+                        const dmgAfter = gameEngine.calculateUpgradedDamage(merc, prestigeBonus.damage);
+                        const dmgGain = dmgAfter - dmgBefore;
+                        skillTriggered = { type: 'chaos', text: `混沌 +${gameEngine.formatNumber(dmgGain)}` };
                     }
-                    if (merc._chaosAtkBuff && !_chaosBuffApplied) { thisHitDamage = gameEngine.bigMul(thisHitDamage, 1 + merc._chaosAtkBuff); _chaosBuffApplied = true; }
                 } else if (skill.type === 'berserker_rage') {
                     const hpPercent = Number(G.boss.currentHp) / Number(G.boss.maxHp);
                     let bonusPercent = 0;
@@ -364,14 +372,14 @@ function processBattleTick() {
                     if (merc[_tbKey] >= skill.interval) {
                         merc[_tbKey] = 0;
                         // Each burst hit is a full independent attack that can trigger other skills
-                        const burstBaseDmg = gameEngine.bigMul(damage, skill.damageMultiplier);
                         const _noRecurse = new Set(['time_burst', 'periodic_burst', 'knight_heavy_armor', 'legend_dual_growth']);
                         const otherSkills = skillsToProcess.filter(s => !_noRecurse.has(s.type));
                         for (let bi = 0; bi < skill.attackCount; bi++) {
+                            // 每次爆发重新计算伤害，混沌叠层后续命中立即生效
+                            const burstBaseDmg = gameEngine.bigMul(gameEngine.calculateUpgradedDamage(merc, prestigeBonus.damage), skill.damageMultiplier);
                             let burstHit = burstBaseDmg;
                             let burstCrit = false;
                             let burstGold = 0n;
-                            let burstChaosApplied = false;
                             // Process other skills per burst hit
                             for (const os of otherSkills) {
                                 if (os.type === 'gold_on_attack') {
@@ -407,10 +415,10 @@ function processBattleTick() {
                                     }
                                 } else if (os.type === 'chaos_stack') {
                                     if (Math.random() < os.chance) {
-                                        merc._chaosAtkBuff = (merc._chaosAtkBuff || 0) + os.atkBonus;
+                                        merc._chaosAtkMult = (merc._chaosAtkMult || 1) * (1 + os.atkBonus);
                                         merc._chaosIntervalPenalty = (merc._chaosIntervalPenalty || 0) + os.intervalIncrease;
                                     }
-                                    if (merc._chaosAtkBuff && !burstChaosApplied) { burstHit = gameEngine.bigMul(burstHit, 1 + merc._chaosAtkBuff); burstChaosApplied = true; }
+                                    // 混沌攻击力加成已纳入 calculateUpgradedDamage，无需再手动乘
                                 } else if (os.type === 'berserker_rage') {
                                     const hpPct = Number(G.boss.currentHp) / Number(G.boss.maxHp);
                                     let bp = 0;
@@ -451,7 +459,10 @@ function processBattleTick() {
                                         burstHit += gameEngine.bigMul(tt, os.ratio); burstCrit = true;
                                     }
                                 } else if (os.type === 'legend_sword') {
-                                    if (Math.random() < 0.01) {
+                                    const _lsKey2 = `_legendSwordProb_${os._slot}`;
+                                    if (typeof merc[_lsKey2] === 'undefined') merc[_lsKey2] = 0.01;
+                                    if (Math.random() < merc[_lsKey2]) {
+                                        merc[_lsKey2] = Math.min(0.15, merc[_lsKey2] + 0.01);
                                         const dmgLv = BigInt((merc.damageLevel || 0) + 1);
                                         let swordDmg = 9999999999n * dmgLv;
                                         const lTotalLevel = (merc.damageLevel || 0) + (merc.intervalLevel || 0) + 1;
@@ -545,8 +556,11 @@ function processBattleTick() {
                 } else if (skill.type === 'legend_dual_growth') {
                     // 全能是纯被动技能，战斗时无需处理
                 } else if (skill.type === 'legend_sword') {
-                    // 传说之剑: 1%概率挥出传说之剑
-                    if (Math.random() < 0.01) {
+                    // 传说之剑: 概率挥出传说之剑（初始1%，每次触发+1%，上限15%，转生重置）
+                    const _lsKey = `_legendSwordProb_${skill._slot}`;
+                    if (typeof merc[_lsKey] === 'undefined') merc[_lsKey] = 0.01;
+                    if (Math.random() < merc[_lsKey]) {
+                        merc[_lsKey] = Math.min(0.15, merc[_lsKey] + 0.01);
                         const dmgLv = BigInt((merc.damageLevel || 0) + 1);
                         let swordDmg = 9999999999n * dmgLv;
                         let metaActive = false;
@@ -560,7 +574,8 @@ function processBattleTick() {
                         }
                         thisHitDamage += swordDmg; isCrit = true;
                         const tag = metaActive ? '元传说之剑' : '传说之剑';
-                        skillTriggered = { type: 'legend_sword', text: `⚔️${tag} +${gameEngine.formatNumber(swordDmg)}!` };
+                        const pctDisp = Math.round(merc[_lsKey] * 100);
+                        skillTriggered = { type: 'legend_sword', text: `⚔️${tag}(${pctDisp}%) +${gameEngine.formatNumber(swordDmg)}!` };
                     }
                 } else if (skill.type === 'knight_heavy_armor') {
                     // 「稳固」技能：每隔8秒造成等同攻击力的额外伤害
@@ -717,7 +732,8 @@ function getSkillScalingInfo(sk, merc) {
             break;
         case 'legend_sword': {
             const dmgLv = (merc.damageLevel || 0) + 1;
-            lines.push({ label: '触发概率', value: '1%', growth: '固定1%' });
+            const curProb = Math.round((merc._legendSwordProb_default || merc._legendSwordProb_secondary || merc._legendSwordProb_evolved || 0.01) * 100);
+            lines.push({ label: '当前概率', value: `${curProb}%`, growth: '初始1%，每触发+1%（上限15%，转生重置）' });
             lines.push({ label: '基础伤害', value: `${gameEngine.formatNumber(9999999999n * BigInt(dmgLv))}`, growth: '9999999999×(攻击力等级+1)' });
             break;
         }
@@ -837,6 +853,61 @@ function getSkillScalingInfo(sk, merc) {
 function getSkillClass(skillType) {
     const map = { stacking_buff: 'skill', crit: 'skill-crit', speed_buff: 'skill-mage', damage_buff: 'skill-dragon', combo: 'skill-combo', berserker_rage: 'skill-combo', combo_strike: 'skill-combo', burn: 'skill-burn', chaos: 'skill-chaos', time_burst: 'skill-time', gold: 'skill-gold', team_buff: 'skill-royal', teaching: 'skill-royal', iron_fist: 'skill-iron', freeze: 'skill-freeze', summon: 'skill-summon', holy: 'skill-holy', void: 'skill-void', phoenix: 'skill-phoenix', ultimate: 'skill-ultimate', knight_fortify: 'skill-iron', legend_sword: 'skill-legend-sword' };
     return map[skillType] || 'skill';
+}
+
+function testTriggerSkill(mercId, slot) {
+    const merc = G.mercenaries.find(m => m.id === mercId);
+    if (!merc || !merc.recruited) return;
+    const prestigeBonus = gameEngine.calculatePrestigeBonus(G.player);
+    let skill;
+    if (slot === 'secondary') skill = gameEngine.getSecondaryMercSkill(merc);
+    else if (slot === 'evolved') skill = gameEngine.getEvolvedMercSkill(merc);
+    else if (slot === 'skill3') {
+        // skill3 is typically legend's meta_legend_sword — passive, get it via secondary
+        skill = gameEngine.getSecondaryMercSkill(merc);
+    }
+    else skill = gameEngine.getMercenarySkill(merc);
+    if (!skill) { alert('技能未解锁'); return; }
+
+    const dmgBefore = gameEngine.calculateUpgradedDamage(merc, prestigeBonus.damage);
+    const intBefore = gameEngine.calculateUpgradedInterval(merc);
+    let msg = `【${merc.name}】测试触发【${skill.type}】\n`;
+    msg += `触发前攻击力: ${gameEngine.formatNumber(dmgBefore)}\n`;
+    msg += `触发前攻击间隔: ${intBefore.toFixed(4)}秒\n\n`;
+
+    // Simulate one trigger
+    if (skill.type === 'chaos_stack') {
+        merc._chaosAtkMult = (merc._chaosAtkMult || 1) * (1 + skill.atkBonus);
+        merc._chaosIntervalPenalty = (merc._chaosIntervalPenalty || 0) + skill.intervalIncrease;
+        const dmgAfter = gameEngine.calculateUpgradedDamage(merc, prestigeBonus.damage);
+        const intAfter = gameEngine.calculateUpgradedInterval(merc);
+        const dmgGain = dmgAfter - dmgBefore;
+        const stacks = Math.round(Math.log(merc._chaosAtkMult || 1) / Math.log(1 + skill.atkBonus));
+        msg += `--- 触发1次混沌法则 (攻击力×${(1 + skill.atkBonus).toFixed(2)}) ---\n`;
+        msg += `触发后攻击力: ${gameEngine.formatNumber(dmgAfter)}\n`;
+        msg += `攻击力增加: +${gameEngine.formatNumber(dmgGain)}\n`;
+        msg += `实际增幅: ${(Number(dmgGain) / Number(dmgBefore) * 100).toFixed(2)}%\n`;
+        msg += `触发后攻击间隔: ${intAfter.toFixed(4)}秒 (+${(intAfter - intBefore).toFixed(4)}秒)\n`;
+        msg += `\n当前混沌总叠层: ${stacks}层 (总倍率×${(merc._chaosAtkMult || 1).toFixed(4)})`;
+    } else if (skill.type === 'stacking_buff') {
+        const buffInc = gameEngine.bigMul(dmgBefore, skill.val);
+        merc._stackingBuff = gameEngine.toBigInt(merc._stackingBuff || 0) + buffInc;
+        const dmgAfter = gameEngine.calculateUpgradedDamage(merc, prestigeBonus.damage);
+        msg += `--- 触发1次熟练 (攻击力+${(skill.val * 100).toFixed(0)}%) ---\n`;
+        msg += `触发后攻击力: ${gameEngine.formatNumber(dmgAfter)}\n`;
+        msg += `攻击力增加: +${gameEngine.formatNumber(buffInc)}\n`;
+    } else if (skill.type === 'crit') {
+        const critDmg = gameEngine.bigMul(dmgBefore, skill.multiplier);
+        msg += `--- 暴击 (${skill.multiplier}x) ---\n`;
+        msg += `暴击伤害: ${gameEngine.formatNumber(critDmg)}\n`;
+    } else {
+        msg += `此技能暂不支持手动测试触发\n`;
+        msg += `技能类型: ${skill.type}\n`;
+        msg += JSON.stringify(skill, null, 2);
+    }
+
+    alert(msg);
+    updateBattleMercList(true);
 }
 
 function getCategoryInfo(category) {
@@ -1077,14 +1148,18 @@ function updateBattleMercList(force) {
                         const sk = gameEngine.getDisplaySkill(merc);
                         if (!sk) return '';
                         const scalingLines = getSkillScalingInfo(sk, merc);
-                        if (scalingLines.length === 0) return '';
-                        return `<div class="skill-scaling-table">
+                        let html = '';
+                        if (scalingLines.length > 0) {
+                            html += `<div class="skill-scaling-table">
                             ${scalingLines.map(l => `<div class="skill-scaling-row">
                                 <span class="scaling-label">${l.label}</span>
                                 <span class="scaling-value">${l.value}</span>
                                 <span class="scaling-growth">${l.growth}</span>
                             </div>`).join('')}
                         </div>`;
+                        }
+                        html += `<button class="skill-test-btn" data-test-skill="${merc.id}" data-test-slot="default">🧪 测试触发</button>`;
+                        return html;
                     })() : ''}
                 </div>` : ''}
                 ${skillInfo && skillInfo.skill2 ? `<div class="skill-detail">
@@ -1097,14 +1172,18 @@ function updateBattleMercList(force) {
                         const sk2 = gameEngine.getSecondaryMercSkill(merc) || gameEngine.getMercenarySkill(merc);
                         if (!sk2) return '';
                         const s2Lines = getSkillScalingInfo(sk2, merc);
-                        if (s2Lines.length === 0) return '';
-                        return `<div class="skill-scaling-table">
+                        let html = '';
+                        if (s2Lines.length > 0) {
+                            html += `<div class="skill-scaling-table">
                             ${s2Lines.map(l => `<div class="skill-scaling-row">
                                 <span class="scaling-label">${l.label}</span>
                                 <span class="scaling-value">${l.value}</span>
                                 <span class="scaling-growth">${l.growth}</span>
                             </div>`).join('')}
                         </div>`;
+                        }
+                        html += `<button class="skill-test-btn" data-test-skill="${merc.id}" data-test-slot="secondary">🧪 测试触发</button>`;
+                        return html;
                     })() : ''}
                 </div>` : ''}
                 ${skillInfo && skillInfo.skill3 ? `<div class="skill-detail">
@@ -1113,6 +1192,7 @@ function updateBattleMercList(force) {
                         ${!skillInfo.skill3.isUnlocked ? `<span class="skill-unlock-condition">${skillInfo.skill3.unlockCondition}</span>` : ''}
                     </div>
                     <div class="skill-detail-desc">${skillInfo.skill3.desc}</div>
+                    ${skillInfo.skill3.isUnlocked ? `<button class="skill-test-btn" data-test-skill="${merc.id}" data-test-slot="skill3">🧪 测试触发</button>` : ''}
                 </div>` : ''}
                 ${evolvedInfo ? `<div class="skill-detail evolved-skill">
                     <div class="skill-detail-header">
@@ -1124,14 +1204,18 @@ function updateBattleMercList(force) {
                         const esk = gameEngine.getEvolvedMercSkill(merc);
                         if (!esk) return '';
                         const escalingLines = getSkillScalingInfo(esk, merc);
-                        if (escalingLines.length === 0) return '';
-                        return `<div class="skill-scaling-table">
+                        let html = '';
+                        if (escalingLines.length > 0) {
+                            html += `<div class="skill-scaling-table">
                             ${escalingLines.map(l => `<div class="skill-scaling-row">
                                 <span class="scaling-label">${l.label}</span>
                                 <span class="scaling-value">${l.value}</span>
                                 <span class="scaling-growth">${l.growth}</span>
                             </div>`).join('')}
                         </div>`;
+                        }
+                        html += `<button class="skill-test-btn" data-test-skill="${merc.id}" data-test-slot="evolved">🧪 测试触发</button>`;
+                        return html;
                     })() : ''}
                 </div>` : ''}
                 <div class="evolution-section">
@@ -1513,6 +1597,12 @@ function setupUI() {
         const evolveEl = e.target.closest('[data-evolve]');
         if (evolveEl) {
             evolveMercenary(evolveEl.dataset.evolve);
+            return;
+        }
+        // Skill test trigger
+        const testEl = e.target.closest('[data-test-skill]');
+        if (testEl) {
+            testTriggerSkill(testEl.dataset.testSkill, testEl.dataset.testSlot);
             return;
         }
     });

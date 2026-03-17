@@ -253,9 +253,9 @@ export const SKILL_LIBRARY = {
     },
     legend_sword: {
         id: 'legend_sword', name: '传说之剑', type: 'legend_sword', icon: '⚔️',
-        baseUnlockLevel: 35, baseDescription: '攻击时有1%概率挥出传说之剑，造成巨额伤害',
+        baseUnlockLevel: 35, baseDescription: '攻击时有概率挥出传说之剑，每次触发概率+1%（上限15%，转生重置）',
         getParams: (level) => ({ chance: 0.01, baseDamagePerLevel: 9999999999 }),
-        getDescription: (level) => `攻击时1%概率造成（9999999999×(攻击力等级+1)）点伤害`
+        getDescription: (level) => `攻击时概率造成（9999999999×(攻击力等级+1)）点伤害，每触发+1%（上限15%）`
     },
     meta_legend_sword: {
         id: 'meta_legend_sword', name: '元传说之剑', type: 'meta_legend_sword', icon: '🗡️',

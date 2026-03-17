@@ -63,6 +63,9 @@ function calculateUpgradedDamage(mercenary, prestigeDamageMult = 1) {
     // 3. 应用周目/圣物全局加成
     let finalDamage = baseDamage * prestigeDamageMult;
 
+    // 4. 混沌法则：乘法叠加，每次触发 ×(1+atkBonus)
+    if (mercenary._chaosAtkMult && mercenary._chaosAtkMult > 1) finalDamage *= mercenary._chaosAtkMult;
+
     return Math.floor(finalDamage);
 }
 
@@ -184,7 +187,9 @@ function migrateMilestoneDamageBonus(mercenaries) {
  */
 function getDamageDisplayInfo(mercenary, prestigeDamageMult = 1) {
     const base = calculateMercenaryBaseDamage(mercenary);
-    const final = Math.floor(base * prestigeDamageMult);
+    let final = Math.floor(base * prestigeDamageMult);
+    // 混沌法则：乘法叠加
+    if (mercenary._chaosAtkMult && mercenary._chaosAtkMult > 1) final = Math.floor(final * mercenary._chaosAtkMult);
     const bonus = final - base;
 
     return {

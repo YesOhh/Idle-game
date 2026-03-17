@@ -147,14 +147,19 @@ export function calculateUpgradedDamage(mercenary, prestigeDamageMult = 1) {
     if (mercenary._teachingBonus) baseDamage += toBigInt(mercenary._teachingBonus);
     // 熟练Buff：永久固定加成，每次触发时 += 当前攻击力×1%
     if (mercenary._stackingBuff) baseDamage += toBigInt(mercenary._stackingBuff);
-    return bigMul(baseDamage, prestigeDamageMult);
+    let result = bigMul(baseDamage, prestigeDamageMult);
+    // 混沌法则：乘法叠加，每次触发 ×(1+atkBonus)
+    if (mercenary._chaosAtkMult && mercenary._chaosAtkMult > 1) result = bigMul(result, mercenary._chaosAtkMult);
+    return result;
 }
 
 export function getDamageDisplayInfo(mercenary, prestigeDamageMult = 1) {
     let base = calculateMercenaryBaseDamage(mercenary);
     if (mercenary._teachingBonus) base += toBigInt(mercenary._teachingBonus);
     if (mercenary._stackingBuff) base += toBigInt(mercenary._stackingBuff);
-    const final = bigMul(base, prestigeDamageMult);
+    let final = bigMul(base, prestigeDamageMult);
+    // 混沌法则：乘法叠加
+    if (mercenary._chaosAtkMult && mercenary._chaosAtkMult > 1) final = bigMul(final, mercenary._chaosAtkMult);
     const bonus = final - base;
     return { base, bonus, final, text: bonus > 0n ? `${formatNumber(base)} (+${formatNumber(bonus)})` : `${formatNumber(base)}` };
 }

@@ -354,20 +354,17 @@ App({
                 skillTriggered = { type: 'damage_buff', text: `龙息 x${skill.burstMultiplier}!` };
               }
             } else if (skill.type === 'chaos_stack') {
-              // 混沌帝王技能：混沌法则 - 攻击力叠加但攻击间隔也增加
+              // 混沌帝王技能：混沌法则 - 攻击力乘法叠加但攻击间隔也增加
               if (Math.random() < skill.chance) {
-                // 叠加攻击力加成
-                merc._chaosAtkBuff = (merc._chaosAtkBuff || 0) + skill.atkBonus;
+                // 乘法叠加攻击力加成
+                merc._chaosAtkMult = (merc._chaosAtkMult || 1) * (1 + skill.atkBonus);
                 // 叠加攻击间隔惩罚
                 merc._chaosIntervalPenalty = (merc._chaosIntervalPenalty || 0) + skill.intervalIncrease;
 
-                const stackCount = Math.round((merc._chaosAtkBuff || 0) / skill.atkBonus);
-                skillTriggered = { type: 'chaos', text: `混沌x${stackCount}` };
+                const stacks = Math.round(Math.log(merc._chaosAtkMult || 1) / Math.log(1 + skill.atkBonus));
+                skillTriggered = { type: 'chaos', text: `混沌x${stacks}` };
               }
-              // 应用混沌攻击力加成到本次伤害
-              if (merc._chaosAtkBuff) {
-                thisHitDamage *= (1 + merc._chaosAtkBuff);
-              }
+              // 混沌攻击力加成已纳入 calculateUpgradedDamage，无需再手动乘
             } else if (skill.type === 'berserker_rage') {
               // 狂暴：Boss血量越低伤害越高
               const boss = this.globalData.boss;
