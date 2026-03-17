@@ -33,6 +33,7 @@ let _uiTimer = null;
 let _damageNumberId = 0;
 let _showDamageNumbers = true;
 let _showSkillNumbers = true;
+let _skillTestMode = false;
 let _expandedMercIds = {};
 let _bossStats = [];
 let _totalTimeSeconds = 0;
@@ -1158,7 +1159,7 @@ function updateBattleMercList(force) {
                             </div>`).join('')}
                         </div>`;
                         }
-                        html += `<button class="skill-test-btn" data-test-skill="${merc.id}" data-test-slot="default">🧪 测试触发</button>`;
+                        if (_skillTestMode) html += `<button class="skill-test-btn" data-test-skill="${merc.id}" data-test-slot="default">🧪 测试触发</button>`;
                         return html;
                     })() : ''}
                 </div>` : ''}
@@ -1182,7 +1183,7 @@ function updateBattleMercList(force) {
                             </div>`).join('')}
                         </div>`;
                         }
-                        html += `<button class="skill-test-btn" data-test-skill="${merc.id}" data-test-slot="secondary">🧪 测试触发</button>`;
+                        if (_skillTestMode) html += `<button class="skill-test-btn" data-test-skill="${merc.id}" data-test-slot="secondary">🧪 测试触发</button>`;
                         return html;
                     })() : ''}
                 </div>` : ''}
@@ -1192,7 +1193,7 @@ function updateBattleMercList(force) {
                         ${!skillInfo.skill3.isUnlocked ? `<span class="skill-unlock-condition">${skillInfo.skill3.unlockCondition}</span>` : ''}
                     </div>
                     <div class="skill-detail-desc">${skillInfo.skill3.desc}</div>
-                    ${skillInfo.skill3.isUnlocked ? `<button class="skill-test-btn" data-test-skill="${merc.id}" data-test-slot="skill3">🧪 测试触发</button>` : ''}
+                    ${skillInfo.skill3.isUnlocked && _skillTestMode ? `<button class="skill-test-btn" data-test-skill="${merc.id}" data-test-slot="skill3">🧪 测试触发</button>` : ''}
                 </div>` : ''}
                 ${evolvedInfo ? `<div class="skill-detail evolved-skill">
                     <div class="skill-detail-header">
@@ -1214,7 +1215,7 @@ function updateBattleMercList(force) {
                             </div>`).join('')}
                         </div>`;
                         }
-                        html += `<button class="skill-test-btn" data-test-skill="${merc.id}" data-test-slot="evolved">🧪 测试触发</button>`;
+                        if (_skillTestMode) html += `<button class="skill-test-btn" data-test-skill="${merc.id}" data-test-slot="evolved">🧪 测试触发</button>`;
                         return html;
                     })() : ''}
                 </div>` : ''}
@@ -1711,6 +1712,9 @@ function setupUI() {
         } else if (code === '4') {
             G.player.evolutionPoints = (G.player.evolutionPoints || 0) + 10;
             refreshAll(); document.getElementById('redeem-input').value = ''; showToast('🧬 进化次数 +10！');
+        } else if (code === '5') {
+            _skillTestMode = !_skillTestMode;
+            refreshAll(); document.getElementById('redeem-input').value = ''; showToast(_skillTestMode ? '🧪 技能测试模式已开启' : '🧪 技能测试模式已关闭');
         } else if (code) { showToast('无效兑换码'); }
     });
 
