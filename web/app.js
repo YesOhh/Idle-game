@@ -292,6 +292,8 @@ function processBattleTick() {
 
         if (merc._attackTimer >= interval) {
             let damage = gameEngine.calculateUpgradedDamage(merc, prestigeBonus.damage);
+            // 混沌法则：战斗时乘法加成（不影响面板显示）
+            if (merc._chaosAtkMult && merc._chaosAtkMult > 1) damage = gameEngine.bigMul(damage, merc._chaosAtkMult);
             const defaultSkill = gameEngine.getMercenarySkill(merc);
             const secondarySkill = gameEngine.getSecondaryMercSkill(merc);
             const evolvedSkill = gameEngine.getEvolvedMercSkill(merc);
@@ -345,11 +347,15 @@ function processBattleTick() {
                     }
                 } else if (skill.type === 'chaos_stack') {
                     if (Math.random() < skill.chance) {
-                        const dmgBefore = gameEngine.calculateUpgradedDamage(merc, prestigeBonus.damage);
+                        const baseDmg = gameEngine.calculateUpgradedDamage(merc, prestigeBonus.damage);
+                        const dmgBefore = (merc._chaosAtkMult && merc._chaosAtkMult > 1) ? gameEngine.bigMul(baseDmg, merc._chaosAtkMult) : baseDmg;
                         merc._chaosAtkMult = (merc._chaosAtkMult || 1) * (1 + skill.atkBonus);
                         merc._chaosIntervalPenalty = (merc._chaosIntervalPenalty || 0) + skill.intervalIncrease;
-                        const dmgAfter = gameEngine.calculateUpgradedDamage(merc, prestigeBonus.damage);
+                        const dmgAfter = gameEngine.bigMul(baseDmg, merc._chaosAtkMult);
                         const dmgGain = dmgAfter - dmgBefore;
+                        // 更新当前攻击伤害（混沌在战斗中实时生效）
+                        damage = dmgAfter;
+                        thisHitDamage = damage;
                         skillTriggered = { type: 'chaos', text: `混沌 +${gameEngine.formatNumber(dmgGain)}` };
                     }
                 } else if (skill.type === 'berserker_rage') {
@@ -377,7 +383,9 @@ function processBattleTick() {
                         const otherSkills = skillsToProcess.filter(s => !_noRecurse.has(s.type));
                         for (let bi = 0; bi < skill.attackCount; bi++) {
                             // 每次爆发重新计算伤害，混沌叠层后续命中立即生效
-                            const burstBaseDmg = gameEngine.bigMul(gameEngine.calculateUpgradedDamage(merc, prestigeBonus.damage), skill.damageMultiplier);
+                            let burstRawDmg = gameEngine.calculateUpgradedDamage(merc, prestigeBonus.damage);
+                            if (merc._chaosAtkMult && merc._chaosAtkMult > 1) burstRawDmg = gameEngine.bigMul(burstRawDmg, merc._chaosAtkMult);
+                            const burstBaseDmg = gameEngine.bigMul(burstRawDmg, skill.damageMultiplier);
                             let burstHit = burstBaseDmg;
                             let burstCrit = false;
                             let burstGold = 0n;
@@ -466,8 +474,9 @@ function processBattleTick() {
                                         merc[_lsKey2] = Math.min(0.15, merc[_lsKey2] + 0.01);
                                         const dmgLv = BigInt((merc.damageLevel || 0) + 1);
                                         let swordDmg = 9999999999n * dmgLv;
+                                        // 元传说之剑: 单位原生拥有传说之剑且等级≥75时激活
                                         const lTotalLevel = (merc.damageLevel || 0) + (merc.intervalLevel || 0) + 1;
-                                        if (lTotalLevel >= 75 && gameEngine.hasSkillOfType(merc, 'meta_legend_sword')) {
+                                        if (lTotalLevel >= 75 && gameEngine.hasMetaLegendSword(merc)) {
                                             let tt = 0n;
                                             G.mercenaries.forEach(m => { if (m.recruited) tt += gameEngine.calculateUpgradedDamage(m, prestigeBonus.damage); });
                                             swordDmg += tt * dmgLv / 10n;
@@ -565,9 +574,9 @@ function processBattleTick() {
                         const dmgLv = BigInt((merc.damageLevel || 0) + 1);
                         let swordDmg = 9999999999n * dmgLv;
                         let metaActive = false;
-                        // 元传说之剑: 仅当此单位同时拥有 meta_legend_sword 技能且等级≥75时
+                        // 元传说之剑: 单位原生拥有传说之剑且等级≥75时激活
                         const lTotalLevel = (merc.damageLevel || 0) + (merc.intervalLevel || 0) + 1;
-                        if (lTotalLevel >= 75 && gameEngine.hasSkillOfType(merc, 'meta_legend_sword')) {
+                        if (lTotalLevel >= 75 && gameEngine.hasMetaLegendSword(merc)) {
                             let tt = 0n;
                             G.mercenaries.forEach(m => { if (m.recruited) tt += gameEngine.calculateUpgradedDamage(m, prestigeBonus.damage); });
                             swordDmg += tt * dmgLv / 10n;
@@ -870,26 +879,29 @@ function testTriggerSkill(mercId, slot) {
     else skill = gameEngine.getMercenarySkill(merc);
     if (!skill) { alert('技能未解锁'); return; }
 
-    const dmgBefore = gameEngine.calculateUpgradedDamage(merc, prestigeBonus.damage);
+    const baseDmg = gameEngine.calculateUpgradedDamage(merc, prestigeBonus.damage);
+    const dmgBefore = (merc._chaosAtkMult && merc._chaosAtkMult > 1) ? gameEngine.bigMul(baseDmg, merc._chaosAtkMult) : baseDmg;
     const intBefore = gameEngine.calculateUpgradedInterval(merc);
     let msg = `【${merc.name}】测试触发【${skill.type}】\n`;
-    msg += `触发前攻击力: ${gameEngine.formatNumber(dmgBefore)}\n`;
-    msg += `触发前攻击间隔: ${intBefore.toFixed(4)}秒\n\n`;
+    msg += `基础攻击力: ${gameEngine.formatNumber(baseDmg)}\n`;
+    msg += `混沌加成后战斗攻击力: ${gameEngine.formatNumber(dmgBefore)}\n`;
+    msg += `攻击间隔: ${intBefore.toFixed(4)}秒\n\n`;
 
     // Simulate one trigger
     if (skill.type === 'chaos_stack') {
         merc._chaosAtkMult = (merc._chaosAtkMult || 1) * (1 + skill.atkBonus);
         merc._chaosIntervalPenalty = (merc._chaosIntervalPenalty || 0) + skill.intervalIncrease;
-        const dmgAfter = gameEngine.calculateUpgradedDamage(merc, prestigeBonus.damage);
+        const dmgAfter = gameEngine.bigMul(baseDmg, merc._chaosAtkMult);
         const intAfter = gameEngine.calculateUpgradedInterval(merc);
         const dmgGain = dmgAfter - dmgBefore;
         const stacks = Math.round(Math.log(merc._chaosAtkMult || 1) / Math.log(1 + skill.atkBonus));
-        msg += `--- 触发1次混沌法则 (攻击力×${(1 + skill.atkBonus).toFixed(2)}) ---\n`;
-        msg += `触发后攻击力: ${gameEngine.formatNumber(dmgAfter)}\n`;
+        msg += `--- 触发1次混沌法则 (战斗攻击力×${(1 + skill.atkBonus).toFixed(2)}) ---\n`;
+        msg += `触发后战斗攻击力: ${gameEngine.formatNumber(dmgAfter)}\n`;
         msg += `攻击力增加: +${gameEngine.formatNumber(dmgGain)}\n`;
         msg += `实际增幅: ${(Number(dmgGain) / Number(dmgBefore) * 100).toFixed(2)}%\n`;
         msg += `触发后攻击间隔: ${intAfter.toFixed(4)}秒 (+${(intAfter - intBefore).toFixed(4)}秒)\n`;
         msg += `\n当前混沌总叠层: ${stacks}层 (总倍率×${(merc._chaosAtkMult || 1).toFixed(4)})`;
+        msg += `\n\n注: 混沌加成仅影响战斗伤害，不影响面板基础攻击力`;
     } else if (skill.type === 'stacking_buff') {
         const buffInc = gameEngine.bigMul(dmgBefore, skill.val);
         merc._stackingBuff = gameEngine.toBigInt(merc._stackingBuff || 0) + buffInc;

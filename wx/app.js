@@ -278,6 +278,8 @@ App({
         if (merc._attackTimer >= interval) {
           // 计算基础单次伤害 (加上重生倍率)
           let damage = gameEngine.calculateUpgradedDamage(merc, prestigeBonus.damage);
+          // 混沌法则：战斗时乘法加成（不影响面板显示）
+          if (merc._chaosAtkMult && merc._chaosAtkMult > 1) damage = Math.floor(damage * merc._chaosAtkMult);
 
           // 获取并应用技能
           const skill = gameEngine.getMercenarySkill(merc);
@@ -353,18 +355,17 @@ App({
 
                 skillTriggered = { type: 'damage_buff', text: `龙息 x${skill.burstMultiplier}!` };
               }
-            } else if (skill.type === 'chaos_stack') {
-              // 混沌帝王技能：混沌法则 - 攻击力乘法叠加但攻击间隔也增加
+            } else if (skill.type === 'chaos_stack') {\n              // 混沌帝王技能：混沌法则 - 攻击力乘法叠加但攻击间隔也增加
               if (Math.random() < skill.chance) {
-                // 乘法叠加攻击力加成
+                const dmgBefore = damage;
                 merc._chaosAtkMult = (merc._chaosAtkMult || 1) * (1 + skill.atkBonus);
-                // 叠加攻击间隔惩罚
                 merc._chaosIntervalPenalty = (merc._chaosIntervalPenalty || 0) + skill.intervalIncrease;
-
-                const stacks = Math.round(Math.log(merc._chaosAtkMult || 1) / Math.log(1 + skill.atkBonus));
-                skillTriggered = { type: 'chaos', text: `混沌x${stacks}` };
+                // 更新战斗伤害
+                damage = Math.floor(gameEngine.calculateUpgradedDamage(merc, prestigeBonus.damage) * merc._chaosAtkMult);
+                thisHitDamage = damage;
+                const dmgGain = damage - dmgBefore;
+                skillTriggered = { type: 'chaos', text: `混沌 +${gameEngine.formatNumber(dmgGain)}` };
               }
-              // 混沌攻击力加成已纳入 calculateUpgradedDamage，无需再手动乘
             } else if (skill.type === 'berserker_rage') {
               // 狂暴：Boss血量越低伤害越高
               const boss = this.globalData.boss;
@@ -528,9 +529,9 @@ App({
                 const dmgLv = (merc.damageLevel || 0) + 1;
                 let swordDmg = 9999999999 * dmgLv;
                 let metaActive = false;
-                // 元传说之剑: 仅当此单位同时拥有 meta_legend_sword 技能且等级≥75时
+                // 元传说之剑: 单位原生拥有传说之剑且等级≥75时激活
                 const lTotalLevel = (merc.damageLevel || 0) + (merc.intervalLevel || 0) + 1;
-                if (lTotalLevel >= 75 && gameEngine.hasSkillOfType(merc, 'meta_legend_sword')) {
+                if (lTotalLevel >= 75 && gameEngine.hasMetaLegendSword(merc)) {
                   let tt = 0;
                   globalData.mercenaries.forEach(m => { if (m.recruited) tt += gameEngine.calculateUpgradedDamage(m, prestigeBonus.damage); });
                   swordDmg += Math.floor(tt * dmgLv / 10);
@@ -584,7 +585,7 @@ App({
                 let swordDmg = 9999999999 * dmgLv;
                 let metaActive = false;
                 const lTotalLevel = (merc.damageLevel || 0) + (merc.intervalLevel || 0) + 1;
-                if (lTotalLevel >= 75 && gameEngine.hasSkillOfType(merc, 'meta_legend_sword')) {
+                if (lTotalLevel >= 75 && gameEngine.hasMetaLegendSword(merc)) {
                   let tt = 0;
                   globalData.mercenaries.forEach(m => { if (m.recruited) tt += gameEngine.calculateUpgradedDamage(m, prestigeBonus.damage); });
                   swordDmg += Math.floor(tt * dmgLv / 10);

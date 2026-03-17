@@ -63,9 +63,6 @@ function calculateUpgradedDamage(mercenary, prestigeDamageMult = 1) {
     // 3. 应用周目/圣物全局加成
     let finalDamage = baseDamage * prestigeDamageMult;
 
-    // 4. 混沌法则：乘法叠加，每次触发 ×(1+atkBonus)
-    if (mercenary._chaosAtkMult && mercenary._chaosAtkMult > 1) finalDamage *= mercenary._chaosAtkMult;
-
     return Math.floor(finalDamage);
 }
 
@@ -188,8 +185,6 @@ function migrateMilestoneDamageBonus(mercenaries) {
 function getDamageDisplayInfo(mercenary, prestigeDamageMult = 1) {
     const base = calculateMercenaryBaseDamage(mercenary);
     let final = Math.floor(base * prestigeDamageMult);
-    // 混沌法则：乘法叠加
-    if (mercenary._chaosAtkMult && mercenary._chaosAtkMult > 1) final = Math.floor(final * mercenary._chaosAtkMult);
     const bonus = final - base;
 
     return {
@@ -439,6 +434,13 @@ function getMercenarySkill(mercenary) {
     return skillSystem.getUnitSkill(mercenary);
 }
 
+// 元传说之剑：仅当单位原生拥有 legend_sword时可用
+function hasMetaLegendSword(mercenary) {
+    const defs = skillSystem.DEFAULT_UNIT_SKILLS;
+    const secs = skillSystem.SECONDARY_UNIT_SKILLS;
+    return defs[mercenary.id] === 'legend_sword' || secs[mercenary.id] === 'legend_sword';
+}
+
 /**
  * 获取佣兵副技能信息
  * @param {Object} mercenary - 佣兵对象
@@ -499,5 +501,6 @@ module.exports = {
     calculateMercenaryBaseDamage,
     calculateRawUpgradeDamage,
     applyMilestoneDamageCheck,
-    migrateMilestoneDamageBonus
+    migrateMilestoneDamageBonus,
+    hasMetaLegendSword
 };
