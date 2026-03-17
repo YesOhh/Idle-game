@@ -1163,7 +1163,7 @@ function updateManageMercList() {
                             </div>`).join('')}
                         </div>`;
                     })() : ''}
-                </div>` : ''}}
+                </div>` : ''}
                 ${!m.recruited ? `<div class="detail-cost">雇佣花费：<div class="cost-row">💰 ${m.recruitCostText}</div></div>` : ''}
                 <div class="detail-actions">
                     ${!m.recruited ? `<button class="action-btn recruit-btn ${m.canAffordRecruit ? '' : 'disabled'}" data-recruit="${m.id}" ${!m.canAffordRecruit ? 'disabled' : ''}>雇佣</button>` : '<div class="action-btn hired-btn">已雇佣</div>'}
@@ -1507,8 +1507,8 @@ function setupUI() {
             G.player.gold += 100000000000n;
             refreshAll(); document.getElementById('redeem-input').value = ''; showToast('获得 1000亿 金币！');
         } else if (code === '4') {
-            G.player.evolutionPoints = (G.player.evolutionPoints || 0) + 1;
-            refreshAll(); document.getElementById('redeem-input').value = ''; showToast('🧬 进化次数 +1！');
+            G.player.evolutionPoints = (G.player.evolutionPoints || 0) + 10;
+            refreshAll(); document.getElementById('redeem-input').value = ''; showToast('🧬 进化次数 +10！');
         } else if (code) { showToast('无效兑换码'); }
     });
 
