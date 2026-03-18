@@ -51,19 +51,14 @@ function calculateTotalDPS(mercenaries, globalDamageBuff = 0, globalSpeedBuff = 
     return totalDPS;
 }
 
+// ============================================================
+// 核心伤害系统 — 基于 _currentDamage 的直接存储模型
+// _currentDamage (number): 佣兵的总攻击力（含所有加成，不含prestige）
+// 所有攻击力修改直接操作 _currentDamage，不再从组件重算
+// ============================================================
+
 function calculateUpgradedDamage(mercenary, prestigeDamageMult = 1) {
-    // 1. 计算基础伤害 (包含等级加成、里程碑、佣兵个体技能)
-    let baseDamage = calculateMercenaryBaseDamage(mercenary);
-
-    // 2. 应用传授技能的永久加成
-    if (mercenary._teachingBonus) {
-        baseDamage += mercenary._teachingBonus;
-    }
-
-    // 3. 应用周目/圣物全局加成
-    let finalDamage = baseDamage * prestigeDamageMult;
-
-    return Math.floor(finalDamage);
+    return Math.floor((mercenary._currentDamage || 0) * prestigeDamageMult);
 }
 
 /**
@@ -96,7 +91,7 @@ function getUpgradeTier(upgradeCount) {
     return Math.floor((upgradeCount - 5) / 5) + 1;
 }
 
-// 计算纯升级伤害（不含任何加成和里程碑）
+// 计算纯升级伤害（仅用于旧存档迁移和模拟器）
 function calculateRawUpgradeDamage(mercenary) {
     let effectiveLevel = mercenary.damageLevel || 0;
     if (mercenary.id === 'legend') {
@@ -122,76 +117,59 @@ function calculateRawUpgradeDamage(mercenary) {
     return damage;
 }
 
+// 计算下一级攻击力升级的增量
+function getNextLevelDamageGain(mercenary) {
+    let effectiveLevel = mercenary.damageLevel || 0;
+    if (mercenary.id === 'legend') {
+        effectiveLevel = (mercenary.damageLevel || 0) + (mercenary.intervalLevel || 0);
+    }
+    const nextUpgrade = effectiveLevel + 1;
+    const tier = getUpgradeTier(nextUpgrade);
+    let baseAdd = tier < ADD_VALUE_TABLE.length
+        ? ADD_VALUE_TABLE[tier]
+        : Math.floor(ADD_VALUE_TABLE[12] * Math.pow(1.5, tier - 12));
+    const scale = mercenary.damage / 4;
+    return Math.max(1, Math.floor(baseAdd * scale));
+}
+
+// 旧函数保留用于迁移
 function calculateMercenaryBaseDamage(mercenary) {
     let damage = calculateRawUpgradeDamage(mercenary);
-
-    // 里程碑奖励（一次性翻倍，存储在 _milestoneDamageBonus 中）
     if (mercenary._milestoneDamageBonus) damage += mercenary._milestoneDamageBonus;
-
-    // 战士等自带的堆叠Buff (属于该佣兵个体的成长)
-    if (mercenary._stackingBuff) {
-        damage *= (1 + mercenary._stackingBuff);
-    }
-
-    // 骑士「重装」技能的额外攻击力加成
-    if (mercenary._knightHeavyBonus) {
-        damage += mercenary._knightHeavyBonus;
-    }
-
-    // 士兵「经验」技能的攻击力加成
-    if (mercenary._experienceBonus) {
-        damage += mercenary._experienceBonus;
-    }
-
+    if (mercenary._stackingBuff) damage *= (1 + mercenary._stackingBuff);
+    if (mercenary._knightHeavyBonus) damage += mercenary._knightHeavyBonus;
+    if (mercenary._experienceBonus) damage += mercenary._experienceBonus;
     return Math.floor(damage);
 }
 
-// 里程碑攻击力检查：跨越50/100级时一次性翻倍当前攻击力（含传授加成）
+// 旧存档迁移：从旧字段计算初始 _currentDamage
+function initCurrentDamageFromLegacy(mercenary) {
+    let damage = calculateMercenaryBaseDamage(mercenary);
+    if (mercenary._teachingBonus) damage += mercenary._teachingBonus;
+    if (mercenary._chaosAtkMult && mercenary._chaosAtkMult > 1) damage = Math.floor(damage * mercenary._chaosAtkMult);
+    return damage;
+}
+
+// 里程碑攻击力检查：跨越50/100级时翻倍 _currentDamage
 function applyMilestoneDamageCheck(merc, oldDisplayLevel, newDisplayLevel) {
     if (oldDisplayLevel < 50 && newDisplayLevel >= 50) {
-        const rawDmg = calculateRawUpgradeDamage(merc);
-        const existing = merc._milestoneDamageBonus || 0;
-        const teachingBonus = merc._teachingBonus || 0;
-        merc._milestoneDamageBonus = rawDmg + teachingBonus + 2 * existing;
+        merc._currentDamage = Math.floor((merc._currentDamage || 0) * 2);
     }
     if (oldDisplayLevel < 100 && newDisplayLevel >= 100) {
-        const rawDmg = calculateRawUpgradeDamage(merc);
-        const existing = merc._milestoneDamageBonus || 0;
-        const teachingBonus = merc._teachingBonus || 0;
-        merc._milestoneDamageBonus = rawDmg + teachingBonus + 2 * existing;
+        merc._currentDamage = Math.floor((merc._currentDamage || 0) * 2);
     }
 }
 
-// 旧存档迁移：补算里程碑奖励
-function migrateMilestoneDamageBonus(mercenaries) {
-    if (!mercenaries) return;
-    mercenaries.forEach(merc => {
-        if (merc._milestoneDamageBonus === undefined || merc._milestoneDamageBonus === null) {
-            const displayLevel = (merc.damageLevel || 0) + (merc.intervalLevel || 0) + 1;
-            const rawDmg = calculateRawUpgradeDamage(merc);
-            const teachingBonus = merc._teachingBonus || 0;
-            if (displayLevel >= 100) {
-                merc._milestoneDamageBonus = 3 * rawDmg + 3 * teachingBonus;
-            } else if (displayLevel >= 50) {
-                merc._milestoneDamageBonus = rawDmg + teachingBonus;
-            }
-        }
-    });
-}
-
-/**
- * 获取用于显示的属性信息 (基础 + 额外)
- */
+// 简化：面板显示 _currentDamage × prestige
 function getDamageDisplayInfo(mercenary, prestigeDamageMult = 1) {
-    const base = calculateMercenaryBaseDamage(mercenary);
-    let final = Math.floor(base * prestigeDamageMult);
-    const bonus = final - base;
-
+    const cd = mercenary._currentDamage || 0;
+    const final = Math.floor(cd * prestigeDamageMult);
+    const bonus = final - cd;
     return {
-        base,
+        base: cd,
         bonus,
         final,
-        text: bonus > 0 ? `${formatNumber(base)} (+${formatNumber(bonus)})` : `${formatNumber(base)}`
+        text: bonus > 0 ? `${formatNumber(cd)} (+${formatNumber(bonus)})` : `${formatNumber(cd)}`
     };
 }
 
@@ -500,7 +478,8 @@ module.exports = {
     getDamageDisplayInfo,
     calculateMercenaryBaseDamage,
     calculateRawUpgradeDamage,
+    getNextLevelDamageGain,
+    initCurrentDamageFromLegacy,
     applyMilestoneDamageCheck,
-    migrateMilestoneDamageBonus,
     hasMetaLegendSword
 };

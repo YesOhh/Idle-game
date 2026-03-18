@@ -106,15 +106,17 @@ function _migrateToBigInt() {
     G.player.gold = gameEngine.toBigInt(G.player.gold || 0);
     G.player.totalDamage = gameEngine.toBigInt(G.player.totalDamage || 0);
     G.player.manualDamage = gameEngine.toBigInt(G.player.manualDamage || 1);
-    // Merc bonus values
+    // Merc bonus values (旧字段 BigInt 转换，用于迁移)
     G.mercenaries.forEach(merc => {
         ['_milestoneDamageBonus', '_knightHeavyBonus', '_experienceBonus', '_teachingBonus', '_totalDamageDealt'].forEach(field => {
             if (merc[field] !== undefined && merc[field] !== null && typeof merc[field] !== 'bigint') {
                 merc[field] = gameEngine.toBigInt(merc[field]);
             }
         });
+        if (merc._currentDamage !== undefined && merc._currentDamage !== null && typeof merc._currentDamage !== 'bigint') {
+            merc._currentDamage = gameEngine.toBigInt(merc._currentDamage);
+        }
         // _stackingBuff: don't convert here if it's the old multiplier format
-        // (will be handled by initGameData stacking buff migration)
         if (merc._stackingBuff !== undefined && typeof merc._stackingBuff === 'number' && !(merc._stackingBuff >= 1 && merc._stackingBuff < 10000)) {
             merc._stackingBuff = gameEngine.toBigInt(merc._stackingBuff);
         }
@@ -125,31 +127,40 @@ function initGameData() {
     const defaultMercs = initMercenaries();
     if (!G.mercenaries || G.mercenaries.length === 0) {
         G.mercenaries = defaultMercs;
+        // 新存档：初始化所有佣兵的 _currentDamage
+        G.mercenaries.forEach(merc => {
+            merc._currentDamage = BigInt(merc.damage); // 基础攻击力
+        });
     } else {
         // Sync new mercs & update base stats
         defaultMercs.forEach(dm => {
             const existing = G.mercenaries.find(m => m.id === dm.id);
-            if (!existing) { G.mercenaries.push(dm); }
+            if (!existing) { dm._currentDamage = BigInt(dm.damage); G.mercenaries.push(dm); }
             else { existing.baseCost = dm.baseCost; existing.damage = dm.damage; existing.attackInterval = dm.attackInterval; existing.icon = dm.icon; existing.description = dm.description; }
         });
         G.mercenaries.forEach(merc => {
             if (merc.recruited === undefined) merc.recruited = false;
             if (merc.damageLevel === undefined) merc.damageLevel = 0;
             if (merc.intervalLevel === undefined) merc.intervalLevel = 0;
-            // 迁移旧版熟练Buff：复利乘数转为固定加成
-            if (merc._stackingBuff !== undefined && typeof merc._stackingBuff === 'number' && merc._stackingBuff >= 1 && merc._stackingBuff < 10000) {
-                // 旧版存的是乘数（≥1），转为等效固定加成
-                const rawDmg = gameEngine.calculateMercenaryBaseDamage(merc) + gameEngine.toBigInt(merc._teachingBonus || 0);
-                merc._stackingBuff = gameEngine.bigMul(rawDmg, merc._stackingBuff - 1);
-                console.log(`[迁移] ${merc.name}: 熟练Buff乘数 → 固定加成 ${gameEngine.formatNumber(merc._stackingBuff)}`);
+
+            // === _currentDamage 迁移 ===
+            // 如果是旧存档（没有 _currentDamage），从旧字段重建
+            if (merc._currentDamage === undefined || merc._currentDamage === null) {
+                // 先处理旧版熟练Buff乘数
+                if (merc._stackingBuff !== undefined && typeof merc._stackingBuff === 'number' && merc._stackingBuff >= 1 && merc._stackingBuff < 10000) {
+                    const rawDmg = gameEngine.calculateRawUpgradeDamage(merc);
+                    const teaching = gameEngine.toBigInt(merc._teachingBonus || 0);
+                    merc._stackingBuff = gameEngine.bigMul(rawDmg + teaching, merc._stackingBuff - 1);
+                }
+                // 先处理旧版混沌Buff加法→乘法
+                if (merc._chaosAtkBuff !== undefined && !merc._chaosAtkMult) {
+                    merc._chaosAtkMult = 1 + merc._chaosAtkBuff;
+                    delete merc._chaosAtkBuff;
+                }
+                merc._currentDamage = gameEngine.initCurrentDamageFromLegacy(merc);
+                console.log(`[迁移] ${merc.name}: _currentDamage = ${gameEngine.formatNumber(merc._currentDamage)}`);
             }
-            // 迁移旧版混沌Buff：加法叠加转为乘法叠加
-            if (merc._chaosAtkBuff !== undefined && !merc._chaosAtkMult) {
-                // 旧版 _chaosAtkBuff 是加法百分比（如 12.90 = +1290%），等价乘法 = 1 + _chaosAtkBuff
-                merc._chaosAtkMult = 1 + merc._chaosAtkBuff;
-                delete merc._chaosAtkBuff;
-                console.log(`[迁移] ${merc.name}: 混沌Buff加法 → 乘法 ×${merc._chaosAtkMult.toFixed(4)}`);
-            }
+
             const prestigeBonus = gameEngine.calculatePrestigeBonus(G.player);
             merc._prestigeSpeedBuff = prestigeBonus.speed;
             merc.currentDamage = gameEngine.calculateUpgradedDamage(merc, prestigeBonus.damage);
@@ -232,14 +243,15 @@ function _processTeachingSkill() {
     if (!skill) return;
     const totalLevel = (soldier.damageLevel || 0) + (soldier.intervalLevel || 0) + 1;
     if (totalLevel < skill.baseUnlockLevel) return;
-    const soldierBaseDamage = gameEngine.calculateMercenaryBaseDamage(soldier);
+    // 传授基于士兵的 _currentDamage（不含prestige）
+    const soldierDmg = gameEngine.toBigInt(soldier._currentDamage || 0n);
     const params = skill.getParams(totalLevel);
-    const bonusDamage = gameEngine.bigMul(soldierBaseDamage, params.bonusRatio);
+    const bonusDamage = gameEngine.bigMul(soldierDmg, params.bonusRatio);
     if (bonusDamage <= 0n) return;
     let buffedCount = 0;
     G.mercenaries.forEach(merc => {
         if (merc.recruited && merc.id !== 'royal_guard') {
-            merc._teachingBonus = gameEngine.toBigInt(merc._teachingBonus || 0) + bonusDamage;
+            merc._currentDamage = gameEngine.toBigInt(merc._currentDamage || 0n) + bonusDamage;
             buffedCount++;
         }
     });
@@ -262,7 +274,7 @@ function _processExperienceSkill() {
     const totalLevel = (soldier.damageLevel || 0) + (soldier.intervalLevel || 0) + 1;
     const dmgLv = soldier.damageLevel || 0;
     const bonus = BigInt(1 + Math.floor(totalLevel * dmgLv / 30));
-    soldier._experienceBonus = gameEngine.toBigInt(soldier._experienceBonus || 0) + bonus;
+    soldier._currentDamage = gameEngine.toBigInt(soldier._currentDamage || 0n) + bonus;
     if (_showSkillNumbers) showMercSkillText('royal_guard', `🌟经验 +${gameEngine.formatNumber(bonus)}`, 'skill-royal');
 }
 
@@ -292,8 +304,6 @@ function processBattleTick() {
 
         if (merc._attackTimer >= interval) {
             let damage = gameEngine.calculateUpgradedDamage(merc, prestigeBonus.damage);
-            // 混沌法则：战斗时乘法加成（不影响面板显示）
-            if (merc._chaosAtkMult && merc._chaosAtkMult > 1) damage = gameEngine.bigMul(damage, merc._chaosAtkMult);
             const defaultSkill = gameEngine.getMercenarySkill(merc);
             const secondarySkill = gameEngine.getSecondaryMercSkill(merc);
             const evolvedSkill = gameEngine.getEvolvedMercSkill(merc);
@@ -314,9 +324,12 @@ function processBattleTick() {
                     skillTriggered = { type: 'gold', text: `+${gameEngine.formatNumber(bonusGold)}💰` };
                 } else if (skill.type === 'stacking_buff') {
                     if (Math.random() < skill.chance) {
-                        // 熟练：永久增加当前攻击力的1%作为固定加成
+                        // 熟练：永久增加当前攻击力的val%
                         const buffInc = gameEngine.bigMul(damage, skill.val);
-                        merc._stackingBuff = gameEngine.toBigInt(merc._stackingBuff || 0) + buffInc;
+                        merc._currentDamage = gameEngine.toBigInt(merc._currentDamage || 0n) + buffInc;
+                        // 重新计算战斗伤害（熟练已累加到 _currentDamage）
+                        damage = gameEngine.calculateUpgradedDamage(merc, prestigeBonus.damage);
+                        thisHitDamage = damage;
                         skillTriggered = { type: 'stacking_buff', text: `熟练 +${gameEngine.formatNumber(buffInc)}` };
                     }
                 } else if (skill.type === 'crit') {
@@ -347,14 +360,13 @@ function processBattleTick() {
                     }
                 } else if (skill.type === 'chaos_stack') {
                     if (Math.random() < skill.chance) {
-                        const baseDmg = gameEngine.calculateUpgradedDamage(merc, prestigeBonus.damage);
-                        const dmgBefore = (merc._chaosAtkMult && merc._chaosAtkMult > 1) ? gameEngine.bigMul(baseDmg, merc._chaosAtkMult) : baseDmg;
-                        merc._chaosAtkMult = (merc._chaosAtkMult || 1) * (1 + skill.atkBonus);
+                        // 混沌法则：直接乘算 _currentDamage
+                        const dmgBefore = gameEngine.toBigInt(merc._currentDamage || 0n);
+                        merc._currentDamage = gameEngine.bigMul(dmgBefore, 1 + skill.atkBonus);
                         merc._chaosIntervalPenalty = (merc._chaosIntervalPenalty || 0) + skill.intervalIncrease;
-                        const dmgAfter = gameEngine.bigMul(baseDmg, merc._chaosAtkMult);
-                        const dmgGain = dmgAfter - dmgBefore;
-                        // 更新当前攻击伤害（混沌在战斗中实时生效）
-                        damage = dmgAfter;
+                        const dmgGain = gameEngine.toBigInt(merc._currentDamage) - dmgBefore;
+                        // 重新计算战斗伤害
+                        damage = gameEngine.calculateUpgradedDamage(merc, prestigeBonus.damage);
                         thisHitDamage = damage;
                         skillTriggered = { type: 'chaos', text: `混沌 +${gameEngine.formatNumber(dmgGain)}` };
                     }
@@ -382,9 +394,8 @@ function processBattleTick() {
                         const _noRecurse = new Set(['time_burst', 'periodic_burst', 'knight_heavy_armor', 'legend_dual_growth']);
                         const otherSkills = skillsToProcess.filter(s => !_noRecurse.has(s.type));
                         for (let bi = 0; bi < skill.attackCount; bi++) {
-                            // 每次爆发重新计算伤害，混沌叠层后续命中立即生效
+                            // 每次爆发重新计算伤害（混沌/熟练已累加到 _currentDamage）
                             let burstRawDmg = gameEngine.calculateUpgradedDamage(merc, prestigeBonus.damage);
-                            if (merc._chaosAtkMult && merc._chaosAtkMult > 1) burstRawDmg = gameEngine.bigMul(burstRawDmg, merc._chaosAtkMult);
                             const burstBaseDmg = gameEngine.bigMul(burstRawDmg, skill.damageMultiplier);
                             let burstHit = burstBaseDmg;
                             let burstCrit = false;
@@ -393,19 +404,25 @@ function processBattleTick() {
                             for (const os of otherSkills) {
                                 if (os.type === 'gold_on_attack') {
                                     burstGold += gameEngine.bigMul(damage, os.multiplier);
+                                    if (_showSkillNumbers) showMercSkillText(merc.id, `+${gameEngine.formatNumber(burstGold)}💰`, getSkillClass('gold'));
                                 } else if (os.type === 'stacking_buff') {
                                     if (Math.random() < os.chance) {
-                                        const buffInc = gameEngine.bigMul(damage, os.val);
-                                        merc._stackingBuff = gameEngine.toBigInt(merc._stackingBuff || 0) + buffInc;
+                                        const buffInc = gameEngine.bigMul(burstRawDmg, os.val);
+                                        merc._currentDamage = gameEngine.toBigInt(merc._currentDamage || 0n) + buffInc;
+                                        if (_showSkillNumbers) showMercSkillText(merc.id, `熟练 +${gameEngine.formatNumber(buffInc)}`, getSkillClass('stacking_buff'));
                                     }
                                 } else if (os.type === 'crit') {
-                                    if (Math.random() < os.chance) { burstHit = gameEngine.bigMul(burstHit, os.multiplier); burstCrit = true; }
+                                    if (Math.random() < os.chance) {
+                                        burstHit = gameEngine.bigMul(burstHit, os.multiplier); burstCrit = true;
+                                        if (_showSkillNumbers) showMercSkillText(merc.id, '爆裂!', getSkillClass('crit'));
+                                    }
                                 } else if (os.type === 'global_speed_buff') {
                                     if (Math.random() < os.chance) {
                                         _globalSpeedBuff = os.val; _speedBuffActive = true;
                                         if (_globalSpeedTimer) clearTimeout(_globalSpeedTimer);
                                         _globalSpeedTimer = setTimeout(() => { _globalSpeedBuff = 0; _speedBuffActive = false; removeSpeedBuffEffect(); }, os.duration);
                                         showSpeedBuffEffect(os.duration);
+                                        if (_showSkillNumbers) showMercSkillText(merc.id, '奥术激涌!', getSkillClass('speed_buff'));
                                     }
                                 } else if (os.type === 'dragon_soul') {
                                     merc._dragonSoulStacks = (merc._dragonSoulStacks || 0) + 1;
@@ -421,13 +438,16 @@ function processBattleTick() {
                                             if (burnCount > burnTicks || G.boss.currentHp <= 0) { clearInterval(_dragonBurnTimer); _dragonBurnTimer = null; return; }
                                             dealGlobalDamage(burnPerTick);
                                         }, 1000);
+                                        if (_showSkillNumbers) showMercSkillText(merc.id, `龙息x${os.burstMultiplier}!`, getSkillClass('damage_buff'));
                                     }
                                 } else if (os.type === 'chaos_stack') {
                                     if (Math.random() < os.chance) {
-                                        merc._chaosAtkMult = (merc._chaosAtkMult || 1) * (1 + os.atkBonus);
+                                        const cdBefore = gameEngine.toBigInt(merc._currentDamage || 0n);
+                                        merc._currentDamage = gameEngine.bigMul(cdBefore, 1 + os.atkBonus);
                                         merc._chaosIntervalPenalty = (merc._chaosIntervalPenalty || 0) + os.intervalIncrease;
+                                        const cdGain = gameEngine.toBigInt(merc._currentDamage) - cdBefore;
+                                        if (_showSkillNumbers) showMercSkillText(merc.id, `混沌 +${gameEngine.formatNumber(cdGain)}`, getSkillClass('chaos'));
                                     }
-                                    // 混沌攻击力加成已纳入 calculateUpgradedDamage，无需再手动乘
                                 } else if (os.type === 'berserker_rage') {
                                     const hpPct = Number(G.boss.currentHp) / Number(G.boss.maxHp);
                                     let bp = 0;
@@ -437,35 +457,53 @@ function processBattleTick() {
                                     const hpPct = Number(G.boss.currentHp) / Number(G.boss.maxHp);
                                     let cc = 0;
                                     for (const t of os.thresholds) { if (hpPct < t.hpPercent) cc = t.comboChance; }
-                                    if (cc > 0) { let cd = 0n; while (Math.random() < cc) { cd += burstBaseDmg; } burstHit += cd; }
+                                    if (cc > 0) {
+                                        let cd = 0n, comboN = 0;
+                                        while (Math.random() < cc) { cd += burstBaseDmg; comboN++; }
+                                        if (comboN > 0) {
+                                            burstHit += cd;
+                                            if (_showSkillNumbers) showMercSkillText(merc.id, `连击x${comboN}!`, getSkillClass('combo'));
+                                        }
+                                    }
                                 } else if (os.type === 'iron_fist') {
                                     if (Math.random() < os.chance) {
                                         let ironTotal = 0n;
                                         G.mercenaries.forEach(m => { if (m.recruited && m.category === 'iron') ironTotal += gameEngine.calculateUpgradedDamage(m, prestigeBonus.damage); });
-                                        burstHit += gameEngine.bigMul(ironTotal, os.multiplier); burstCrit = true;
+                                        const extra = gameEngine.bigMul(ironTotal, os.multiplier);
+                                        burstHit += extra; burstCrit = true;
+                                        if (_showSkillNumbers) showMercSkillText(merc.id, `钢铁神拳 +${gameEngine.formatNumber(extra)}!`, getSkillClass('iron_fist'));
                                     }
                                 } else if (os.type === 'boss_debuff') {
                                     if (Math.random() < os.chance) {
                                         _bossDebuff = os.val; _bossDebuffActive = true;
                                         if (_bossDebuffTimer) clearTimeout(_bossDebuffTimer);
                                         _bossDebuffTimer = setTimeout(() => { _bossDebuff = 0; _bossDebuffActive = false; }, os.duration);
+                                        if (_showSkillNumbers) showMercSkillText(merc.id, `冰霜冻结 +${(os.val * 100).toFixed(0)}%!`, getSkillClass('freeze'));
                                     }
                                 } else if (os.type === 'soul_devour') {
                                     if (Math.random() < os.chance) { merc._soulCount = Math.min((merc._soulCount || 0) + 1, os.maxSouls); }
                                     const sc = merc._soulCount || 0;
-                                    if (sc > 0) burstHit += gameEngine.bigMul(damage, os.damageRatio * sc);
+                                    if (sc > 0) {
+                                        const soulDmg = gameEngine.bigMul(damage, os.damageRatio * sc);
+                                        burstHit += soulDmg;
+                                        if (_showSkillNumbers) showMercSkillText(merc.id, `💀x${sc}/${os.maxSouls} +${gameEngine.formatNumber(soulDmg)}`, getSkillClass('summon'));
+                                    }
                                 } else if (os.type === 'pure_percent_damage') {
                                     if (Math.random() < os.chance) {
                                         const dlp1 = (merc.damageLevel || 0) + 1;
                                         let tt = 0n; G.mercenaries.forEach(m => { if (m.recruited) tt += gameEngine.calculateUpgradedDamage(m, prestigeBonus.damage); });
                                         const cap = tt * BigInt(dlp1) / 30n;
                                         const pd = gameEngine.bigMul(G.boss.currentHp, os.percentVal);
-                                        burstHit += (pd < cap ? pd : cap);
+                                        const cappedPd = pd < cap ? pd : cap;
+                                        burstHit += cappedPd;
+                                        if (_showSkillNumbers) showMercSkillText(merc.id, `圣洁之力 ${gameEngine.formatNumber(cappedPd)}`, getSkillClass('holy'));
                                     }
                                 } else if (os.type === 'total_team_damage') {
                                     if (Math.random() < os.chance) {
                                         let tt = 0n; G.mercenaries.forEach(m => { if (m.recruited) tt += gameEngine.calculateUpgradedDamage(m, prestigeBonus.damage); });
-                                        burstHit += gameEngine.bigMul(tt, os.ratio); burstCrit = true;
+                                        const voidDmg = gameEngine.bigMul(tt, os.ratio);
+                                        burstHit += voidDmg; burstCrit = true;
+                                        if (_showSkillNumbers) showMercSkillText(merc.id, `虚空侵蚀 +${gameEngine.formatNumber(voidDmg)}!`, getSkillClass('void'));
                                     }
                                 } else if (os.type === 'legend_sword') {
                                     const _lsKey2 = `_legendSwordProb_${os._slot}`;
@@ -474,14 +512,18 @@ function processBattleTick() {
                                         merc[_lsKey2] = Math.min(0.15, merc[_lsKey2] + 0.01);
                                         const dmgLv = BigInt((merc.damageLevel || 0) + 1);
                                         let swordDmg = 9999999999n * dmgLv;
-                                        // 元传说之剑: 单位原生拥有传说之剑且等级≥75时激活
+                                        let metaActive = false;
                                         const lTotalLevel = (merc.damageLevel || 0) + (merc.intervalLevel || 0) + 1;
                                         if (lTotalLevel >= 75 && gameEngine.hasMetaLegendSword(merc)) {
                                             let tt = 0n;
                                             G.mercenaries.forEach(m => { if (m.recruited) tt += gameEngine.calculateUpgradedDamage(m, prestigeBonus.damage); });
                                             swordDmg += tt * dmgLv / 10n;
+                                            metaActive = true;
                                         }
                                         burstHit += swordDmg; burstCrit = true;
+                                        const tag = metaActive ? '元传说之剑' : '传说之剑';
+                                        const pctDisp = Math.round(merc[_lsKey2] * 100);
+                                        if (_showSkillNumbers) showMercSkillText(merc.id, `⚔️${tag}(${pctDisp}%) +${gameEngine.formatNumber(swordDmg)}!`, getSkillClass('legend_sword'));
                                     }
                                 } else if (os.type === 'damage_aura') {
                                     _damageAura = os.val;
@@ -497,6 +539,7 @@ function processBattleTick() {
                             if (_ultimateAura) burstHit = gameEngine.bigMul(burstHit, 1 + _ultimateAura.damage);
                             if (_ultimateAura && _ultimateAura.critChance && Math.random() < _ultimateAura.critChance) {
                                 burstHit = gameEngine.bigMul(burstHit, _ultimateAura.critMult); burstCrit = true;
+                                if (_showSkillNumbers) showMercSkillText(merc.id, `万物终结 x${_ultimateAura.critMult}!`, getSkillClass('ultimate'));
                             }
                             if (_bossDebuff) burstHit = gameEngine.bigMul(burstHit, 1 + _bossDebuff);
                             dealGlobalDamage(burstHit);
@@ -879,38 +922,34 @@ function testTriggerSkill(mercId, slot) {
     else skill = gameEngine.getMercenarySkill(merc);
     if (!skill) { alert('技能未解锁'); return; }
 
-    const baseDmg = gameEngine.calculateUpgradedDamage(merc, prestigeBonus.damage);
-    const dmgBefore = (merc._chaosAtkMult && merc._chaosAtkMult > 1) ? gameEngine.bigMul(baseDmg, merc._chaosAtkMult) : baseDmg;
+    const combatDmg = gameEngine.calculateUpgradedDamage(merc, prestigeBonus.damage);
     const intBefore = gameEngine.calculateUpgradedInterval(merc);
     let msg = `【${merc.name}】测试触发【${skill.type}】\n`;
-    msg += `基础攻击力: ${gameEngine.formatNumber(baseDmg)}\n`;
-    msg += `混沌加成后战斗攻击力: ${gameEngine.formatNumber(dmgBefore)}\n`;
+    msg += `当前攻击力(_currentDamage): ${gameEngine.formatNumber(merc._currentDamage || 0n)}\n`;
+    msg += `战斗攻击力(×prestige): ${gameEngine.formatNumber(combatDmg)}\n`;
     msg += `攻击间隔: ${intBefore.toFixed(4)}秒\n\n`;
 
     // Simulate one trigger
     if (skill.type === 'chaos_stack') {
-        merc._chaosAtkMult = (merc._chaosAtkMult || 1) * (1 + skill.atkBonus);
+        const dmgBefore = gameEngine.toBigInt(merc._currentDamage || 0n);
+        merc._currentDamage = gameEngine.bigMul(dmgBefore, 1 + skill.atkBonus);
         merc._chaosIntervalPenalty = (merc._chaosIntervalPenalty || 0) + skill.intervalIncrease;
-        const dmgAfter = gameEngine.bigMul(baseDmg, merc._chaosAtkMult);
+        const dmgGain = gameEngine.toBigInt(merc._currentDamage) - dmgBefore;
         const intAfter = gameEngine.calculateUpgradedInterval(merc);
-        const dmgGain = dmgAfter - dmgBefore;
-        const stacks = Math.round(Math.log(merc._chaosAtkMult || 1) / Math.log(1 + skill.atkBonus));
-        msg += `--- 触发1次混沌法则 (战斗攻击力×${(1 + skill.atkBonus).toFixed(2)}) ---\n`;
-        msg += `触发后战斗攻击力: ${gameEngine.formatNumber(dmgAfter)}\n`;
+        msg += `--- 触发1次混沌法则 (_currentDamage×${(1 + skill.atkBonus).toFixed(2)}) ---\n`;
+        msg += `触发后_currentDamage: ${gameEngine.formatNumber(merc._currentDamage)}\n`;
         msg += `攻击力增加: +${gameEngine.formatNumber(dmgGain)}\n`;
         msg += `实际增幅: ${(Number(dmgGain) / Number(dmgBefore) * 100).toFixed(2)}%\n`;
         msg += `触发后攻击间隔: ${intAfter.toFixed(4)}秒 (+${(intAfter - intBefore).toFixed(4)}秒)\n`;
-        msg += `\n当前混沌总叠层: ${stacks}层 (总倍率×${(merc._chaosAtkMult || 1).toFixed(4)})`;
-        msg += `\n\n注: 混沌加成仅影响战斗伤害，不影响面板基础攻击力`;
     } else if (skill.type === 'stacking_buff') {
-        const buffInc = gameEngine.bigMul(dmgBefore, skill.val);
-        merc._stackingBuff = gameEngine.toBigInt(merc._stackingBuff || 0) + buffInc;
+        const buffInc = gameEngine.bigMul(combatDmg, skill.val);
+        merc._currentDamage = gameEngine.toBigInt(merc._currentDamage || 0n) + buffInc;
         const dmgAfter = gameEngine.calculateUpgradedDamage(merc, prestigeBonus.damage);
         msg += `--- 触发1次熟练 (攻击力+${(skill.val * 100).toFixed(0)}%) ---\n`;
         msg += `触发后攻击力: ${gameEngine.formatNumber(dmgAfter)}\n`;
         msg += `攻击力增加: +${gameEngine.formatNumber(buffInc)}\n`;
     } else if (skill.type === 'crit') {
-        const critDmg = gameEngine.bigMul(dmgBefore, skill.multiplier);
+        const critDmg = gameEngine.bigMul(combatDmg, skill.multiplier);
         msg += `--- 暴击 (${skill.multiplier}x) ---\n`;
         msg += `暴击伤害: ${gameEngine.formatNumber(critDmg)}\n`;
     } else {
@@ -1027,10 +1066,8 @@ function _patchMercStats(container, prestigeBonus) {
         if (costDmgEl) { costDmgEl.textContent = costText; costDmgEl.className = `upgrade-cost ${canAfford ? '' : 'disabled'}`; }
         const costIntEl = container.querySelector(`[data-cost-int="${merc.id}"]`);
         if (costIntEl) { costIntEl.textContent = costText; costIntEl.className = `upgrade-cost ${canAfford ? '' : 'disabled'}`; }
-        // Upgrade effects
-        const tempDmg = { ...merc, damageLevel: (merc.damageLevel || 0) + 1 };
-        const nextDmgInfo = gameEngine.getDamageDisplayInfo(tempDmg, prestigeBonus.damage);
-        let damageGain = nextDmgInfo.final - dmgInfo.final;
+        // Upgrade effects — 直接用 getNextLevelDamageGain 计算升级增量
+        let damageGain = gameEngine.getNextLevelDamageGain(merc);
         if (gameEngine.hasSkillOfType(merc, 'extreme_focus')) damageGain = gameEngine.bigMul(damageGain, 1 / 2.2);
         const effDmgEl = container.querySelector(`[data-eff-dmg="${merc.id}"]`);
         if (effDmgEl) effDmgEl.textContent = `攻击力 +${gameEngine.formatNumber(damageGain)}`;
@@ -1102,10 +1139,8 @@ function updateBattleMercList(force) {
             evolvedShortName = me ? me[1] : evolvedInfo.name;
         }
 
-        // Upgrade effects
-        const tempMercDmg = { ...merc, damageLevel: (merc.damageLevel || 0) + 1 };
-        const nextDmgInfo = gameEngine.getDamageDisplayInfo(tempMercDmg, prestigeBonus.damage);
-        let damageGain = nextDmgInfo.final - dmgInfo.final;
+        // Upgrade effects — 直接用 getNextLevelDamageGain 计算升级增量
+        let damageGain = gameEngine.getNextLevelDamageGain(merc);
         // 有「极」时预览只显示基础升级量（不含2.2倍），极的加成由飘字提示
         if (gameEngine.hasSkillOfType(merc, 'extreme_focus')) damageGain = gameEngine.bigMul(damageGain, 1 / 2.2);
         const damageUpgradeEffect = gameEngine.formatNumber(damageGain);
@@ -1796,10 +1831,12 @@ function upgradeMerc(mercId, type) {
     if (G.player.gold < cost) { showToast('金币不足!'); return; }
     G.player.gold -= cost;
     const oldDisplayLevel = (merc.damageLevel || 0) + (merc.intervalLevel || 0) + 1;
-    const oldDamageValue = gameEngine.calculateUpgradedDamage(merc, prestigeBonus.damage);
     if (type === 'damage') {
+        // 计算升级增量并加到 _currentDamage
+        const gain = gameEngine.getNextLevelDamageGain(merc);
         merc.damageLevel++;
-        // 里程碑攻击力检查（跨越50/100级时一次性翻倍）
+        merc._currentDamage = gameEngine.toBigInt(merc._currentDamage || 0n) + gain;
+        // 里程碑攻击力检查（跨越50/100级时翻倍 _currentDamage）
         const newLv = (merc.damageLevel || 0) + (merc.intervalLevel || 0) + 1;
         gameEngine.applyMilestoneDamageCheck(merc, oldDisplayLevel, newLv);
         // 骑士「重装」技能：升级攻击力时额外增加（攻击力等级²×等级）点攻击力
@@ -1808,16 +1845,13 @@ function upgradeMerc(mercId, type) {
             const dmgLv = merc.damageLevel || 0;
             const totalLv = (merc.damageLevel || 0) + (merc.intervalLevel || 0) + 1;
             const heavyBonus = BigInt(dmgLv * dmgLv * totalLv);
-            merc._knightHeavyBonus = gameEngine.toBigInt(merc._knightHeavyBonus || 0) + heavyBonus;
+            merc._currentDamage += heavyBonus;
             if (_showSkillNumbers) showMercSkillText(merc.id, `🛡️重装 +${gameEngine.formatNumber(heavyBonus)}`, 'skill-iron');
         }
         // 「极」技能：升级攻击力飘字显示额外加成和攻速惩罚
         if (gameEngine.hasSkillOfType(merc, 'extreme_focus') && _showSkillNumbers) {
-            const newDmg = gameEngine.calculateUpgradedDamage(merc, prestigeBonus.damage);
-            // 计算此次升级的总增量和无极额外贡献
-            const totalGain = newDmg - oldDamageValue;
-            // 无极额外 = 总增量的 (1 - 1/2.2) ≈ 54.5%
-            const extremeExtra = gameEngine.bigMul(totalGain, 1 - 1 / 2.2);
+            // 极的额外 = 升级增量的 (1 - 1/2.2) ≈ 54.5%
+            const extremeExtra = gameEngine.bigMul(gain, 1 - 1 / 2.2);
             const spdPenalty = ((Math.pow(1.005, merc.damageLevel) - Math.pow(1.005, merc.damageLevel - 1)) * 100).toFixed(1);
             showMercSkillText(merc.id, `⚡极 +${gameEngine.formatNumber(extremeExtra)} | 攻速-${spdPenalty}%`, 'skill-ultimate');
         }
@@ -1934,18 +1968,13 @@ function setupSimulator() {
         const merc = {
             id: mercData.id, damage: mercData.damage, attackInterval: mercData.attackInterval,
             baseCost: mercData.baseCost, damageLevel: startDmgLevel, intervalLevel: startSpdLevel,
-            _milestoneDamageBonus: 0n, _knightHeavyBonus: 0n
         };
 
+        // 初始化模拟 _currentDamage（从零开始算）
+        merc._currentDamage = gameEngine.calculateRawUpgradeDamage(merc);
         // Pre-compute milestone bonuses for levels already passed
-        if (startDisplayLevel >= 50) {
-            const rawDmg = gameEngine.calculateRawUpgradeDamage(merc);
-            merc._milestoneDamageBonus = rawDmg;
-        }
-        if (startDisplayLevel >= 100) {
-            const rawDmg = gameEngine.calculateRawUpgradeDamage(merc);
-            merc._milestoneDamageBonus = (merc._milestoneDamageBonus || 0n) + rawDmg + merc._milestoneDamageBonus;
-        }
+        if (startDisplayLevel >= 50) merc._currentDamage *= 2n;
+        if (startDisplayLevel >= 100) merc._currentDamage *= 2n;
         // Pre-compute knight heavy bonus
         const isKnight = mercData.id === 'knight';
         if (isKnight) {
@@ -1954,7 +1983,7 @@ function setupSimulator() {
                 const dispAtThatPoint = dl + startSpdLevel + 1;
                 knightBonus += BigInt(dl * dl) * BigInt(dispAtThatPoint);
             }
-            merc._knightHeavyBonus = knightBonus;
+            merc._currentDamage += knightBonus;
         }
 
         const rows = [];
@@ -1973,12 +2002,18 @@ function setupSimulator() {
             else if (simUpgradeMode === 'interval') upgradeType = 'interval';
             else upgradeType = (lvl % 2 === 0) ? 'damage' : 'interval';
 
-            if (upgradeType === 'damage') merc.damageLevel++;
-            else merc.intervalLevel++;
+            if (upgradeType === 'damage') {
+                const gain = gameEngine.getNextLevelDamageGain(merc);
+                merc.damageLevel++;
+                merc._currentDamage += gain;
+            } else {
+                merc.intervalLevel++;
+            }
 
             const newDisplayLevel = merc.damageLevel + merc.intervalLevel + 1;
             if (isKnight && upgradeType === 'damage') {
-                merc._knightHeavyBonus = gameEngine.toBigInt(merc._knightHeavyBonus || 0) + BigInt(merc.damageLevel * merc.damageLevel) * BigInt(newDisplayLevel);
+                const heavyBonus = BigInt(merc.damageLevel * merc.damageLevel) * BigInt(newDisplayLevel);
+                merc._currentDamage += heavyBonus;
             }
 
             let note = '';

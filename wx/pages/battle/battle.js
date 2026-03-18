@@ -290,18 +290,19 @@ Page({
                 if (merc.recruited === undefined) {
                     merc.recruited = (merc.count > 0);
                 }
-                // 等级初始为0（未升级过）
                 if (merc.damageLevel === undefined) merc.damageLevel = 0;
                 if (merc.intervalLevel === undefined) merc.intervalLevel = 0;
 
-                // 实时重算当前显示数值，确保算法更新后数值同步
-                const prestigeBonus = gameEngine.calculatePrestigeBonus(globalData.player);
-                merc._prestigeSpeedBuff = prestigeBonus.speed; // 设置永久攻速加成
+                // _currentDamage 迁移
+                if (merc._currentDamage === undefined || merc._currentDamage === null) {
+                    merc._currentDamage = gameEngine.initCurrentDamageFromLegacy(merc);
+                }
 
+                const prestigeBonus = gameEngine.calculatePrestigeBonus(globalData.player);
+                merc._prestigeSpeedBuff = prestigeBonus.speed;
                 merc.currentDamage = gameEngine.calculateUpgradedDamage(merc, prestigeBonus.damage);
                 merc.currentInterval = gameEngine.calculateUpgradedInterval(merc);
 
-                // 同步玩家单位的点击伤害（长大技能）
                 if (merc.id === 'player' && merc.recruited) {
                     globalData.player.manualDamage = merc.currentDamage;
                 }
@@ -436,11 +437,8 @@ Page({
                 }
             }
 
-            // 计算升级效果预览 - 模拟升级后的数值
-            // 攻击力：创建临时对象模拟升级后的状态
-            const tempMercDamage = { ...merc, damageLevel: (merc.damageLevel || 0) + 1 };
-            const nextDmgInfo = gameEngine.getDamageDisplayInfo(tempMercDamage, prestigeBonus.damage);
-            const damageUpgradeEffect = nextDmgInfo.final - dmgInfo.final;
+            // 计算升级效果预览 — 直接用 getNextLevelDamageGain
+            const damageUpgradeEffect = gameEngine.getNextLevelDamageGain(merc);
 
             // 攻击间隔：每级减少当前攻速的1%
             // 计算方式：下一级攻速 = 当前攻速 * 0.99，所以减少量 = 当前攻速 * 0.01
@@ -861,18 +859,21 @@ Page({
             globalData.player.gold -= cost;
 
             if (this.data.autoUpgradeType === 'damage') {
+                // 计算增量并加到 _currentDamage
+                const gain = gameEngine.getNextLevelDamageGain(merc);
                 merc.damageLevel++;
+                merc._currentDamage = (merc._currentDamage || 0) + gain;
                 // 里程碑攻击力检查
                 const oldLv = (merc.damageLevel - 1) + (merc.intervalLevel || 0) + 1;
                 const newLv = (merc.damageLevel || 0) + (merc.intervalLevel || 0) + 1;
                 gameEngine.applyMilestoneDamageCheck(merc, oldLv, newLv);
-                // 骑士「重装」技能：升级攻击力时额外增加攻击力
+                // 骑士「重装」技能
                 const knightSkill = gameEngine.getMercenarySkill(merc);
                 if (knightSkill && knightSkill.type === 'knight_heavy_armor') {
                     const dmgLv = merc.damageLevel || 0;
                     const totalLv = (merc.damageLevel || 0) + (merc.intervalLevel || 0) + 1;
                     const heavyBonus = dmgLv * dmgLv * totalLv;
-                    merc._knightHeavyBonus = (merc._knightHeavyBonus || 0) + heavyBonus;
+                    merc._currentDamage += heavyBonus;
                     if (this.data.showDamageNumbers) this.showDamageNumber(`🛡️重装 +${gameEngine.formatNumber(heavyBonus)}`, null, 'skill-iron');
                 }
                 merc.currentDamage = gameEngine.calculateUpgradedDamage(merc, prestigeBonus.damage);
@@ -1048,20 +1049,23 @@ Page({
 
         if (globalData.player.gold >= cost) {
             globalData.player.gold -= cost;
+            // 计算增量并加到 _currentDamage
+            const gain = gameEngine.getNextLevelDamageGain(mercenary);
             mercenary.damageLevel++;
+            mercenary._currentDamage = (mercenary._currentDamage || 0) + gain;
 
             // 里程碑攻击力检查
             const oldLv = (mercenary.damageLevel - 1) + (mercenary.intervalLevel || 0) + 1;
             const newLv = (mercenary.damageLevel || 0) + (mercenary.intervalLevel || 0) + 1;
             gameEngine.applyMilestoneDamageCheck(mercenary, oldLv, newLv);
 
-            // 骑士「重装」技能：升级攻击力时额外增加攻击力
+            // 骑士「重装」技能
             const knightSkill = gameEngine.getMercenarySkill(mercenary);
             if (knightSkill && knightSkill.type === 'knight_heavy_armor') {
                 const dmgLv = mercenary.damageLevel || 0;
                 const totalLv = (mercenary.damageLevel || 0) + (mercenary.intervalLevel || 0) + 1;
                 const heavyBonus = dmgLv * dmgLv * totalLv;
-                mercenary._knightHeavyBonus = (mercenary._knightHeavyBonus || 0) + heavyBonus;
+                mercenary._currentDamage += heavyBonus;
                 if (this.data.showDamageNumbers) this.showDamageNumber(`🛡️重装 +${gameEngine.formatNumber(heavyBonus)}`, null, 'skill-iron');
             }
 

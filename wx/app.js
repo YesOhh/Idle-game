@@ -17,8 +17,15 @@ App({
           if (merc.evolvedSkillId === 'berserker_combo') merc.evolvedSkillId = 'berserker_rage';
         }
       }
-      // 里程碑迁移：补算旧存档的一次性翻倍奖励
-      gameEngine.migrateMilestoneDamageBonus(this.globalData.mercenaries);
+      // _currentDamage 迁移：旧存档从旧字段重建
+      if (this.globalData.mercenaries) {
+        this.globalData.mercenaries.forEach(merc => {
+          if (merc._currentDamage === undefined || merc._currentDamage === null) {
+            merc._currentDamage = gameEngine.initCurrentDamageFromLegacy(merc);
+            console.log(`[迁移] ${merc.name}: _currentDamage = ${gameEngine.formatNumber(merc._currentDamage)}`);
+          }
+        });
+      }
       console.log('加载已保存的游戏数据');
     } else {
       // 初始化新游戏
@@ -143,19 +150,18 @@ App({
     const totalLevel = (soldier.damageLevel || 0) + (soldier.intervalLevel || 0) + 1;
     if (totalLevel < skill.baseUnlockLevel) return;
 
-    // 计算士兵基础攻击力（不含转生加成）的1%，避免转生倍率双重叠加
-    const soldierBaseDamage = gameEngine.calculateMercenaryBaseDamage(soldier);
+    // 传授基于士兵的 _currentDamage
+    const soldierDmg = soldier._currentDamage || 0;
     const params = skill.getParams(totalLevel);
-    const bonusDamage = Math.floor(soldierBaseDamage * params.bonusRatio);
+    const bonusDamage = Math.floor(soldierDmg * params.bonusRatio);
 
     if (bonusDamage <= 0) return;
 
-    // 给其他基础系单位增加永久攻击力加成
+    // 给其他单位直接增加 _currentDamage
     let teachCount = 0;
     globalData.mercenaries.forEach(merc => {
       if (merc.recruited && merc.id !== 'royal_guard') {
-        // 使用 _teachingBonus 存储传授获得的永久加成
-        merc._teachingBonus = (merc._teachingBonus || 0) + bonusDamage;
+        merc._currentDamage = (merc._currentDamage || 0) + bonusDamage;
         teachCount++;
       }
     });
@@ -197,7 +203,7 @@ App({
     const dmgLv = soldier.damageLevel || 0;
     const bonus = 1 + Math.floor(totalLevel * dmgLv / 30);
 
-    soldier._experienceBonus = (soldier._experienceBonus || 0) + bonus;
+    soldier._currentDamage = (soldier._currentDamage || 0) + bonus;
 
     // 通知战斗界面更新
     this._notifyBattleUpdate({
@@ -276,10 +282,8 @@ App({
 
         // 如果计时器超过攻击间隔，触发攻击
         if (merc._attackTimer >= interval) {
-          // 计算基础单次伤害 (加上重生倍率)
+          // 计算基础单次伤害
           let damage = gameEngine.calculateUpgradedDamage(merc, prestigeBonus.damage);
-          // 混沌法则：战斗时乘法加成（不影响面板显示）
-          if (merc._chaosAtkMult && merc._chaosAtkMult > 1) damage = Math.floor(damage * merc._chaosAtkMult);
 
           // 获取并应用技能
           const skill = gameEngine.getMercenarySkill(merc);
@@ -295,10 +299,13 @@ App({
               bonusGold = extraGold;
               skillTriggered = { type: 'gold', text: `+${gameEngine.formatNumber(extraGold)}💰` };
             } else if (skill.type === 'stacking_buff') {
-              // 战士技能：叠加攻击力
+              // 熟练：永久增加 _currentDamage
               if (Math.random() < skill.chance) {
-                merc._stackingBuff = (merc._stackingBuff || 0) + skill.val;
-                skillTriggered = { type: 'stacking_buff', text: '熟练+1%' };
+                const buffInc = Math.floor(damage * skill.val);
+                merc._currentDamage = (merc._currentDamage || 0) + buffInc;
+                damage = gameEngine.calculateUpgradedDamage(merc, prestigeBonus.damage);
+                thisHitDamage = damage;
+                skillTriggered = { type: 'stacking_buff', text: `熟练 +${gameEngine.formatNumber(buffInc)}` };
               }
             } else if (skill.type === 'crit') {
               // 弓箭手技能：暴击
@@ -355,15 +362,15 @@ App({
 
                 skillTriggered = { type: 'damage_buff', text: `龙息 x${skill.burstMultiplier}!` };
               }
-            } else if (skill.type === 'chaos_stack') {\n              // 混沌帝王技能：混沌法则 - 攻击力乘法叠加但攻击间隔也增加
+            } else if (skill.type === 'chaos_stack') {
+              // 混沌法则：直接乘算 _currentDamage
               if (Math.random() < skill.chance) {
-                const dmgBefore = damage;
-                merc._chaosAtkMult = (merc._chaosAtkMult || 1) * (1 + skill.atkBonus);
+                const dmgBefore = merc._currentDamage || 0;
+                merc._currentDamage = Math.floor(dmgBefore * (1 + skill.atkBonus));
                 merc._chaosIntervalPenalty = (merc._chaosIntervalPenalty || 0) + skill.intervalIncrease;
-                // 更新战斗伤害
-                damage = Math.floor(gameEngine.calculateUpgradedDamage(merc, prestigeBonus.damage) * merc._chaosAtkMult);
+                const dmgGain = (merc._currentDamage || 0) - dmgBefore;
+                damage = gameEngine.calculateUpgradedDamage(merc, prestigeBonus.damage);
                 thisHitDamage = damage;
-                const dmgGain = damage - dmgBefore;
                 skillTriggered = { type: 'chaos', text: `混沌 +${gameEngine.formatNumber(dmgGain)}` };
               }
             } else if (skill.type === 'berserker_rage') {
