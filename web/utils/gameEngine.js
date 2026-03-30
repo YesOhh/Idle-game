@@ -52,7 +52,7 @@ function hasSkillType(mercenary, skillType) {
 }
 
 // 统计佣兵拥有指定类型技能的数量（0/1/2/3）
-function countSkillType(mercenary, skillType) {
+export function countSkillType(mercenary, skillType) {
     let count = 0;
     const defaultSkillId = DEFAULT_UNIT_SKILLS[mercenary.id];
     const secondarySkillId = SECONDARY_UNIT_SKILLS[mercenary.id];
@@ -82,7 +82,7 @@ export function calculateRawUpgradeDamage(mercenary) {
     const baseAtk = mercenary.damage;
     const scaleNumer = BigInt(baseAtk);
     const scaleDenom = 4n;
-    const hasExtreme = hasSkillType(mercenary, 'extreme_focus');
+    const extremeCount = countSkillType(mercenary, 'extreme_focus');
     let damage = BigInt(baseAtk);
     let currentTier = -1;
     let baseAddBig = 0n;
@@ -100,7 +100,7 @@ export function calculateRawUpgradeDamage(mercenary) {
             currentTier = newTier;
         }
         let addValue = baseAddBig * scaleNumer / scaleDenom;
-        if (hasExtreme) addValue = addValue * 11n / 5n;
+        if (extremeCount > 0) addValue = addValue * (5n + 6n * BigInt(extremeCount)) / 5n;
         damage += addValue > 0n ? addValue : 1n;
     }
     return damage;
@@ -124,7 +124,8 @@ export function getNextLevelDamageGain(mercenary) {
     }
     const scaleNumer = BigInt(mercenary.damage);
     let addValue = baseAddBig * scaleNumer / 4n;
-    if (hasSkillType(mercenary, 'extreme_focus')) addValue = addValue * 11n / 5n;
+    const extremeCount = countSkillType(mercenary, 'extreme_focus');
+    if (extremeCount > 0) addValue = addValue * (5n + 6n * BigInt(extremeCount)) / 5n;
     return addValue > 0n ? addValue : 1n;
 }
 
@@ -186,10 +187,11 @@ export function calculateUpgradedInterval(mercenary) {
     if (displayLevel >= 100) interval /= 1.2;
     if (mercenary._prestigeSpeedBuff) interval /= (1 + mercenary._prestigeSpeedBuff);
     if (mercenary._chaosIntervalPenalty) interval += mercenary._chaosIntervalPenalty;
-    // 「极」技能：每级攻击力升级降低0.5%攻速
-    if (hasSkillType(mercenary, 'extreme_focus')) {
+    // 「极」技能：每级攻击力升级降低0.5%攻速（多个极叠加惩罚：N个极 = N×0.5%每级）
+    const extremeFocusCount = countSkillType(mercenary, 'extreme_focus');
+    if (extremeFocusCount > 0) {
         const dmgLvl = mercenary.damageLevel || 0;
-        if (dmgLvl > 0) interval *= Math.pow(1.005, dmgLvl);
+        if (dmgLvl > 0) interval *= Math.pow(1 + 0.005 * extremeFocusCount, dmgLvl);
     }
     return Math.max(MIN_INTERVAL, Number(interval.toFixed(4)));
 }

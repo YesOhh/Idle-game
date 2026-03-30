@@ -1068,7 +1068,8 @@ function _patchMercStats(container, prestigeBonus) {
         if (costIntEl) { costIntEl.textContent = costText; costIntEl.className = `upgrade-cost ${canAfford ? '' : 'disabled'}`; }
         // Upgrade effects — 直接用 getNextLevelDamageGain 计算升级增量
         let damageGain = gameEngine.getNextLevelDamageGain(merc);
-        if (gameEngine.hasSkillOfType(merc, 'extreme_focus')) damageGain = gameEngine.bigMul(damageGain, 1 / 2.2);
+        const _extremeCountPreview = gameEngine.countSkillType(merc, 'extreme_focus');
+        if (_extremeCountPreview > 0) damageGain = gameEngine.bigMul(damageGain, 5 / (5 + 6 * _extremeCountPreview));
         const effDmgEl = container.querySelector(`[data-eff-dmg="${merc.id}"]`);
         if (effDmgEl) effDmgEl.textContent = `攻击力 +${gameEngine.formatNumber(damageGain)}`;
         const tempInt = { ...merc, intervalLevel: (merc.intervalLevel || 0) + 1 };
@@ -1142,7 +1143,8 @@ function updateBattleMercList(force) {
         // Upgrade effects — 直接用 getNextLevelDamageGain 计算升级增量
         let damageGain = gameEngine.getNextLevelDamageGain(merc);
         // 有「极」时预览只显示基础升级量（不含2.2倍），极的加成由飘字提示
-        if (gameEngine.hasSkillOfType(merc, 'extreme_focus')) damageGain = gameEngine.bigMul(damageGain, 1 / 2.2);
+        const _extremeCountRender = gameEngine.countSkillType(merc, 'extreme_focus');
+        if (_extremeCountRender > 0) damageGain = gameEngine.bigMul(damageGain, 5 / (5 + 6 * _extremeCountRender));
         const damageUpgradeEffect = gameEngine.formatNumber(damageGain);
         const tempMercInt = { ...merc, intervalLevel: (merc.intervalLevel || 0) + 1 };
         let nextInterval = gameEngine.calculateUpgradedInterval(tempMercInt);
@@ -1848,12 +1850,15 @@ function upgradeMerc(mercId, type) {
             merc._currentDamage += heavyBonus;
             if (_showSkillNumbers) showMercSkillText(merc.id, `🛡️重装 +${gameEngine.formatNumber(heavyBonus)}`, 'skill-iron');
         }
-        // 「极」技能：升级攻击力飘字显示额外加成和攻速惩罚
-        if (gameEngine.hasSkillOfType(merc, 'extreme_focus') && _showSkillNumbers) {
-            // 极的额外 = 升级增量的 (1 - 1/2.2) ≈ 54.5%
-            const extremeExtra = gameEngine.bigMul(gain, 1 - 1 / 2.2);
-            const spdPenalty = ((Math.pow(1.005, merc.damageLevel) - Math.pow(1.005, merc.damageLevel - 1)) * 100).toFixed(1);
-            showMercSkillText(merc.id, `⚡极 +${gameEngine.formatNumber(extremeExtra)} | 攻速-${spdPenalty}%`, 'skill-ultimate');
+        // 「极」技能：每个极各自飘字显示自己贡献的+120%加成
+        const _extremeCountUpgrade = gameEngine.countSkillType(merc, 'extreme_focus');
+        if (_extremeCountUpgrade > 0 && _showSkillNumbers) {
+            // 每个极贡献 = baseGain × 1.2，baseGain = gain / (1 + 1.2 * count)
+            const perExtremeBonus = gameEngine.bigMul(gain, 1.2 / (1 + 1.2 * _extremeCountUpgrade));
+            const spdPenaltyPerExtreme = ((Math.pow(1.005, merc.damageLevel) - Math.pow(1.005, merc.damageLevel - 1)) * 100).toFixed(1);
+            for (let ei = 0; ei < _extremeCountUpgrade; ei++) {
+                showMercSkillText(merc.id, `⚡极 +${gameEngine.formatNumber(perExtremeBonus)} | 攻速-${spdPenaltyPerExtreme}%`, 'skill-ultimate');
+            }
         }
         merc.currentDamage = gameEngine.calculateUpgradedDamage(merc, prestigeBonus.damage);
         if (merc.id === 'player') {
