@@ -1541,12 +1541,11 @@ function startUITimer() {
         updateBattleUI();
         // Only update merc lists at a slower rate to avoid thrashing
     }, 200);
-    // Slower merc list update
+    // Slower merc list update (圣物UI不需要定时刷新，避免DOM重建导致闪烁)
     setInterval(() => {
         const activeTab = document.querySelector('.tab-page.active');
         if (activeTab && activeTab.id === 'tab-battle') updateBattleMercList();
         else if (activeTab && activeTab.id === 'tab-mercenaries') updateManageMercList();
-        else if (activeTab && activeTab.id === 'tab-relics') updateRelicsUI();
     }, 500);
 }
 
