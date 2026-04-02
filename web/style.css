@@ -635,9 +635,12 @@ input:checked + .toggle-slider:before { transform: translateX(18px); }
 .gold-value { font-size: 14px; color: var(--text-gold); font-weight: bold; }
 .manage-scroll-full { overflow-y: auto; max-height: calc(100vh - 160px); }
 
-.merc-grid-row { display: flex; gap: 8px; margin-bottom: 8px; }
+#manage-merc-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+    gap: 8px;
+}
 .merc-grid-item {
-    flex: 1; min-width: 0;
     background: var(--bg-card); border-radius: 8px;
     padding: 10px 5px; text-align: center;
     border: 2px solid transparent;
@@ -665,6 +668,7 @@ input:checked + .toggle-slider:before { transform: translateX(18px); }
 
 /* Detail Panel */
 .merc-detail-panel {
+    grid-column: 1 / -1;
     background: var(--bg-card); border-radius: 8px; padding: 12px;
     margin-top: 5px; border: 2px solid var(--accent-color);
     box-shadow: 0 4px 12px rgba(0,0,0,0.3);
@@ -966,14 +970,10 @@ input:checked + .toggle-slider:before { transform: translateX(18px); }
         max-height: calc(100vh - 140px);
     }
 
-    /* Flatten rows into a CSS grid for flexible columns */
+    /* Wider grid items on desktop */
     #manage-merc-list {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+        grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
         gap: 10px;
-    }
-    .merc-grid-row {
-        display: contents;
     }
     .merc-grid-item {
         padding: 16px 10px;
@@ -986,9 +986,8 @@ input:checked + .toggle-slider:before { transform: translateX(18px); }
     .merc-grid-name {
         font-size: 14px;
     }
-    /* Detail panel spans full grid width */
+    /* Detail panel desktop padding */
     .merc-detail-panel {
-        grid-column: 1 / -1;
         padding: 20px;
     }
     .detail-name {

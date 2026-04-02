@@ -1319,27 +1319,19 @@ function updateManageMercList() {
     mercs.sort((a, b) => a.recruitCost > b.recruitCost ? 1 : a.recruitCost < b.recruitCost ? -1 : 0);
 
     let html = '';
-    for (let i = 0; i < mercs.length; i += 3) {
-        const row = mercs.slice(i, i + 3);
-        const rowIndex = Math.floor(i / 3);
-        html += '<div class="merc-grid-row">';
-        row.forEach(merc => {
-            html += `<div class="merc-grid-item ${merc.recruited ? 'recruited' : 'not-recruited'} ${_selectedMercId === merc.id ? 'selected' : ''}" data-manage-select="${merc.id}">
-                <div class="merc-grid-icon-wrapper">
-                    <div class="merc-grid-icon">${merc.icon}</div>
-                    ${(!merc.recruited && merc.canAffordRecruit) ? '<div class="recruit-dot"></div>' : ''}
-                </div>
-                <div class="merc-grid-name">${merc.name}</div>
-            </div>`;
-        });
-        // Fill empty cells
-        for (let j = row.length; j < 3; j++) html += '<div class="merc-grid-item" style="visibility:hidden"></div>';
-        html += '</div>';
+    for (let i = 0; i < mercs.length; i++) {
+        const merc = mercs[i];
+        html += `<div class="merc-grid-item ${merc.recruited ? 'recruited' : 'not-recruited'} ${_selectedMercId === merc.id ? 'selected' : ''}" data-manage-select="${merc.id}">
+            <div class="merc-grid-icon-wrapper">
+                <div class="merc-grid-icon">${merc.icon}</div>
+                ${(!merc.recruited && merc.canAffordRecruit) ? '<div class="recruit-dot"></div>' : ''}
+            </div>
+            <div class="merc-grid-name">${merc.name}</div>
+        </div>`;
 
-        // Detail panel
-        const selInRow = row.find(m => m.id === _selectedMercId);
-        if (selInRow) {
-            const m = selInRow;
+        // Detail panel right after selected item
+        if (merc.id === _selectedMercId) {
+            const m = merc;
             html += `<div class="merc-detail-panel">
                 <div class="detail-header">
                     <span class="detail-name">${m.icon} ${m.name}</span>
